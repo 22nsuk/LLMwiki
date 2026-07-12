@@ -389,6 +389,19 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         self.assertEqual(report["summary"]["present_count"], 14)
         self.assertEqual(report["summary"]["current_count"], 14)
 
+    def test_dashboard_attention_summary_must_match_observed_gates(self) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        self._write_closeout_summary()
+        dashboard_path = self.vault / "ops/reports/release-evidence-dashboard.json"
+        dashboard = json.loads(dashboard_path.read_text(encoding="utf-8"))
+        dashboard["summary"]["gate_attention_count"] = 1
+        dashboard_path.write_text(json.dumps(dashboard), encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            ValueError, "dashboard gate_attention_count does not match attention gates"
+        ):
+            build_batch_manifest(self.vault, context=fixed_context())
+
     def test_distribution_zip_retires_nonsealed_external_report_attention(
         self,
     ) -> None:

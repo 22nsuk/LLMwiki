@@ -102,6 +102,19 @@ def test_xunit2_classname_name_and_parametrized_names_map_to_canonical_nodeids()
     assert evidence["subtests_passed_by_nodeid"] == dict.fromkeys(sorted(nodeids), 0)
 
 
+def test_xunit2_parametrized_name_preserves_double_colon_in_parameter_id() -> None:
+    nodeid = "tests/test_param.py::test_value[a::b]"
+    xml = (
+        b'<testsuite name="pytest" tests="1" errors="0" failures="0" skipped="0">'
+        b'<testcase classname="tests.test_param" name="test_value[a::b]" />'
+        b"</testsuite>"
+    )
+
+    evidence = parse_junit_testcases(xml, expected_nodeids=[nodeid])
+
+    assert evidence["outcomes"] == {nodeid: "passed"}
+
+
 def test_xunit2_testcase_properties_account_for_passing_subtests_by_nodeid() -> None:
     nodeids = [
         "tests/test_sample.py::test_function[value-a]",
@@ -460,6 +473,22 @@ def test_collection_manifest_reference_rejects_input_digest_drift(
             expected_semantic_command="-m pytest",
         )
 
+    stale_manifest = deepcopy(manifest)
+    stale_manifest["source_revision"] = "previous-revision"
+    write_collection_manifest(
+        vault, stale_manifest, "build/release-payloads/full.collection.json"
+    )
+    with pytest.raises(ValueError, match="source_revision drift"):
+        load_collection_manifest_digest(
+            vault,
+            identity["manifest_path"],
+            expected_suite="full-shard-1",
+            expected_semantic_command="-m pytest",
+        )
+    write_collection_manifest(
+        vault, manifest, "build/release-payloads/full.collection.json"
+    )
+
     path = vault / identity["manifest_path"]
     path.write_text(
         path.read_text(encoding="utf-8").replace(
@@ -560,6 +589,29 @@ def test_pure_derivation_api_accepts_exact_selected_nodeids(tmp_path: Path) -> N
 
     assert derived["pytest_collect_nodeid_digest"]["nodeid_count"] == 1
     assert derived["semantic_command"].startswith("exact-nodeid-selection:")
+
+
+def test_derived_summary_uses_selected_manifest_suite(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    _, full_summary, full_manifest, selected_manifest = _derived_fixture(vault)
+    selected_manifest["suite"] = "public"
+
+    derived = derive_subset_summary(
+        full_summary,
+        parse_junit_testcases(
+            _junit_xml(), expected_nodeids=full_manifest["nodeids"]
+        ),
+        full_manifest,
+        selected_manifest,
+    )
+
+    assert derived["suite"] == "public"
+    assert derived["suite_scope"] == "public_contract"
+    assert derived["not_full_suite_reason"] == (
+        "derived public subset of exact full-suite evidence"
+    )
 
 
 def test_direct_parity_is_exact_for_status_counts_nodeids_and_deselection(

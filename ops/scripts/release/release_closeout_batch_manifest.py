@@ -964,8 +964,21 @@ def _dashboard_decision_inputs(
         accepted_risks,
         active_risks,
     )
+    dashboard_gates = dashboard.get("gates", [])
+    declared_gate_attention_count = int(
+        dashboard_summary.get("gate_attention_count", 0) or 0
+    )
+    observed_gate_attention_count = (
+        sum(1 for gate in dashboard_gates if _gate_is_attention(gate))
+        if isinstance(dashboard_gates, list)
+        else 0
+    )
+    if declared_gate_attention_count != observed_gate_attention_count:
+        raise ValueError(
+            "dashboard gate_attention_count does not match attention gates"
+        )
     gate_attention_codes = _active_gate_attention_codes(
-        dashboard.get("gates", []),
+        dashboard_gates,
         retired_codes=retired_codes,
     )
     return DashboardDecisionInputs(

@@ -29,7 +29,6 @@ from ops.scripts.test.test_execution_derivation_runtime import (
     build_collection_manifest,
     collection_manifest_reference_is_current,
     collection_manifest_reference_is_rebindable,
-    load_collection_manifest_digest,
     write_collection_manifest,
 )
 from ops.scripts.test.test_execution_summary import (
@@ -1834,13 +1833,17 @@ class TestExecutionSummaryTest(unittest.TestCase):
                 vault
                 / "build/release-payloads/test-execution-summary-full.collection.json"
             )
-            write_collection_manifest(vault, manifest, manifest_path)
-            digest = load_collection_manifest_digest(
-                vault,
-                manifest_path,
-                expected_suite="full-shard-1",
-                expected_semantic_command="-m pytest",
+            manifest_identity = write_collection_manifest(
+                vault, manifest, manifest_path
             )
+            digest = {
+                **manifest_identity,
+                "status": "collected",
+                "command": "-m pytest",
+                "nodeid_count": len(nodeids),
+                "sha256": manifest["nodeids_sha256"],
+                "reason": "stale revision fixture for aggregate rebind",
+            }
             shard = build_report(
                 vault,
                 command=[sys.executable, "-m", "pytest"],

@@ -30,6 +30,10 @@ from ops.scripts.test.test_execution_evidence_runtime import (
     sha256_file,
     sha256_text,
 )
+from ops.scripts.test.test_execution_selection_runtime import (
+    REPORT_CONTRACT_SUMMARY_SUITE,
+    suite_scope_for_key,
+)
 
 COLLECTION_MANIFEST_SCHEMA_PATH = "ops/schemas/test-execution-collection-manifest.schema.json"
 PRODUCER = "ops.scripts.test_execution_summary"
@@ -179,6 +183,8 @@ def load_collection_manifest_digest(
         raise ValueError("; ".join(blockers))
     if manifest.get("source_tree_fingerprint") != release_source_tree_fingerprint(vault):
         raise ValueError("collection manifest source_tree_fingerprint drift")
+    if manifest.get("source_revision") != resolve_source_revision(vault).revision:
+        raise ValueError("collection manifest source_revision drift")
     if manifest.get("suite") != expected_suite:
         raise ValueError("collection manifest suite mismatch")
     if manifest.get("semantic_command") != expected_semantic_command:
@@ -391,7 +397,23 @@ def _xml_local_name(tag: str) -> str:
 
 
 def _xunit_identity_for_nodeid(nodeid: str) -> tuple[str, str]:
-    parts = nodeid.split("::")
+    parts: list[str] = []
+    segment_start = 0
+    bracket_depth = 0
+    index = 0
+    while index < len(nodeid):
+        character = nodeid[index]
+        if character == "[":
+            bracket_depth += 1
+        elif character == "]" and bracket_depth:
+            bracket_depth -= 1
+        elif bracket_depth == 0 and nodeid.startswith("::", index):
+            parts.append(nodeid[segment_start:index])
+            index += 2
+            segment_start = index
+            continue
+        index += 1
+    parts.append(nodeid[segment_start:])
     if len(parts) < 2:
         raise ValueError(f"nodeid has no test name: {nodeid}")
     module_name = parts[0][:-3].replace("/", ".")
@@ -761,6 +783,20 @@ def _build_validated_subset_summary(
     semantic_command = str(selected_manifest["semantic_command"])
     selected_digest = str(selected_manifest["nodeids_sha256"])
     status = _derived_status(counts)
+    selected_suite = str(selected_manifest.get("suite", "")).strip()
+    if not selected_suite:
+        raise ValueError("selected collection manifest suite is missing")
+    suite_key = selected_suite.lower().replace("_", "-")
+    suite_scope = (
+        "report_contract_summary"
+        if suite_key == REPORT_CONTRACT_SUMMARY_SUITE
+        else suite_scope_for_key(suite_key)
+    )
+    derived_subset_reason = (
+        "derived report-contract subset of exact full-suite evidence"
+        if suite_key == REPORT_CONTRACT_SUMMARY_SUITE
+        else f"derived {selected_suite} subset of exact full-suite evidence"
+    )
     derived = deepcopy(full_summary)
     derived.update(
         {
@@ -771,10 +807,10 @@ def _build_validated_subset_summary(
                 collection_manifest,
                 selected_manifest,
             ),
-            "suite": "report-contract-summary",
-            "suite_scope": "report_contract_summary",
+            "suite": selected_suite,
+            "suite_scope": suite_scope,
             "represents_full_suite": False,
-            "not_full_suite_reason": "derived report-contract subset of exact full-suite evidence",
+            "not_full_suite_reason": derived_subset_reason,
             "full_suite_evidence": {
                 **deepcopy(full_summary["full_suite_evidence"]),
                 "status": "not_represented",
@@ -867,6 +903,7 @@ def derive_subset_summary(
         exact_nodeids = canonical_nodeids(selected_nodeids)
         semantic_command = f"exact-nodeid-selection:{nodeids_sha256(exact_nodeids)}"
         selected_manifest = {
+            "suite": REPORT_CONTRACT_SUMMARY_SUITE,
             "nodeids": exact_nodeids,
             "nodeid_count": len(exact_nodeids),
             "nodeids_sha256": nodeids_sha256(exact_nodeids),
