@@ -103,13 +103,27 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _raw_metadata(vault: Path, raw_path: str | None) -> tuple[bool, str, str | None]:
-    if raw_path is None:
-        return False, "missing", None
-    candidate = Path(raw_path)
-    resolved = candidate if candidate.is_absolute() else vault / candidate
+def resolve_source_raw_path(
+    vault: Path, raw_path_value: Any
+) -> tuple[Path | None, str | None]:
+    if not isinstance(raw_path_value, str) or not raw_path_value.strip():
+        return None, "raw_path_missing_frontmatter"
+    relative = Path(raw_path_value.strip())
+    if relative.is_absolute():
+        return None, "raw_path_outside_vault"
+    vault_root = vault.resolve()
+    resolved = (vault_root / relative).resolve()
+    if not resolved.is_relative_to(vault_root):
+        return None, "raw_path_outside_vault"
     if not resolved.is_file():
+        return None, "raw_path_not_file"
+    return resolved, None
+
+
+def _raw_metadata(path: Path | None) -> tuple[bool, str, str | None]:
+    if path is None:
         return False, "missing", None
+    resolved = path
     suffix = resolved.suffix.lower()
     if suffix in TEXT_RAW_SUFFIXES:
         return True, "text", _sha256_file(resolved)
@@ -211,8 +225,14 @@ def build_report(
             synthesis_by_stem=synthesis_by_stem,
             inverse_targets=inverse_targets,
         )
-        raw_path = _frontmatter_text(frontmatter, "raw_path")
-        raw_exists, raw_media_class, raw_sha256 = _raw_metadata(vault, raw_path)
+        raw_path_value = _frontmatter_text(frontmatter, "raw_path")
+        resolved_raw_path, _ = resolve_source_raw_path(vault, raw_path_value)
+        raw_path = (
+            resolved_raw_path.relative_to(vault.resolve()).as_posix()
+            if resolved_raw_path is not None
+            else None
+        )
+        raw_exists, raw_media_class, raw_sha256 = _raw_metadata(resolved_raw_path)
         remediation_route = _remediation_route(
             substance_pass=substance_pass,
             linked=bool(linkage["linked"]),

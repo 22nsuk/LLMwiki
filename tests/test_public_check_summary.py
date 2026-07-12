@@ -828,6 +828,21 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 "python -m ops.scripts.public_check_summary --vault . --mode full",
             )
 
+    def test_cli_mode_defaults_make_full_selectorless(self) -> None:
+        default_args = public_check_summary_module.parse_args([])
+        full_args = public_check_summary_module.parse_args(["--mode", "full"])
+        explicit_empty = public_check_summary_module.parse_args(
+            ["--mode", "full", "--pytest-mark-expr", ""]
+        )
+
+        self.assertEqual(default_args.pytest_mark_expr, "public")
+        self.assertEqual(full_args.pytest_mark_expr, "")
+        self.assertEqual(explicit_empty.pytest_mark_expr, "")
+        with self.assertRaises(SystemExit):
+            public_check_summary_module.parse_args(
+                ["--mode", "full", "--pytest-mark-expr", "public"]
+            )
+
     def test_cross_mode_reuse_is_rejected_in_both_directions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

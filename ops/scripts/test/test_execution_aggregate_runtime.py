@@ -25,6 +25,7 @@ from ops.scripts.test.test_execution_command_runtime import (
 )
 from ops.scripts.test.test_execution_derivation_runtime import (
     collection_manifest_reference_is_current,
+    collection_manifest_reference_is_rebindable,
 )
 from ops.scripts.test.test_execution_evidence_runtime import (
     evidence_artifact_consistency as _evidence_artifact_consistency,
@@ -77,6 +78,18 @@ def reusable_aggregate_summary_diagnostics(
 
     current_source_revision = resolve_source_revision(vault).revision
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    digest = existing.get("pytest_collect_nodeid_digest", {})
+    has_collection_manifest = bool(
+        isinstance(digest, dict) and digest.get("manifest_path")
+    )
+    collection_manifest_current = (
+        not has_collection_manifest
+        or collection_manifest_reference_is_current(vault, digest)
+    )
+    collection_manifest_rebindable = bool(
+        has_collection_manifest
+        and collection_manifest_reference_is_rebindable(vault, digest)
+    )
     checks = {
         "artifact_kind": existing.get("artifact_kind") == "test_execution_summary",
         "status": existing.get("status") == "pass",
@@ -90,16 +103,19 @@ def reusable_aggregate_summary_diagnostics(
         ),
         "collection_manifest": (
             suite.strip().lower().replace("_", "-") not in FULL_SUITE_SCOPES
-            or not existing.get("pytest_collect_nodeid_digest", {}).get("manifest_path")
-            or collection_manifest_reference_is_current(
-                vault, existing.get("pytest_collect_nodeid_digest", {})
-            )
+            or collection_manifest_current
         ),
     }
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         diagnostics["reason"] = f"not_current:{','.join(failed)}"
-        diagnostics["result_reusable"] = failed == ["source_revision"]
+        diagnostics["result_reusable"] = failed == ["source_revision"] or (
+            set(failed) == {"source_revision", "collection_manifest"}
+            and collection_manifest_rebindable
+        )
+        diagnostics["collection_manifest_rebindable"] = (
+            collection_manifest_rebindable
+        )
         diagnostics["checks"] = checks
         diagnostics["current_source_revision"] = current_source_revision
         diagnostics["observed_source_revision"] = str(existing.get("source_revision", ""))

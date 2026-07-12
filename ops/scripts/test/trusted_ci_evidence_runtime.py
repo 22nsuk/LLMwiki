@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import stat
-import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -11,6 +10,9 @@ from typing import Any
 from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
+)
+from ops.scripts.test.test_execution_evidence_runtime import (
+    junit_test_count_from_xml,
 )
 
 BUNDLE_MANIFEST_MEMBER = "trusted-ci-evidence-bundle-manifest.json"
@@ -40,14 +42,11 @@ def semantic_digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def junit_testcase_count(payload: bytes) -> int:
-    try:
-        root = ET.fromstring(payload)
-    except ET.ParseError as exc:
-        raise ValueError(f"JUnit XML is unreadable: {exc}") from exc
-    return sum(
-        1 for element in root.iter() if element.tag.rsplit("}", 1)[-1] == "testcase"
-    )
+def junit_test_count(payload: bytes) -> int:
+    count = junit_test_count_from_xml(payload)
+    if count is None:
+        raise ValueError("JUnit XML is unreadable")
+    return count
 
 
 def safe_zip_member_name(value: str) -> str:

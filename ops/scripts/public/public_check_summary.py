@@ -920,7 +920,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--public-python", default=sys.executable)
     parser.add_argument("--ruff-targets", default="ops/scripts tests tools")
     parser.add_argument("--mypy-targets", default="ops/scripts")
-    parser.add_argument("--pytest-mark-expr", default="public")
+    parser.add_argument("--pytest-mark-expr")
     parser.add_argument("--pytest-flags", default="")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument("--heartbeat-interval-seconds", type=int, default=DEFAULT_HEARTBEAT_INTERVAL_SECONDS)
@@ -931,7 +931,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="With --reuse-if-current, fail instead of rerunning when the public-check summary is stale.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.pytest_mark_expr is None:
+        args.pytest_mark_expr = "" if args.mode == "full" else "public"
+    elif args.mode == "full" and args.pytest_mark_expr.strip():
+        parser.error("--mode full requires an empty --pytest-mark-expr")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:

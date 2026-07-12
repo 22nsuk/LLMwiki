@@ -33,7 +33,7 @@ from ops.scripts.test.trusted_ci_evidence_runtime import (
     PAYLOAD_MEMBERS,
     SUMMARY_MEMBER,
     json_object,
-    junit_testcase_count,
+    junit_test_count,
     read_strict_bundle,
     semantic_digest,
     sha256_bytes,
@@ -245,7 +245,7 @@ def _junit_check(
     members: dict[str, bytes], manifest: dict[str, Any], summary: dict[str, Any]
 ) -> dict[str, str]:
     junit_sha = sha256_bytes(members[JUNIT_MEMBER])
-    junit_count = junit_testcase_count(members[JUNIT_MEMBER])
+    junit_count = junit_test_count(members[JUNIT_MEMBER])
     artifacts = [
         item
         for item in summary["evidence_artifacts"]
@@ -261,7 +261,7 @@ def _junit_check(
     return _check(
         "junit",
         valid,
-        "JUnit digest and testcase count match manifest and summary",
+        "JUnit digest and suite test count match manifest and summary",
     )
 
 

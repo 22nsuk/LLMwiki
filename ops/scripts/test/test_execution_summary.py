@@ -52,6 +52,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         derive_subset_summary,
         load_collection_manifest_digest,
         parse_junit_testcases,
+        rebind_collection_manifest_reference,
         subset_summary_parity,
         validate_collection_manifest_payload,
         validate_collection_manifest_schema,
@@ -139,6 +140,7 @@ else:
         derive_subset_summary,
         load_collection_manifest_digest,
         parse_junit_testcases,
+        rebind_collection_manifest_reference,
         subset_summary_parity,
         validate_collection_manifest_payload,
         validate_collection_manifest_schema,
@@ -1054,6 +1056,15 @@ def _run_aggregate_cli(vault: Path, args: argparse.Namespace) -> int:
         suite=args.suite,
         policy_path=args.policy,
     )
+    digest = report.get("pytest_collect_nodeid_digest")
+    if (
+        args.refresh_revision_if_same_tree
+        and isinstance(digest, dict)
+        and digest.get("manifest_path")
+    ):
+        report["pytest_collect_nodeid_digest"] = (
+            rebind_collection_manifest_reference(vault, digest)
+        )
     _write_and_print_report(vault, report, args.out)
     return 0 if report["status"] == "pass" else 1
 
@@ -1385,7 +1396,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             if (
                 args.refresh_revision_if_same_tree
-                and diagnostics.get("reason") == "not_current:source_revision"
+                and not diagnostics.get("reusable")
                 and diagnostics.get("result_reusable")
             ):
                 return _run_aggregate_cli(vault, args)

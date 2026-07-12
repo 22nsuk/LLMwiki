@@ -213,10 +213,10 @@ def _xml_local_name(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
 
-def _junit_testcase_count(path: Path) -> int | None:
+def junit_test_count_from_xml(payload: bytes) -> int | None:
     try:
-        root = ET.parse(path).getroot()
-    except (ET.ParseError, OSError):
+        root = ET.fromstring(payload)
+    except ET.ParseError:
         return None
 
     suite_counts: list[int] = []
@@ -233,6 +233,14 @@ def _junit_testcase_count(path: Path) -> int | None:
     if suite_counts:
         return sum(suite_counts)
     return sum(1 for element in root.iter() if _xml_local_name(str(element.tag)) == "testcase")
+
+
+def _junit_testcase_count(path: Path) -> int | None:
+    try:
+        payload = path.read_bytes()
+    except OSError:
+        return None
+    return junit_test_count_from_xml(payload)
 
 
 def _counted_outcome_total(counts: dict[str, int]) -> int:

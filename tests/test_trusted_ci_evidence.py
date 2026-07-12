@@ -53,11 +53,12 @@ def _context() -> RuntimeContext:
     )
 
 
-def _result() -> TimedProcessResult:
+def _result(*, subtests_passed: int = 0) -> TimedProcessResult:
+    subtest_summary = f", {subtests_passed} subtests passed" if subtests_passed else ""
     return TimedProcessResult(
         args=[sys.executable, "-m", "pytest"],
         returncode=0,
-        stdout="= 1 passed in 0.01s =",
+        stdout=f"= 1 passed{subtest_summary} in 0.01s =",
         stderr="",
         timed_out=False,
         timeout_seconds=30,
@@ -75,7 +76,7 @@ def _ci_environment() -> dict[str, object]:
             "autoload_disabled": True,
             "policy": "disabled",
         },
-        "interpreter_path_class": "repo_virtualenv",
+        "interpreter_path_class": "path_lookup",
         "toolchain_contract": {
             "status": "pass",
             "python_supported": True,
@@ -95,7 +96,7 @@ def _write_json(path: Path, payload: dict[str, object]) -> None:
     )
 
 
-def _seed_evidence(vault: Path) -> Path:
+def _seed_evidence(vault: Path, *, subtests_passed: int = 0) -> Path:
     seed_minimal_vault(vault)
     (vault / "ops" / "test-lane-registry.json").write_bytes(
         (REPO_ROOT / "ops" / "test-lane-registry.json").read_bytes()
@@ -109,8 +110,16 @@ def _seed_evidence(vault: Path) -> Path:
     )
     junit_path = vault / "build/release-payloads/test-execution-summary-full.junit.xml"
     junit_path.parent.mkdir(parents=True, exist_ok=True)
+    junit_total = 1 + subtests_passed
+    subtest_property = (
+        "<properties><property name='llmwiki.subtests_passed' "
+        f"value='{subtests_passed}'/></properties>"
+        if subtests_passed
+        else ""
+    )
     junit_path.write_text(
-        "<testsuite tests='1'><testcase classname='sample' name='test_sample'/></testsuite>\n",
+        f"<testsuite tests='{junit_total}'><testcase classname='sample' "
+        f"name='test_sample'>{subtest_property}</testcase></testsuite>\n",
         encoding="utf-8",
     )
     lifecycle = {
@@ -153,13 +162,13 @@ def _seed_evidence(vault: Path) -> Path:
             "skipped": 0,
             "xfailed": 0,
             "xpassed": 0,
-            "subtests_passed": 0,
+            "subtests_passed": subtests_passed,
         },
     )
     shard = build_report(
         vault,
         command=[sys.executable, "-m", "pytest"],
-        result=_result(),
+        result=_result(subtests_passed=subtests_passed),
         duration_ms=10,
         suite="full-shard-1",
         context=_context(),
@@ -322,6 +331,38 @@ def test_bundle_is_deterministic_and_valid_import_is_diagnostic_only(
     assert not (
         vault / "ops/reports/test-execution-summary-full-imported.json"
     ).exists()
+
+
+def test_repository_contract_matches_hosted_python_workflow() -> None:
+    contract = json.loads(
+        (REPO_ROOT / "ops/test-lane-registry.json").read_text(encoding="utf-8")
+    )["trusted_ci_evidence"]
+    workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text(
+        encoding="utf-8"
+    )
+    setup_action = (REPO_ROOT / ".github/actions/setup-python-uv/action.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "uses: ./.github/actions/setup-python-uv" in workflow
+    assert "python -m pip install -r" in setup_action
+    assert ".venv" not in setup_action
+    assert contract["environment"]["interpreter_path_class"] == "path_lookup"
+
+
+def test_bundle_and_import_use_junit_suite_totals_for_subtests(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    bundle = _seed_evidence(vault, subtests_passed=2)
+
+    members = read_strict_bundle(bundle)
+    manifest = json.loads(members[BUNDLE_MANIFEST_MEMBER])
+    summary = json.loads(members[SUMMARY_MEMBER])
+    report = _run_import(vault, bundle)
+
+    assert manifest["junit"]["count"] == 3
+    assert summary["counts"]["subtests_passed"] == 2
+    assert report["status"] == "pass", (report["diagnostics"], report["checks"])
 
 
 @pytest.mark.parametrize(

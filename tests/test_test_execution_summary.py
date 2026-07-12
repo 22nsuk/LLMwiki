@@ -22,6 +22,16 @@ from ops.scripts.core.command_runtime import CommandHeartbeat, TimedProcessResul
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.test.test_execution_aggregate_runtime import (
+    reusable_aggregate_summary_diagnostics,
+)
+from ops.scripts.test.test_execution_derivation_runtime import (
+    build_collection_manifest,
+    collection_manifest_reference_is_current,
+    collection_manifest_reference_is_rebindable,
+    load_collection_manifest_digest,
+    write_collection_manifest,
+)
 from ops.scripts.test.test_execution_summary import (
     REUSE_MISMATCH_COMMAND_IDENTITY,
     REUSE_MISMATCH_INTERPRETER_TOOLCHAIN,
@@ -1789,7 +1799,11 @@ class TestExecutionSummaryTest(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             seed_minimal_vault(vault)
-            shard = build_report(
+            nodeids = [
+                "tests/test_sample.py::test_one",
+                "tests/test_sample.py::test_two",
+            ]
+            bootstrap_shard = build_report(
                 vault,
                 command=[sys.executable, "-m", "pytest"],
                 result=_result(returncode=0, stdout="= 2 passed in 1.00s ="),
@@ -1805,6 +1819,34 @@ class TestExecutionSummaryTest(unittest.TestCase):
                     "reason": "",
                 },
             )
+            manifest = build_collection_manifest(
+                vault,
+                suite="full-shard-1",
+                semantic_command="-m pytest",
+                nodeids=nodeids,
+                selection_kind="full_suite",
+                deselected_tests=[],
+                deselection_lifecycle=bootstrap_shard["deselection_lifecycle"],
+                context=_fixed_context(),
+            )
+            manifest["source_revision"] = "old-revision"
+            manifest_path = (
+                vault
+                / "build/release-payloads/test-execution-summary-full.collection.json"
+            )
+            write_collection_manifest(vault, manifest, manifest_path)
+            digest = load_collection_manifest_digest(vault, manifest_path)
+            shard = build_report(
+                vault,
+                command=[sys.executable, "-m", "pytest"],
+                result=_result(returncode=0, stdout="= 2 passed in 1.00s ="),
+                duration_ms=1000,
+                suite="full-shard-1",
+                context=_fixed_context(),
+                collect_nodeids=True,
+                collect_nodeid_digest=digest,
+            )
+            shard["source_revision"] = "old-revision"
             shard_dir = vault / "ops" / "reports" / "test-execution-summary-full-shards"
             shard_dir.mkdir(parents=True)
             (shard_dir / "full-suite-shard-1.json").write_text(
@@ -1820,6 +1862,17 @@ class TestExecutionSummaryTest(unittest.TestCase):
             aggregate["source_revision"] = "old-revision"
             out_path = vault / "ops" / "reports" / "test-execution-summary-full.json"
             out_path.write_text(json.dumps(aggregate, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            self.assertFalse(
+                collection_manifest_reference_is_current(
+                    vault, aggregate["pytest_collect_nodeid_digest"]
+                )
+            )
+            self.assertTrue(
+                collection_manifest_reference_is_rebindable(
+                    vault, aggregate["pytest_collect_nodeid_digest"]
+                )
+            )
 
             returncode = summary_main(
                 [
@@ -1844,6 +1897,24 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(payload["source_revision"], "source_package_without_git")
             self.assertEqual(payload["source_tree_fingerprint"], shard["source_tree_fingerprint"])
             self.assertEqual(payload["counts"]["passed"], 2)
+            rebound_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                rebound_manifest["source_revision"], "source_package_without_git"
+            )
+            self.assertEqual(
+                payload["pytest_collect_nodeid_digest"]["source_revision"],
+                "source_package_without_git",
+            )
+            self.assertTrue(
+                collection_manifest_reference_is_current(
+                    vault, payload["pytest_collect_nodeid_digest"]
+                )
+            )
+            self.assertTrue(
+                reusable_aggregate_summary_diagnostics(
+                    vault, out_path, suite="full"
+                )["reusable"]
+            )
 
     def test_make_full_revision_rebind_preserves_current_and_replaces_stale_revision(
         self,

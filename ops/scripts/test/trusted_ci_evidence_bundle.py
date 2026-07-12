@@ -22,7 +22,7 @@ from ops.scripts.test.trusted_ci_evidence_runtime import (
     JUNIT_MEMBER,
     PAYLOAD_MEMBERS,
     SUMMARY_MEMBER,
-    junit_testcase_count,
+    junit_test_count,
     semantic_digest,
     sha256_bytes,
     write_deterministic_member,
@@ -91,12 +91,12 @@ def _validate_evidence(
         "source_tree_fingerprint"
     ):
         raise ValueError("summary/collection digest source tree mismatch")
-    junit_count = junit_testcase_count(junit)
+    junit_count = junit_test_count(junit)
     junit_identity = _junit_summary_identity(summary)
     if junit_identity.get("sha256") != sha256_bytes(junit):
         raise ValueError("summary/JUnit digest mismatch")
     if junit_identity.get("observed_count") != junit_count:
-        raise ValueError("summary/JUnit count mismatch")
+        raise ValueError("summary/JUnit test count mismatch")
     if junit_identity.get("consistency_status") != "pass":
         raise ValueError("summary/JUnit consistency is not passing")
     return {

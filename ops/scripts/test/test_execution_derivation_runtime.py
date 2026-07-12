@@ -20,6 +20,7 @@ from ops.scripts.core.schema_runtime import (
     load_schema_with_vault_override,
     validate_or_raise,
 )
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
@@ -218,24 +219,27 @@ def validate_collection_manifest_schema(vault: Path, manifest: dict[str, Any]) -
     )
 
 
-def collection_manifest_reference_is_current(
+def _collection_manifest_reference(
     vault: Path, digest: dict[str, Any]
-) -> bool:
+) -> tuple[Path, dict[str, Any]] | None:
     path_value = str(digest.get("manifest_path", ""))
     if not path_value:
-        return False
+        return None
     relative_path = Path(path_value)
     if relative_path.is_absolute() or ".." in relative_path.parts:
-        return False
-    path = vault / relative_path
+        return None
+    vault_root = vault.resolve()
+    path = (vault_root / relative_path).resolve()
+    if not path.is_relative_to(vault_root):
+        return None
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(manifest, dict):
-            return False
+            return None
         validate_collection_manifest_schema(vault, manifest)
     except (OSError, json.JSONDecodeError, ValueError):
-        return False
-    return (
+        return None
+    matches = (
         not validate_collection_manifest_payload(manifest)
         and sha256_file(path) == digest.get("manifest_sha256")
         and manifest.get("source_tree_fingerprint")
@@ -244,6 +248,49 @@ def collection_manifest_reference_is_current(
         and manifest.get("nodeid_count") == digest.get("nodeid_count")
         and manifest.get("nodeids_sha256") == digest.get("sha256")
     )
+    return (path, manifest) if matches else None
+
+
+def collection_manifest_reference_is_rebindable(
+    vault: Path, digest: dict[str, Any]
+) -> bool:
+    reference = _collection_manifest_reference(vault, digest)
+    return bool(
+        reference
+        and reference[1].get("source_tree_fingerprint")
+        == release_source_tree_fingerprint(vault)
+    )
+
+
+def collection_manifest_reference_is_current(
+    vault: Path, digest: dict[str, Any]
+) -> bool:
+    reference = _collection_manifest_reference(vault, digest)
+    current_revision = resolve_source_revision(vault).revision
+    return bool(
+        reference
+        and reference[1].get("source_tree_fingerprint")
+        == release_source_tree_fingerprint(vault)
+        and reference[1].get("source_revision") == current_revision
+        and digest.get("source_revision") == current_revision
+    )
+
+
+def rebind_collection_manifest_reference(
+    vault: Path, digest: dict[str, Any]
+) -> dict[str, Any]:
+    reference = _collection_manifest_reference(vault, digest)
+    if (
+        reference is None
+        or reference[1].get("source_tree_fingerprint")
+        != release_source_tree_fingerprint(vault)
+    ):
+        raise ValueError("collection manifest reference is not same-tree rebindable")
+    path, manifest = reference
+    rebound = deepcopy(manifest)
+    rebound["source_revision"] = resolve_source_revision(vault).revision
+    identity = write_collection_manifest(vault, rebound, path)
+    return {**digest, **identity}
 
 
 def _xml_local_name(tag: str) -> str:

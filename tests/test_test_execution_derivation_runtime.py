@@ -15,6 +15,7 @@ from ops.scripts.test.test_execution_derivation_runtime import (
     JUNIT_SUBTESTS_PASSED_PROPERTY,
     build_collection_manifest,
     collection_manifest_reference_is_current,
+    collection_manifest_reference_is_rebindable,
     derive_subset_summary,
     load_collection_manifest_digest,
     nodeids_sha256,
@@ -396,6 +397,7 @@ def test_collection_manifest_reference_rejects_input_digest_drift(
     }
 
     assert collection_manifest_reference_is_current(vault, digest) is True
+    assert collection_manifest_reference_is_rebindable(vault, digest) is True
     loaded_digest = load_collection_manifest_digest(vault, identity["manifest_path"])
     assert loaded_digest["sha256"] == manifest["nodeids_sha256"]
     assert loaded_digest["manifest_sha256"] == identity["manifest_sha256"]
@@ -408,6 +410,7 @@ def test_collection_manifest_reference_rejects_input_digest_drift(
         encoding="utf-8",
     )
     assert collection_manifest_reference_is_current(vault, digest) is False
+    assert collection_manifest_reference_is_rebindable(vault, digest) is False
 
 
 def test_derivation_rejects_parent_and_input_digest_drift(tmp_path: Path) -> None:

@@ -14,7 +14,7 @@
       "python_major_minor": "3.12",
       "minimum_pytest_major": 8,
       "plugin_autoload_disabled": true,
-      "interpreter_path_class": "repo_virtualenv",
+      "interpreter_path_class": "path_lookup",
       "toolchain_status": "pass",
       "release_evidence_effect": "eligible"
     }

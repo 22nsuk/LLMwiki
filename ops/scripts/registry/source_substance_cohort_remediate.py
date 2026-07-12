@@ -45,6 +45,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.registry.source_substance_cohort_classify import (
         build_report as build_classification_report,
+        resolve_source_raw_path,
     )
 else:
     from ops.scripts.core.artifact_freshness_runtime import (
@@ -76,6 +77,7 @@ else:
     )
     from ops.scripts.registry.source_substance_cohort_classify import (
         build_report as build_classification_report,
+        resolve_source_raw_path,
     )
 
 DEFAULT_OUT = "tmp/source-substance-cohort-remediation.json"
@@ -182,24 +184,6 @@ def _replace_section(text: str, heading: str, body: str) -> str:
         else len(text)
     )
     return text[: heading_match.end()] + f"\n\n{body}\n\n" + text[end:]
-
-
-def _resolve_raw_path(
-    vault: Path, raw_path_value: Any
-) -> tuple[Path | None, str | None]:
-    if not isinstance(raw_path_value, str) or not raw_path_value.strip():
-        return None, "raw_path_missing_frontmatter"
-    relative = Path(raw_path_value)
-    if relative.is_absolute():
-        return None, "raw_path_outside_vault"
-    resolved = (vault / relative).resolve()
-    try:
-        resolved.relative_to(vault)
-    except ValueError:
-        return None, "raw_path_outside_vault"
-    if not resolved.is_file():
-        return None, "raw_path_not_file"
-    return resolved, None
 
 
 def _extract_raw_text(
@@ -361,7 +345,9 @@ def _build_page_candidate(
         return entry, None
     registry_id = str((frontmatter or {}).get("registry_id", "")).strip()
     entry["registry_id"] = registry_id or None
-    raw_path, path_error = _resolve_raw_path(vault, (frontmatter or {}).get("raw_path"))
+    raw_path, path_error = resolve_source_raw_path(
+        vault, (frontmatter or {}).get("raw_path")
+    )
     if path_error is not None or raw_path is None:
         entry["reason_codes"] = [path_error]
         return entry, None

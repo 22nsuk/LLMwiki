@@ -219,6 +219,38 @@ class SourceSubstanceCohortClassifyTests(unittest.TestCase):
                 "no_action",
             )
 
+    def test_raw_paths_outside_vault_are_not_read_or_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            vault = self._seed_vault(root)
+            outside = root / "outside.txt"
+            outside.write_text("host-only evidence", encoding="utf-8")
+            pages = {
+                "wiki/source--absolute.md": str(outside),
+                "wiki/source--traversal.md": "../outside.txt",
+            }
+            for relative_path, raw_path in pages.items():
+                path = vault / relative_path
+                path.write_text(
+                    _source_page(
+                        title=path.stem,
+                        created="2026-07-12",
+                        raw_path=raw_path,
+                    ),
+                    encoding="utf-8",
+                )
+
+            report = build_report(vault)
+            entries = {entry["page"]: entry for entry in report["entries"]}
+
+            for page in pages:
+                entry = entries[page]
+                self.assertIsNone(entry["raw_path"])
+                self.assertFalse(entry["raw_exists"])
+                self.assertEqual(entry["raw_media_class"], "missing")
+                self.assertIsNone(entry["raw_sha256"])
+                self.assertEqual(entry["remediation_route"], "operator_review")
+
     def test_write_report_rejects_invalid_payload_without_writing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = self._seed_vault(Path(temp_dir))
