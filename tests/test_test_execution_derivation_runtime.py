@@ -12,6 +12,7 @@ from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.test.test_execution_derivation_runtime import (
+    JUNIT_SUBTESTS_PASSED_PROPERTY,
     build_collection_manifest,
     collection_manifest_reference_is_current,
     derive_subset_summary,
@@ -56,11 +57,29 @@ def _lifecycle() -> dict[str, object]:
 
 def _junit_xml() -> bytes:
     return b"""<?xml version="1.0" encoding="utf-8"?>
-<testsuites><testsuite name="pytest" tests="2">
+<testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="2">
   <testcase classname="tests.test_sample" name="test_function[value-a]" time="0.001" />
   <testcase classname="tests.test_sample.TestGroup" name="test_method[value-b]" time="0.001" />
 </testsuite></testsuites>
 """
+
+
+def _junit_xml_with_subtests(
+    *,
+    first_property: str = "2",
+    second_property: str = "1",
+    tests: str = "5",
+) -> bytes:
+    return f"""<?xml version="1.0" encoding="utf-8"?>
+<testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="{tests}">
+  <testcase classname="tests.test_sample" name="test_function[value-a]" time="0.001">
+    <properties><property name="{JUNIT_SUBTESTS_PASSED_PROPERTY}" value="{first_property}" /></properties>
+  </testcase>
+  <testcase classname="tests.test_sample.TestGroup" name="test_method[value-b]" time="0.001">
+    <properties><property name="{JUNIT_SUBTESTS_PASSED_PROPERTY}" value="{second_property}" /></properties>
+  </testcase>
+</testsuite></testsuites>
+""".encode()
 
 
 def test_xunit2_classname_name_and_parametrized_names_map_to_canonical_nodeids() -> (
@@ -76,6 +95,61 @@ def test_xunit2_classname_name_and_parametrized_names_map_to_canonical_nodeids()
     assert evidence["testcase_count"] == 2
     assert evidence["counts"]["passed"] == 2
     assert list(evidence["outcomes"]) == sorted(nodeids)
+    assert evidence["subtests_passed"] == 0
+    assert evidence["subtests_passed_by_nodeid"] == dict.fromkeys(sorted(nodeids), 0)
+
+
+def test_xunit2_testcase_properties_account_for_passing_subtests_by_nodeid() -> None:
+    nodeids = [
+        "tests/test_sample.py::test_function[value-a]",
+        "tests/test_sample.py::TestGroup::test_method[value-b]",
+    ]
+
+    evidence = parse_junit_testcases(
+        _junit_xml_with_subtests(), expected_nodeids=nodeids
+    )
+
+    assert evidence["testcase_count"] == 2
+    assert evidence["subtests_passed"] == 3
+    assert evidence["subtests_passed_by_nodeid"] == {
+        nodeids[0]: 2,
+        nodeids[1]: 1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("xml", "message"),
+    [
+        (
+            _junit_xml_with_subtests().replace(
+                f'<property name="{JUNIT_SUBTESTS_PASSED_PROPERTY}" value="1" />'.encode(),
+                b"",
+            ),
+            "missing testcase property",
+        ),
+        (
+            _junit_xml_with_subtests().replace(
+                f'<property name="{JUNIT_SUBTESTS_PASSED_PROPERTY}" value="2" />'.encode(),
+                (
+                    f'<property name="{JUNIT_SUBTESTS_PASSED_PROPERTY}" value="2" />'
+                    f'<property name="{JUNIT_SUBTESTS_PASSED_PROPERTY}" value="0" />'
+                ).encode(),
+            ),
+            "duplicate",
+        ),
+        (_junit_xml_with_subtests(first_property="many"), "not an integer"),
+        (_junit_xml_with_subtests(tests="6"), "do not match testsuite aggregate"),
+    ],
+)
+def test_subtest_property_authority_fails_closed(xml: bytes, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        parse_junit_testcases(
+            xml,
+            expected_nodeids=[
+                "tests/test_sample.py::test_function[value-a]",
+                "tests/test_sample.py::TestGroup::test_method[value-b]",
+            ],
+        )
 
 
 @pytest.mark.parametrize(
@@ -114,7 +188,12 @@ def test_junit_authority_fails_closed_for_missing_duplicate_unmatched_or_malform
         )
 
 
-def _derived_fixture(vault: Path) -> tuple[dict, dict, dict, dict]:
+def _derived_fixture(
+    vault: Path,
+    *,
+    junit_xml: bytes | None = None,
+    stdout: str = "2 passed in 0.01s",
+) -> tuple[dict, dict, dict, dict]:
     nodeids = [
         "tests/test_sample.py::test_function[value-a]",
         "tests/test_sample.py::TestGroup::test_method[value-b]",
@@ -143,7 +222,7 @@ def _derived_fixture(vault: Path) -> tuple[dict, dict, dict, dict]:
     result = TimedProcessResult(
         args=["python", "-m", "pytest"],
         returncode=0,
-        stdout="2 passed in 0.01s",
+        stdout=stdout,
         stderr="",
         timed_out=False,
         timeout_seconds=30,
@@ -159,14 +238,15 @@ def _derived_fixture(vault: Path) -> tuple[dict, dict, dict, dict]:
         collect_nodeid_digest=digest,
         context=FIXED_CONTEXT,
     )
-    junit_evidence = parse_junit_testcases(_junit_xml(), expected_nodeids=nodeids)
+    xml = junit_xml if junit_xml is not None else _junit_xml()
+    junit_evidence = parse_junit_testcases(xml, expected_nodeids=nodeids)
     full_summary["evidence_artifacts"] = [
         {
             "kind": "junit_xml",
             "path": "build/release-payloads/full.junit.xml",
             "exists": True,
-            "size_bytes": len(_junit_xml()),
-            "sha256": hashlib.sha256(_junit_xml()).hexdigest(),
+            "size_bytes": len(xml),
+            "sha256": hashlib.sha256(xml).hexdigest(),
             "source": "pytest_junit_xml",
         }
     ]
@@ -184,6 +264,58 @@ def _derived_fixture(vault: Path) -> tuple[dict, dict, dict, dict]:
         full_summary, junit_evidence, full_manifest, selected_manifest
     )
     return derived, full_summary, full_manifest, selected_manifest
+
+
+def test_selected_subset_sums_only_its_parent_subtest_properties(
+    tmp_path: Path,
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+
+    derived, full_summary, full_manifest, selected_manifest = _derived_fixture(
+        vault,
+        junit_xml=_junit_xml_with_subtests(),
+        stdout="2 passed, 3 subtests passed in 0.01s",
+    )
+
+    assert full_summary["counts"]["subtests_passed"] == 3
+    assert derived["counts"]["passed"] == 1
+    assert derived["counts"]["subtests_passed"] == 2
+    direct = deepcopy(derived)
+    direct.pop("evidence_origin")
+    direct.pop("derivation")
+    direct["summary_mode"] = "single"
+    assert subset_summary_parity(derived, direct)["status"] == "pass"
+
+    mismatched_summary = deepcopy(full_summary)
+    mismatched_summary["counts"]["subtests_passed"] = 2
+    with pytest.raises(ValueError, match="subtests_passed"):
+        derive_subset_summary(
+            mismatched_summary,
+            parse_junit_testcases(
+                _junit_xml_with_subtests(), expected_nodeids=full_manifest["nodeids"]
+            ),
+            full_manifest,
+            selected_manifest,
+        )
+
+    drifted_evidence = parse_junit_testcases(
+        _junit_xml_with_subtests(), expected_nodeids=full_manifest["nodeids"]
+    )
+    nodeid_with_two_subtests = next(
+        nodeid
+        for nodeid, count in drifted_evidence["subtests_passed_by_nodeid"].items()
+        if count == 2
+    )
+    drifted_evidence["subtests_passed_by_nodeid"][nodeid_with_two_subtests] = 1
+    with pytest.raises(ValueError, match="subtest accounting does not match"):
+        derive_subset_summary(
+            full_summary,
+            drifted_evidence,
+            full_manifest,
+            selected_manifest,
+        )
 
 
 def test_collection_manifest_and_derived_summary_are_schema_backed_and_deterministic(

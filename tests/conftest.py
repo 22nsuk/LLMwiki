@@ -10,9 +10,14 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import pytest
+from _pytest.reports import TestReport
+from _pytest.unittest import SubtestReport
 from hypothesis import HealthCheck, settings
 
 from ops.scripts.test.test_execution_command_runtime import PYTEST_OPTION_VALUE_FLAGS
+from ops.scripts.test.test_execution_derivation_runtime import (
+    JUNIT_SUBTESTS_PASSED_PROPERTY,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.report_contract_test_runtime import (
     ReportPayloadMap,
@@ -36,6 +41,7 @@ MAKE_PYTEST_ENTRYPOINT_ENV = "LLMWIKI_MAKE_PYTEST_ENTRYPOINT"
 HYPOTHESIS_PROFILE = "llmwiki"
 DEFAULT_HYPOTHESIS_MAX_EXAMPLES = 30
 PYTEST_SCOPE_VALUE_FLAGS = {"-k", "-m", "--deselect", "--ignore", "--ignore-glob"}
+_PASSED_SUBTEST_COUNTS: dict[str, int] = {}
 
 
 def _is_bare_pytest_invocation(argv0: str) -> bool:
@@ -168,3 +174,40 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
                 raise pytest.UsageError(
                     f"{item.nodeid} declares unauthorized marker combination for {marker}: {unknown_overlap}"
                 )
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_logreport(report: TestReport) -> None:
+    if isinstance(report, SubtestReport):
+        if report.passed:
+            _PASSED_SUBTEST_COUNTS[report.nodeid] = (
+                _PASSED_SUBTEST_COUNTS.get(report.nodeid, 0) + 1
+            )
+        return
+    if report.when != "teardown":
+        return
+
+    passed_count = _PASSED_SUBTEST_COUNTS.pop(report.nodeid, 0)
+    existing = [
+        value
+        for name, value in report.user_properties
+        if name == JUNIT_SUBTESTS_PASSED_PROPERTY
+    ]
+    if len(existing) > 1:
+        raise pytest.UsageError(
+            f"{report.nodeid} has duplicate {JUNIT_SUBTESTS_PASSED_PROPERTY!r} properties"
+        )
+    if existing:
+        value = existing[0]
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise pytest.UsageError(
+                f"{report.nodeid} has malformed {JUNIT_SUBTESTS_PASSED_PROPERTY!r} "
+                f"property: {value!r}"
+            )
+        if value != passed_count:
+            raise pytest.UsageError(
+                f"{report.nodeid} has conflicting {JUNIT_SUBTESTS_PASSED_PROPERTY!r} "
+                f"property: expected {passed_count}, got {value}"
+            )
+        return
+    report.user_properties.append((JUNIT_SUBTESTS_PASSED_PROPERTY, passed_count))

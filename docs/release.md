@@ -576,7 +576,10 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   minimal OIDC attestation job. The importer invokes `gh attestation verify`
   with the registry-owned exact repository and signer workflow, current source
   digest, and self-hosted-runner denial, then replays embedded schemas and
-  revision/tree/command/toolchain/collection/JUnit bindings. This remains
+  revision/tree/command/toolchain/collection/JUnit bindings. Full-suite JUnit
+  evidence records `llmwiki.subtests_passed` on every parent testcase; subset
+  derivation requires those per-node counts whenever the suite aggregate
+  reports subtests and rejects missing or inconsistent accounting. This remains
   additive diagnostic evidence: it is not consumed by `release-run-ready`,
   preseal, publish authority, or canonical summary promotion.
 - `ops/reports/public-check-summary.json` proves the registry-default exported

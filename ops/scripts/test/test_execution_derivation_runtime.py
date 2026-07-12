@@ -32,6 +32,7 @@ from ops.scripts.test.test_execution_evidence_runtime import (
 COLLECTION_MANIFEST_SCHEMA_PATH = "ops/schemas/test-execution-collection-manifest.schema.json"
 PRODUCER = "ops.scripts.test_execution_summary"
 OUTCOME_LABELS = ("passed", "failed", "errors", "skipped", "xfailed", "xpassed")
+JUNIT_SUBTESTS_PASSED_PROPERTY = "llmwiki.subtests_passed"
 
 
 def canonical_json_sha256(payload: Any) -> str:
@@ -285,6 +286,114 @@ def _junit_outcome(testcase: ET.Element) -> str:
     )
 
 
+def _junit_integer_attribute(
+    element: ET.Element, attribute: str, *, context: str
+) -> int:
+    value = element.attrib.get(attribute)
+    if value is None:
+        raise ValueError(f"{context} is missing {attribute!r}")
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise ValueError(f"{context} has non-integer {attribute!r}: {value!r}") from exc
+    if parsed < 0:
+        raise ValueError(f"{context} has negative {attribute!r}: {parsed}")
+    return parsed
+
+
+def _leaf_junit_suites(root: ET.Element) -> list[ET.Element]:
+    suites = [
+        element
+        for element in root.iter()
+        if _xml_local_name(str(element.tag)) == "testsuite"
+    ]
+    leaves = [
+        suite
+        for suite in suites
+        if not any(_xml_local_name(str(child.tag)) == "testsuite" for child in suite)
+    ]
+    if not leaves:
+        raise ValueError("JUnit XML contains no leaf testsuite")
+    return leaves
+
+
+def _junit_subtests_passed_property(testcase: ET.Element) -> int | None:
+    values = [
+        property_element.attrib.get("value")
+        for child in testcase
+        if _xml_local_name(str(child.tag)) == "properties"
+        for property_element in child
+        if _xml_local_name(str(property_element.tag)) == "property"
+        and property_element.attrib.get("name") == JUNIT_SUBTESTS_PASSED_PROPERTY
+    ]
+    if len(values) > 1:
+        raise ValueError(
+            "JUnit testcase contains duplicate "
+            f"{JUNIT_SUBTESTS_PASSED_PROPERTY!r} properties"
+        )
+    if not values:
+        return None
+    value = values[0]
+    if value is None:
+        raise ValueError(
+            "JUnit testcase property "
+            f"{JUNIT_SUBTESTS_PASSED_PROPERTY!r} is missing its value"
+        )
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise ValueError(
+            "JUnit testcase property "
+            f"{JUNIT_SUBTESTS_PASSED_PROPERTY!r} is not an integer: {value!r}"
+        ) from exc
+    if parsed < 0:
+        raise ValueError(
+            "JUnit testcase property "
+            f"{JUNIT_SUBTESTS_PASSED_PROPERTY!r} is negative: {parsed}"
+        )
+    return parsed
+
+
+def _junit_subtest_total_for_suite(
+    suite: ET.Element,
+    *,
+    testcase_outcomes: list[str],
+) -> int:
+    context = f"JUnit testsuite {suite.attrib.get('name', '<unnamed>')!r}"
+    declared = {
+        label: _junit_integer_attribute(suite, label, context=context)
+        for label in ("tests", "errors", "failures", "skipped")
+    }
+    encoded = Counter(testcase_outcomes)
+    encoded_raw = {
+        "tests": len(testcase_outcomes),
+        "errors": int(encoded.get("errors", 0)),
+        "failures": int(encoded.get("failed", 0) + encoded.get("xpassed", 0)),
+        "skipped": int(encoded.get("skipped", 0) + encoded.get("xfailed", 0)),
+    }
+    deltas = {label: declared[label] - encoded_raw[label] for label in declared}
+    if any(value < 0 for value in deltas.values()):
+        raise ValueError(
+            f"{context} aggregate counts are smaller than emitted testcases: {deltas}"
+        )
+    if any(deltas[label] for label in ("errors", "failures", "skipped")):
+        raise ValueError(
+            f"{context} contains non-passing subtest outcomes that cannot be "
+            f"represented by subtests_passed: {deltas}"
+        )
+    subtests_passed = deltas["tests"]
+    declared_passed = (
+        declared["tests"]
+        - declared["errors"]
+        - declared["failures"]
+        - declared["skipped"]
+    )
+    encoded_passed = int(encoded.get("passed", 0))
+    if declared_passed - encoded_passed != subtests_passed:
+        raise ValueError(f"{context} passing count does not reconcile with testcases")
+    return subtests_passed
+
+
 def parse_junit_testcases(
     junit_xml: str | bytes,
     *,
@@ -308,22 +417,32 @@ def parse_junit_testcases(
     outcomes: dict[str, str] = {}
     unmatched: list[str] = []
     duplicates: list[str] = []
-    for testcase in (
-        element
-        for element in root.iter()
-        if _xml_local_name(str(element.tag)) == "testcase"
-    ):
-        classname = testcase.attrib.get("classname")
-        name = testcase.attrib.get("name")
-        if not classname or not name:
-            raise ValueError("JUnit testcase is missing xunit2 classname or name")
-        matched_nodeid = identity_map.get((classname, name))
-        if matched_nodeid is None:
-            unmatched.append(f"{classname}::{name}")
-        elif matched_nodeid in outcomes:
-            duplicates.append(matched_nodeid)
-        else:
-            outcomes[matched_nodeid] = _junit_outcome(testcase)
+    suite_cases: list[tuple[ET.Element, list[str]]] = []
+    subtests_by_nodeid: dict[str, int | None] = {}
+    for suite in _leaf_junit_suites(root):
+        testcase_outcomes: list[str] = []
+        testcases = [
+            child for child in suite if _xml_local_name(str(child.tag)) == "testcase"
+        ]
+        for testcase in testcases:
+            classname = testcase.attrib.get("classname")
+            name = testcase.attrib.get("name")
+            if not classname or not name:
+                raise ValueError("JUnit testcase is missing xunit2 classname or name")
+            matched_nodeid = identity_map.get((classname, name))
+            if matched_nodeid is None:
+                unmatched.append(f"{classname}::{name}")
+                continue
+            if matched_nodeid in outcomes:
+                duplicates.append(matched_nodeid)
+                continue
+            outcome = _junit_outcome(testcase)
+            outcomes[matched_nodeid] = outcome
+            testcase_outcomes.append(outcome)
+            subtests_by_nodeid[matched_nodeid] = _junit_subtests_passed_property(
+                testcase
+            )
+        suite_cases.append((suite, testcase_outcomes))
     missing = sorted(set(expected) - set(outcomes))
     if missing or duplicates or unmatched:
         details = []
@@ -336,12 +455,41 @@ def parse_junit_testcases(
         raise ValueError(
             "JUnit testcase authority derivation failed: " + "; ".join(details)
         )
+    junit_subtests_passed = sum(
+        _junit_subtest_total_for_suite(
+            suite,
+            testcase_outcomes=testcase_outcomes,
+        )
+        for suite, testcase_outcomes in suite_cases
+    )
+    if junit_subtests_passed:
+        missing_properties = sorted(
+            nodeid for nodeid, value in subtests_by_nodeid.items() if value is None
+        )
+        if missing_properties:
+            raise ValueError(
+                "JUnit subtest authority is missing testcase property "
+                f"{JUNIT_SUBTESTS_PASSED_PROPERTY!r}: {missing_properties}"
+            )
+    normalized_subtests_by_nodeid = {
+        nodeid: int(value or 0) for nodeid, value in subtests_by_nodeid.items()
+    }
+    property_total = sum(normalized_subtests_by_nodeid.values())
+    if property_total != junit_subtests_passed:
+        raise ValueError(
+            "JUnit testcase subtest properties do not match testsuite aggregate: "
+            f"properties={property_total}, aggregate={junit_subtests_passed}"
+        )
     counts = Counter(outcomes.values())
     return {
         "sha256": hashlib.sha256(raw).hexdigest(),
         "testcase_count": len(outcomes),
         "outcomes": dict(sorted(outcomes.items())),
         "counts": {label: int(counts.get(label, 0)) for label in OUTCOME_LABELS},
+        "subtests_passed_by_nodeid": dict(
+            sorted(normalized_subtests_by_nodeid.items())
+        ),
+        "subtests_passed": junit_subtests_passed,
     }
 
 
@@ -350,13 +498,22 @@ def _require_matching_outcomes(
 ) -> None:
     summary_counts = full_summary.get("counts", {})
     junit_counts = junit_evidence.get("counts", {})
+    subtests_by_nodeid = junit_evidence.get("subtests_passed_by_nodeid")
+    if not isinstance(subtests_by_nodeid, dict) or any(
+        not isinstance(value, int) or isinstance(value, bool) or value < 0
+        for value in subtests_by_nodeid.values()
+    ):
+        raise ValueError("JUnit per-node subtest accounting is malformed")
+    junit_subtests_passed = int(junit_evidence.get("subtests_passed", 0) or 0)
+    if sum(subtests_by_nodeid.values()) != junit_subtests_passed:
+        raise ValueError("JUnit per-node subtest accounting does not match its total")
     mismatched = [
         label
         for label in OUTCOME_LABELS
         if int(summary_counts.get(label, 0) or 0)
         != int(junit_counts.get(label, 0) or 0)
     ]
-    if int(summary_counts.get("subtests_passed", 0) or 0):
+    if int(summary_counts.get("subtests_passed", 0) or 0) != junit_subtests_passed:
         mismatched.append("subtests_passed")
     if mismatched:
         raise ValueError(
@@ -372,6 +529,66 @@ def _derived_status(counts: dict[str, int]) -> str:
     return "pass"
 
 
+def _derived_subset_counts(
+    junit_evidence: dict[str, Any],
+    *,
+    full_set: set[str],
+    selected: list[str],
+    outcomes: dict[str, Any],
+) -> dict[str, int]:
+    subtests_by_nodeid = junit_evidence.get("subtests_passed_by_nodeid", {})
+    if set(subtests_by_nodeid) != full_set:
+        raise ValueError(
+            "JUnit subtest-accounting nodeids do not exactly match full collection manifest"
+        )
+    subset_counter = Counter(str(outcomes[nodeid]) for nodeid in selected)
+    counts = {label: int(subset_counter.get(label, 0)) for label in OUTCOME_LABELS}
+    counts["warnings"] = 0
+    counts["subtests_passed"] = sum(
+        int(subtests_by_nodeid[nodeid]) for nodeid in selected
+    )
+    return counts
+
+
+def _derived_subset_deselection_metadata(
+    selected_manifest: dict[str, Any],
+    *,
+    full_set: set[str],
+    selected: list[str],
+) -> tuple[list[dict[str, Any]], dict[str, Any], int, int]:
+    deselected_tests = deepcopy(selected_manifest.get("deselected_tests", []))
+    lifecycle = deepcopy(selected_manifest.get("deselection_lifecycle", {}))
+    policy_deselected_count = len(deselected_tests)
+    marker_deselected_count = len(full_set) - len(selected) - policy_deselected_count
+    if marker_deselected_count < 0:
+        raise ValueError(
+            "selected deselection metadata exceeds full-to-subset deselection count"
+        )
+    return (
+        deselected_tests,
+        lifecycle,
+        policy_deselected_count,
+        marker_deselected_count,
+    )
+
+
+def _derived_input_fingerprints(
+    full_summary: dict[str, Any],
+    junit_evidence: dict[str, Any],
+    collection_manifest: dict[str, Any],
+    selected_manifest: dict[str, Any],
+) -> dict[str, str]:
+    return {
+        "parent_summary": canonical_json_sha256(full_summary),
+        "junit_xml": str(junit_evidence["sha256"]),
+        "full_collection_manifest": canonical_json_sha256(collection_manifest),
+        "selected_collection_manifest": canonical_json_sha256(selected_manifest),
+        "selector_semantic_command": str(
+            selected_manifest["semantic_command_sha256"]
+        ),
+    }
+
+
 def _build_validated_subset_summary(
     full_summary: dict[str, Any],
     junit_evidence: dict[str, Any],
@@ -382,17 +599,22 @@ def _build_validated_subset_summary(
     selected: list[str],
     outcomes: dict[str, Any],
 ) -> dict[str, Any]:
-    subset_counter = Counter(str(outcomes[nodeid]) for nodeid in selected)
-    counts = {label: int(subset_counter.get(label, 0)) for label in OUTCOME_LABELS}
-    counts.update({"warnings": 0, "subtests_passed": 0})
-    deselected_tests = deepcopy(selected_manifest.get("deselected_tests", []))
-    lifecycle = deepcopy(selected_manifest.get("deselection_lifecycle", {}))
-    policy_deselected_count = len(deselected_tests)
-    marker_deselected_count = len(full_set) - len(selected) - policy_deselected_count
-    if marker_deselected_count < 0:
-        raise ValueError(
-            "selected deselection metadata exceeds full-to-subset deselection count"
-        )
+    counts = _derived_subset_counts(
+        junit_evidence,
+        full_set=full_set,
+        selected=selected,
+        outcomes=outcomes,
+    )
+    (
+        deselected_tests,
+        lifecycle,
+        policy_deselected_count,
+        marker_deselected_count,
+    ) = _derived_subset_deselection_metadata(
+        selected_manifest,
+        full_set=full_set,
+        selected=selected,
+    )
     semantic_command = str(selected_manifest["semantic_command"])
     selected_digest = str(selected_manifest["nodeids_sha256"])
     status = _derived_status(counts)
@@ -400,17 +622,12 @@ def _build_validated_subset_summary(
     derived.update(
         {
             "source_command": "python -m ops.scripts.test_execution_summary --derive-subset-from-full",
-            "input_fingerprints": {
-                "parent_summary": canonical_json_sha256(full_summary),
-                "junit_xml": str(junit_evidence["sha256"]),
-                "full_collection_manifest": canonical_json_sha256(collection_manifest),
-                "selected_collection_manifest": canonical_json_sha256(
-                    selected_manifest
-                ),
-                "selector_semantic_command": str(
-                    selected_manifest["semantic_command_sha256"]
-                ),
-            },
+            "input_fingerprints": _derived_input_fingerprints(
+                full_summary,
+                junit_evidence,
+                collection_manifest,
+                selected_manifest,
+            ),
             "suite": "report-contract-summary",
             "suite_scope": "report_contract_summary",
             "represents_full_suite": False,
