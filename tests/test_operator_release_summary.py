@@ -180,6 +180,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
                     "auto_improve_lane_status": "pass",
                     "accepted_risk_count": 0,
                     "gate_attention_count": 0,
+                    "gate_attention_codes": [],
                     "learning_claim_blocking_family_count": 0,
                     "advisory_lifecycle_family_count": 0,
                 },
@@ -590,6 +591,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
             {
                 "accepted_risk_count": 0,
                 "gate_attention_count": 1,
+                "gate_attention_codes": ["dashboard_attention_gate"],
                 "learning_claim_blocking_family_count": 2,
                 "advisory_lifecycle_family_count": 3,
             }
@@ -602,6 +604,10 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertEqual(report["accepted_risk"]["release_accepted_risk_count"], 0)
         self.assertEqual(report["accepted_risk"]["accepted_learning_risk_count"], 0)
         self.assertEqual(report["accepted_risk"]["gate_attention_count"], 1)
+        self.assertEqual(
+            report["accepted_risk"]["gate_attention_codes"],
+            ["dashboard_attention_gate"],
+        )
         self.assertNotIn("dashboard_attention_gate_count", report["accepted_risk"])
         self.assertEqual(report["accepted_risk"]["learning_claim_blocking_family_count"], 2)
         self.assertEqual(report["accepted_risk"]["advisory_lifecycle_family_count"], 3)
@@ -611,7 +617,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertIn("gate_attention=1", report["operator_summary"])
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_operator_summary_emits_deduplicated_closeout_identity_codes(self) -> None:
+    def test_operator_summary_keeps_gate_and_closeout_lane_identities_separate(self) -> None:
         closeout_path = self.vault / "ops/reports/release-closeout-summary.json"
         closeout = json.loads(closeout_path.read_text(encoding="utf-8"))
         learning_issue = {
@@ -631,10 +637,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         report = build_report(self.vault, context=fixed_context())
 
         accepted_risk = report["accepted_risk"]
-        self.assertEqual(
-            accepted_risk["gate_attention_codes"],
-            ["archive_review_backlog", "promotion_blocked_by_release_batch_manifest_failure"],
-        )
+        self.assertEqual(accepted_risk["gate_attention_codes"], [])
         self.assertEqual(
             accepted_risk["learning_claim_blocking_codes"],
             ["promotion_blocked_by_release_batch_manifest_failure"],

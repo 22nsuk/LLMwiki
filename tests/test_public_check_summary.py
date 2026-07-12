@@ -843,6 +843,23 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 ["--mode", "full", "--pytest-mark-expr", "public"]
             )
 
+    def test_programmatic_full_mode_is_selectorless_and_rejects_marker_filters(self) -> None:
+        request = PublicCheckRequest(mode="full")
+
+        command, _summary_path = public_check_summary_module._pytest_public_summary_command(
+            public_python="python",
+            request=request,
+            reuse_from=Path("ops/reports/test-execution-summary-public.json"),
+        )
+
+        self.assertEqual(request.pytest_mark_expr, "")
+        self.assertEqual(command[-3:], ["python", "-m", "pytest"])
+        self.assertNotIn("public", command)
+        with self.assertRaisesRegex(
+            ValueError, "full mode requires an empty pytest marker expression"
+        ):
+            PublicCheckRequest(mode="full", pytest_mark_expr="public")
+
     def test_cross_mode_reuse_is_rejected_in_both_directions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

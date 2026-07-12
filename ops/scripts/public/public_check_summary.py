@@ -90,10 +90,24 @@ class PublicCheckRequest:
     public_python: str = sys.executable
     ruff_targets: str = "ops/scripts tests tools"
     mypy_targets: str = "ops/scripts"
-    pytest_mark_expr: str = "public"
+    pytest_mark_expr: str | None = None
     pytest_flags: str = ""
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
     heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS
+
+    def __post_init__(self) -> None:
+        pytest_mark_expr = self.pytest_mark_expr
+        if pytest_mark_expr is None:
+            pytest_mark_expr = "" if self.mode == "full" else "public"
+        if self.mode == "full" and pytest_mark_expr.strip():
+            raise ValueError("full mode requires an empty pytest marker expression")
+        object.__setattr__(self, "pytest_mark_expr", pytest_mark_expr)
+
+    @property
+    def effective_pytest_mark_expr(self) -> str:
+        value = self.pytest_mark_expr
+        assert value is not None
+        return value
 
 
 @dataclass(frozen=True)
@@ -265,8 +279,10 @@ def _public_check_config_payload(vault: Path, request: PublicCheckRequest) -> di
         },
         "pytest": {
             "flags": shlex.split(request.pytest_flags),
-            "mark_expr": request.pytest_mark_expr,
-            "summary_suite": _pytest_public_summary_suite(request.pytest_mark_expr),
+            "mark_expr": request.effective_pytest_mark_expr,
+            "summary_suite": _pytest_public_summary_suite(
+                request.effective_pytest_mark_expr
+            ),
         },
         "timeout_seconds": request.timeout_seconds,
         "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
@@ -292,8 +308,9 @@ def _pytest_public_summary_command(
     reuse_from: Path,
 ) -> tuple[list[str], Path]:
     pytest_command = [public_python, "-m", "pytest"]
-    if request.pytest_mark_expr.strip():
-        pytest_command.extend(["-m", request.pytest_mark_expr])
+    pytest_mark_expr = request.effective_pytest_mark_expr
+    if pytest_mark_expr.strip():
+        pytest_command.extend(["-m", pytest_mark_expr])
     pytest_command.extend(shlex.split(request.pytest_flags))
     summary_rel_path = Path(PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH)
     return (
@@ -306,7 +323,7 @@ def _pytest_public_summary_command(
             "--out",
             summary_rel_path.as_posix(),
             "--suite",
-            _pytest_public_summary_suite(request.pytest_mark_expr),
+            _pytest_public_summary_suite(pytest_mark_expr),
             "--timeout-seconds",
             str(request.timeout_seconds),
             "--reuse-if-current",

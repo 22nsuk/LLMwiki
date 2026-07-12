@@ -95,6 +95,7 @@ class BatchArtifactInventory:
 class DashboardDecisionInputs:
     accepted_risk_count: int
     gate_attention_count: int
+    gate_attention_codes: list[str]
 
 
 @dataclass(frozen=True)
@@ -123,6 +124,7 @@ class ReleaseDecisionInputs:
     accepted_risk_family_count: int
     accepted_risk_count: int
     gate_attention_count: int
+    gate_attention_codes: list[str]
     learning_lane_status: str
     auto_improve_lane_status: str
     learning_claim_guard_status: str
@@ -818,21 +820,31 @@ def _gate_is_attention(gate: object) -> bool:
     )
 
 
-def _retired_gate_attention_count(
+def _active_gate_attention_codes(
     gates: object,
     *,
     retired_codes: set[str],
-) -> int:
-    if not retired_codes or not isinstance(gates, list):
-        return 0
-    count = 0
+) -> list[str]:
+    if not isinstance(gates, list):
+        return []
+    identities: list[str] = []
+    seen: set[str] = set()
     for gate in gates:
         if not _gate_is_attention(gate):
             continue
         codes = set(_gate_attention_codes(gate))
-        if codes and codes <= retired_codes:
-            count += 1
-    return count
+        active_codes = codes - retired_codes
+        if codes and not active_codes:
+            continue
+        gate_id = str(gate.get("gate_id", "")).strip() if isinstance(gate, dict) else ""
+        identity = next(iter(active_codes)) if len(active_codes) == 1 else gate_id
+        if identity in seen:
+            identity = gate_id
+        if not identity or identity in seen:
+            raise ValueError("dashboard attention gates must have unique identities")
+        seen.add(identity)
+        identities.append(identity)
+    return sorted(identities)
 
 
 def _artifact_record(
@@ -952,18 +964,14 @@ def _dashboard_decision_inputs(
         accepted_risks,
         active_risks,
     )
-    gate_attention_count = int(dashboard_summary.get("gate_attention_count", 0) or 0)
-    gate_attention_count = max(
-        0,
-        gate_attention_count
-        - _retired_gate_attention_count(
-            dashboard.get("gates", []),
-            retired_codes=retired_codes,
-        ),
+    gate_attention_codes = _active_gate_attention_codes(
+        dashboard.get("gates", []),
+        retired_codes=retired_codes,
     )
     return DashboardDecisionInputs(
         accepted_risk_count=accepted_risk_count,
-        gate_attention_count=gate_attention_count,
+        gate_attention_count=len(gate_attention_codes),
+        gate_attention_codes=gate_attention_codes,
     )
 
 
@@ -1053,6 +1061,7 @@ def _release_decision_inputs(
         ),
         accepted_risk_count=dashboard.accepted_risk_count,
         gate_attention_count=dashboard.gate_attention_count,
+        gate_attention_codes=dashboard.gate_attention_codes,
         learning_lane_status=lane.learning_lane_status,
         auto_improve_lane_status=lane.auto_improve_lane_status,
         learning_claim_guard_status=lane.learning_claim_guard_status,
@@ -1230,6 +1239,7 @@ def _release_decision_snapshot(release: ReleaseDecisionInputs) -> dict[str, Any]
         "advisory_lifecycle_family_count": release.advisory_lifecycle_family_count,
         "accepted_risk_count": release.accepted_risk_count,
         "gate_attention_count": release.gate_attention_count,
+        "gate_attention_codes": release.gate_attention_codes,
         "accepted_risk_family_count": release.accepted_risk_family_count,
         "accepted_risks": release.accepted_risks,
     }
