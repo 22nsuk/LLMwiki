@@ -61,6 +61,7 @@ DEFAULT_OUT = "ops/reports/public-check-summary.json"
 PRODUCER = "ops.scripts.public_check_summary"
 SCHEMA_PATH = "ops/schemas/public-check-summary.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.public_check_summary --vault ."
+FULL_SOURCE_COMMAND = "python -m ops.scripts.public_check_summary --vault . --mode full"
 DEFAULT_TIMEOUT_SECONDS = 5400
 DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 30
 TAIL_LINE_COUNT = 80
@@ -84,14 +85,29 @@ PRIVATE_EXPORT_PATTERNS = (
 
 @dataclass(frozen=True)
 class PublicCheckRequest:
+    mode: str = "default"
     public_out: str = DEFAULT_PUBLIC_OUT
     public_python: str = sys.executable
     ruff_targets: str = "ops/scripts tests tools"
     mypy_targets: str = "ops/scripts"
-    pytest_mark_expr: str = "public"
+    pytest_mark_expr: str | None = None
     pytest_flags: str = ""
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
     heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS
+
+    def __post_init__(self) -> None:
+        pytest_mark_expr = self.pytest_mark_expr
+        if pytest_mark_expr is None:
+            pytest_mark_expr = "" if self.mode == "full" else "public"
+        if self.mode == "full" and pytest_mark_expr.strip():
+            raise ValueError("full mode requires an empty pytest marker expression")
+        object.__setattr__(self, "pytest_mark_expr", pytest_mark_expr)
+
+    @property
+    def effective_pytest_mark_expr(self) -> str:
+        value = self.pytest_mark_expr
+        assert value is not None
+        return value
 
 
 @dataclass(frozen=True)
@@ -245,6 +261,8 @@ def _public_check_config_payload(vault: Path, request: PublicCheckRequest) -> di
         public_out_boundary = "outside_source_vault"
     return {
         "version": 1,
+        "mode": request.mode,
+        "source_command": _public_check_source_command(request),
         "public_out": {
             "boundary": public_out_boundary,
             "relative_to_vault": public_out_relative_to_vault,
@@ -261,8 +279,10 @@ def _public_check_config_payload(vault: Path, request: PublicCheckRequest) -> di
         },
         "pytest": {
             "flags": shlex.split(request.pytest_flags),
-            "mark_expr": request.pytest_mark_expr,
-            "summary_suite": _pytest_public_summary_suite(request.pytest_mark_expr),
+            "mark_expr": request.effective_pytest_mark_expr,
+            "summary_suite": _pytest_public_summary_suite(
+                request.effective_pytest_mark_expr
+            ),
         },
         "timeout_seconds": request.timeout_seconds,
         "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
@@ -277,6 +297,10 @@ def _public_check_config_fingerprint(vault: Path, request: PublicCheckRequest) -
     return _canonical_sha256(_public_check_config_payload(vault, request))
 
 
+def _public_check_source_command(request: PublicCheckRequest) -> str:
+    return FULL_SOURCE_COMMAND if request.mode == "full" else SOURCE_COMMAND
+
+
 def _pytest_public_summary_command(
     *,
     public_python: str,
@@ -284,8 +308,9 @@ def _pytest_public_summary_command(
     reuse_from: Path,
 ) -> tuple[list[str], Path]:
     pytest_command = [public_python, "-m", "pytest"]
-    if request.pytest_mark_expr.strip():
-        pytest_command.extend(["-m", request.pytest_mark_expr])
+    pytest_mark_expr = request.effective_pytest_mark_expr
+    if pytest_mark_expr.strip():
+        pytest_command.extend(["-m", pytest_mark_expr])
     pytest_command.extend(shlex.split(request.pytest_flags))
     summary_rel_path = Path(PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH)
     return (
@@ -298,7 +323,7 @@ def _pytest_public_summary_command(
             "--out",
             summary_rel_path.as_posix(),
             "--suite",
-            _pytest_public_summary_suite(request.pytest_mark_expr),
+            _pytest_public_summary_suite(pytest_mark_expr),
             "--timeout-seconds",
             str(request.timeout_seconds),
             "--reuse-if-current",
@@ -738,7 +763,7 @@ def _render_public_check_report(
             generated_at=runtime_context.isoformat_z(),
             artifact_kind="public_check_summary",
             producer=PRODUCER,
-            source_command=SOURCE_COMMAND,
+            source_command=_public_check_source_command(request),
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
             source_paths=source_paths,
@@ -842,6 +867,9 @@ def reusable_summary_diagnostics(
         "source_tree_fingerprint": payload.get("source_tree_fingerprint") == current_source_tree_fingerprint,
     }
     if request is not None:
+        expected_source_command = _public_check_source_command(request)
+        observed_source_command = str(payload.get("source_command", ""))
+        checks["source_command"] = observed_source_command == expected_source_command
         expected_public_check_config_fingerprint = _public_check_config_fingerprint(vault, request)
         observed_public_check_config_fingerprint = str(
             input_fingerprints.get(PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY, "")
@@ -862,6 +890,8 @@ def reusable_summary_diagnostics(
             diagnostics["observed_public_check_config_fingerprint"] = (
                 observed_public_check_config_fingerprint
             )
+            diagnostics["expected_source_command"] = expected_source_command
+            diagnostics["observed_source_command"] = observed_source_command
         return diagnostics
     diagnostics.update(
         {
@@ -902,11 +932,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run public mirror checks and write a canonical summary.")
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument("--mode", choices=("default", "full"), default="default")
     parser.add_argument("--public-out", default=DEFAULT_PUBLIC_OUT)
     parser.add_argument("--public-python", default=sys.executable)
     parser.add_argument("--ruff-targets", default="ops/scripts tests tools")
     parser.add_argument("--mypy-targets", default="ops/scripts")
-    parser.add_argument("--pytest-mark-expr", default="public")
+    parser.add_argument("--pytest-mark-expr")
     parser.add_argument("--pytest-flags", default="")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument("--heartbeat-interval-seconds", type=int, default=DEFAULT_HEARTBEAT_INTERVAL_SECONDS)
@@ -917,7 +948,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="With --reuse-if-current, fail instead of rerunning when the public-check summary is stale.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.pytest_mark_expr is None:
+        args.pytest_mark_expr = "" if args.mode == "full" else "public"
+    elif args.mode == "full" and args.pytest_mark_expr.strip():
+        parser.error("--mode full requires an empty --pytest-mark-expr")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -926,6 +962,7 @@ def main(argv: list[str] | None = None) -> int:
         args.reuse_if_current = True
     vault = Path(args.vault).resolve()
     request = PublicCheckRequest(
+        mode=args.mode,
         public_out=args.public_out,
         public_python=args.public_python,
         ruff_targets=args.ruff_targets,

@@ -227,8 +227,17 @@ def failed_test_nodeids(payload: dict[str, Any]) -> list[str]:
     return sorted(failed)
 
 
-def build_closeout_test_failure_lanes(payload: dict[str, Any], load_status: str) -> list[dict[str, Any]]:
+def build_closeout_test_failure_lanes(
+    payload: dict[str, Any],
+    load_status: str,
+    *,
+    full_suite_ready: bool = False,
+) -> list[dict[str, Any]]:
     command = str(payload.get("command", "")).strip()
+    selected_summary_scope = str(payload.get("suite_scope", "")).strip()
+    full_suite_covers_selected_scope = (
+        full_suite_ready and selected_summary_scope == "report_contract_summary"
+    )
     failed_nodeids = failed_test_nodeids(payload) if load_status == "ok" else []
     lanes: list[dict[str, Any]] = []
     for definition in TEST_FAILURE_LANES:
@@ -240,7 +249,10 @@ def build_closeout_test_failure_lanes(payload: dict[str, Any], load_status: str)
             for nodeid in failed_nodeids
             if any(marker in nodeid for marker in failure_markers)
         ]
-        represented = load_status == "ok" and any(marker in command for marker in command_markers)
+        represented_by_selected_summary = load_status == "ok" and any(
+            marker in command for marker in command_markers
+        )
+        represented = represented_by_selected_summary or full_suite_covers_selected_scope
         if lane_failures:
             status = "fail"
             next_action = str(definition["next_action"])
@@ -253,7 +265,11 @@ def build_closeout_test_failure_lanes(payload: dict[str, Any], load_status: str)
         lanes.append(
             {
                 "lane_id": lane_id,
-                "source_path": "ops/reports/test-execution-summary.json",
+                "source_path": (
+                    "ops/reports/test-execution-summary.json"
+                    if represented_by_selected_summary or lane_failures
+                    else "ops/reports/test-execution-summary-full.json"
+                ),
                 "status": status,
                 "represented_in_summary": represented,
                 "failed_count": len(lane_failures),

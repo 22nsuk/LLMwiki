@@ -8,6 +8,7 @@ from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.test.test_execution_command_runtime import (
     classify_interpreter_path,
     classify_status,
+    collection_semantic_command,
     parse_pytest_counts,
     semantic_command,
 )
@@ -18,6 +19,37 @@ class TestExecutionCommandRuntimeTests(unittest.TestCase):
         self.assertEqual(
             semantic_command(["/tmp/venv/bin/python", "-m", "pytest", "-q", "tests"]),
             ["-m", "pytest", "-q", "tests"],
+        )
+
+    def test_collection_semantic_command_ignores_only_junit_output_path(self) -> None:
+        self.assertEqual(
+            collection_semantic_command(
+                [
+                    "python3",
+                    "-m",
+                    "pytest",
+                    "--junit-xml",
+                    "build/full.junit.xml",
+                    "-m",
+                    "report_contract_core",
+                    "-p",
+                    "no:cacheprovider",
+                ]
+            ),
+            [
+                "-m",
+                "pytest",
+                "-m",
+                "report_contract_core",
+                "-p",
+                "no:cacheprovider",
+            ],
+        )
+        self.assertEqual(
+            collection_semantic_command(
+                ["pytest", "--junitxml=build/full.junit.xml", "tests"]
+            ),
+            ["pytest", "tests"],
         )
         self.assertEqual(
             semantic_command([".venv/bin/pytest", "-q", "tests"]),

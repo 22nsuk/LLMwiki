@@ -169,6 +169,44 @@ used as a cleaned lead without carrying navigation boilerplate.
             self.assertEqual(report["summary"]["review_count"], 1)
             self.assertEqual(report["findings"][0]["quality_status"], "review")
             self.assertIn("summary_below_min_chars", report["findings"][0]["issues"])
+            self.assertEqual(
+                report["findings"][0]["cleaned_raw_lead"]["status"],
+                "insufficient",
+            )
+            self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_reviewed_source_only_empty_raw_body_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            (vault / "raw").mkdir(exist_ok=True)
+            (vault / "raw" / "source.md").write_text(
+                "---\ntitle: Metadata only\nsource: synthetic\n---\n",
+                encoding="utf-8",
+            )
+            write_source(
+                vault / "wiki" / "source--quality.md",
+                summary=(
+                    "A previously generated summary contains two specific facts. "
+                    "Those claims cannot substitute for an empty canonical raw body."
+                ),
+                key_points=[
+                    "The first point is deliberately complete for the admission evaluator.",
+                    "The second point keeps the source page above the old count threshold.",
+                    "The third point demonstrates that page prose is not raw evidence.",
+                    "The fourth point confirms the empty raw must remain registry-only.",
+                ],
+            )
+            matrix_path = vault / "runs" / "matrix.json"
+            write_matrix(matrix_path, [matrix_entry()])
+
+            report = build_report(vault, matrix_path=matrix_path)
+
+            finding = report["findings"][0]
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(finding["quality_status"], "fail")
+            self.assertEqual(finding["cleaned_raw_lead"]["status"], "empty")
+            self.assertIn("raw_body_empty", finding["issues"])
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_low_content_promoted_action_fails_gate(self) -> None:

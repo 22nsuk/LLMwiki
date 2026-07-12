@@ -288,7 +288,7 @@ WORKFLOW_RULES: list[dict[str, Any]] = [
         "targets": [
             "static",
             "sync-derived",
-            "test-report-contract-core",
+            "test-execution-summary-current-or-refresh",
             "generated-artifact-converge",
             "release-finality-resettle",
         ],

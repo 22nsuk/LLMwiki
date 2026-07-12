@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import datetime as dt
 import json
 import re
 from collections.abc import Callable
 from pathlib import Path
 
 from ops.scripts.core.policy_runtime import report_path
-from ops.scripts.core.runtime_context import RuntimeContext
-from ops.scripts.core.workflow_dependency_planner import (
-    build_report as build_workflow_dependency_report,
-)
 
 from .external_report_action_catalog import SOURCE_REVISION_RELEASE_AUTHORITY_REPORTS
 from .external_report_inventory_runtime import (
@@ -51,8 +46,10 @@ from .external_report_release_verification_runtime import (
     _reason_token,
     _release_verified_count_status,
 )
+from .release_closeout_fixed_point import POLICY_PATH as FIXED_POINT_POLICY_PATH
 from .release_workflow_order_guard import (
-    build_report as build_release_workflow_order_guard_report,
+    SPEC_PATH as WORKFLOW_ORDER_SPEC_PATH,
+    release_writer_single_source_contract,
 )
 
 
@@ -1118,38 +1115,23 @@ def collaboration_governance_surface_reason_ids(vault: Path) -> list[str]:
 
 
 def single_source_status(vault: Path) -> str:
-    planner_path = vault / "ops" / "reports" / "workflow-dependency-planner.json"
-    guard_path = vault / "ops" / "reports" / "release-workflow-order-guard.json"
-    planner = load_json_object(planner_path)
-    guard = load_json_object(guard_path)
-    if not planner or not guard:
-        makefile_path = vault / "Makefile"
-        if not makefile_path.is_file():
-            if guard.get("status") == "pass":
-                return "partially_automated"
-            return "planned"
-    runtime_context = RuntimeContext(display_timezone=dt.UTC)
-    if not guard:
-        guard = build_release_workflow_order_guard_report(vault, context=runtime_context)
-    if not planner:
-        planner = build_workflow_dependency_report(vault, context=runtime_context)
-    rules = as_list(planner.get("workflow_rules"))
-    planner_targets: list[str] = []
-    for rule in rules:
-        if not isinstance(rule, dict):
-            continue
-        if rule.get("workflow_id") != "workflow_dependency_planner_closeout":
-            continue
-        targets = rule.get("targets")
-        if not isinstance(targets, list):
-            continue
-        planner_targets.extend(str(target) for target in targets)
-    has_policy_targets = "generated-artifact-index-body" in planner_targets
-    if guard.get("status") == "pass" and has_policy_targets:
-        return "implemented"
-    if guard:
+    source_paths = (
+        vault / "Makefile",
+        vault / FIXED_POINT_POLICY_PATH,
+        vault / WORKFLOW_ORDER_SPEC_PATH,
+    )
+    existing_count = sum(path.is_file() for path in source_paths)
+    if existing_count == 0:
+        return "planned"
+    if existing_count != len(source_paths):
         return "partially_automated"
-    return "planned"
+    try:
+        contract = release_writer_single_source_contract(vault)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return "partially_automated"
+    if contract.get("status") == "pass":
+        return "implemented"
+    return "partially_automated"
 
 
 def command_heartbeat_observability_status(vault: Path, existing_count: int, expected_count: int) -> str:

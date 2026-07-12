@@ -2,13 +2,17 @@ PUBLIC_CHECK_SUMMARY_OUT ?= ops/reports/public-check-summary.json
 PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT ?= tmp/public-check-summary.candidate.json
 PUBLIC_CHECK_SUMMARY_CHECK_OUT ?= tmp/public-check-summary-check.json
 PUBLIC_CHECK_SUMMARY_REUSE_FROM ?= $(PUBLIC_CHECK_SUMMARY_OUT)
+PUBLIC_CHECK_SUMMARY_FULL_OUT ?= ops/reports/public-check-summary-full.json
+PUBLIC_CHECK_SUMMARY_FULL_CANDIDATE_OUT ?= tmp/public-check-summary-full.candidate.json
+PUBLIC_CHECK_SUMMARY_FULL_CHECK_OUT ?= tmp/public-check-summary-full-check.json
+PUBLIC_CHECK_SUMMARY_FULL_REUSE_FROM ?= $(PUBLIC_CHECK_SUMMARY_FULL_OUT)
 PUBLIC_CHECK_TIMEOUT_SECONDS ?= 5400
 PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS ?= 30
 PUBLIC_OUT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)/llm-wiki-public-repo
 PUBLIC_PYTHON ?= $(if $(wildcard $(firstword $(PYTHON))),$(abspath $(firstword $(PYTHON))),$(shell command -v $(firstword $(PYTHON))))
 PUBLIC_GITIGNORE_TEMPLATE ?= ops/templates/public-mirror.gitignore
 
-.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check-summary-current-or-refresh ci-public-tier public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel review-surface-manifest
+.PHONY: sync-public-policy sync-public-policy-check public-export public-check-summary public-check-summary-check public-check-summary-current-check public-check-summary-current-or-refresh public-check-summary-full public-check-summary-full-check public-check-summary-full-current-check ci-public-tier public-check public-check-serial public-check-parallel public-check-all public-check-all-check public-check-all-serial public-check-all-parallel review-surface-manifest
 
 review-surface-manifest:
 	$(PYTHON) -m ops.scripts.public.review_surface_manifest --vault "$(VAULT)"
@@ -39,6 +43,16 @@ public-check-summary-current-or-refresh:
 		$(MAKE) public-check-summary; \
 	fi
 
+public-check-summary-full: script-output-surfaces-check
+	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_FULL_CANDIDATE_OUT)" --mode full --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)"
+	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(PUBLIC_CHECK_SUMMARY_FULL_CANDIDATE_OUT)" --out "$(PUBLIC_CHECK_SUMMARY_FULL_OUT)" --schema ops/schemas/public-check-summary.schema.json --expected-artifact-kind public_check_summary --expected-producer ops.scripts.public_check_summary
+
+public-check-summary-full-check:
+	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_FULL_CHECK_OUT)" --mode full --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)"
+
+public-check-summary-full-current-check:
+	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_FULL_CHECK_OUT)" --mode full --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)" --reuse-if-current --reuse-only --reuse-from "$(PUBLIC_CHECK_SUMMARY_FULL_REUSE_FROM)"
+
 ci-public-tier:
 	$(MAKE) public-check
 
@@ -51,13 +65,13 @@ public-check-parallel:
 	$(MAKE) public-check-summary PYTEST_FLAGS="$(PYTEST_PARALLEL_FLAGS)"
 
 public-check-all:
-	$(MAKE) public-check-summary PYTEST_PUBLIC_MARK_EXPR="" PYTEST_FLAGS="$(PYTEST_FLAGS)"
+	$(MAKE) public-check-summary-full PYTEST_FLAGS="$(PYTEST_FLAGS)"
 
 public-check-all-check:
-	$(MAKE) public-check-summary-current-check PYTEST_PUBLIC_MARK_EXPR="" PYTEST_FLAGS="$(PYTEST_FLAGS)"
+	$(MAKE) public-check-summary-full-current-check PYTEST_FLAGS="$(PYTEST_FLAGS)"
 
 public-check-all-serial:
-	$(MAKE) public-check-summary PYTEST_PUBLIC_MARK_EXPR="" PYTEST_FLAGS="$(PYTEST_SERIAL_FLAGS)"
+	$(MAKE) public-check-summary-full PYTEST_FLAGS="$(PYTEST_SERIAL_FLAGS)"
 
 public-check-all-parallel:
-	$(MAKE) public-check-summary PYTEST_PUBLIC_MARK_EXPR="" PYTEST_FLAGS="$(PYTEST_PARALLEL_FLAGS)"
+	$(MAKE) public-check-summary-full PYTEST_FLAGS="$(PYTEST_PARALLEL_FLAGS)"

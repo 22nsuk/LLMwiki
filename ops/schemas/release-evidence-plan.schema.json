@@ -139,6 +139,7 @@
         "verification_status": { "type": "string" },
         "currentness_status": { "type": "string", "enum": ["current", "stale"] },
         "can_reuse": { "type": "boolean" },
+        "stage3_count_diagnostics": { "$ref": "#/$defs/stage3_count_diagnostics" },
         "issues": {
           "type": "array",
           "items": {
@@ -154,6 +155,50 @@
           },
           "uniqueItems": true
         }
+      }
+    },
+    "identity_codes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "stage3_count_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_count",
+        "identity_count_mismatch",
+        "discounted_ids",
+        "release_gate_discounted_ids",
+        "advisory_discounted_ids"
+      ],
+      "properties": {
+        "raw_count": { "type": "integer", "minimum": 0 },
+        "identity_count_mismatch": { "type": "boolean" },
+        "discounted_ids": { "$ref": "#/$defs/identity_codes" },
+        "release_gate_discounted_ids": { "$ref": "#/$defs/identity_codes" },
+        "advisory_discounted_ids": { "$ref": "#/$defs/identity_codes" },
+        "gate_attention_count": { "type": "integer", "minimum": 0 },
+        "learning_claim_blocking_family_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "stage3_count_diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_accepted_risk_count",
+        "clean_lane_blocking_accepted_risk_family_count",
+        "gate_attention",
+        "learning_claim"
+      ],
+      "properties": {
+        "release_accepted_risk_count": { "type": "integer", "minimum": 0 },
+        "clean_lane_blocking_accepted_risk_family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gate_attention": { "$ref": "#/$defs/stage3_count_audit" },
+        "learning_claim": { "$ref": "#/$defs/stage3_count_audit" }
       }
     },
     "planned_action": {

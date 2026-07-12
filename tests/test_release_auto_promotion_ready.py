@@ -79,6 +79,9 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
                 "clean_lane_blocking_accepted_risk_family_count": 0,
                 "gate_attention_count": 0,
                 "learning_claim_blocking_family_count": 0,
+                "gate_attention_codes": [],
+                "learning_claim_blocking_codes": [],
+                "advisory_lifecycle_codes": [],
             },
         }
         payload.update(overrides)
@@ -252,14 +255,31 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
             },
         )
         self.assertEqual(
-            manifest["diagnostics"]["operator"]["gate_attention"],
-            {"gate_attention_count": 0},
+            manifest["diagnostics"]["operator"]["gate_attention"]["gate_attention_count"],
+            0,
         )
         self.assertEqual(
-            manifest["diagnostics"]["operator"]["learning_claim"],
-            {"learning_claim_blocking_family_count": 0},
+            manifest["diagnostics"]["operator"]["learning_claim"][
+                "learning_claim_blocking_family_count"
+            ],
+            0,
         )
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+        archived_v1 = json.loads(json.dumps(manifest))
+        archived_v1["diagnostics"]["auto_improve"].pop(
+            "release_gate_diagnostic_promotion_blocker_ids"
+        )
+        for group in ("gate_attention", "learning_claim"):
+            archived_group = archived_v1["diagnostics"]["operator"][group]
+            for field in (
+                "raw_count",
+                "identity_count_mismatch",
+                "discounted_ids",
+                "release_gate_discounted_ids",
+                "advisory_discounted_ids",
+            ):
+                archived_group.pop(field)
+        self.assertEqual(validate_with_schema(archived_v1, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(
             write_manifest(
                 self.vault,
@@ -639,6 +659,16 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
 
     def test_release_gate_auto_improve_blocker_is_stage3_diagnostic(self) -> None:
         self._write_inputs()
+        operator = self._operator_summary()
+        operator["accepted_risk"]["gate_attention_count"] = 1
+        operator["accepted_risk"]["learning_claim_blocking_family_count"] = 1
+        operator["accepted_risk"]["gate_attention_codes"] = [
+            "promotion_blocked_by_release_batch_manifest_failure"
+        ]
+        operator["accepted_risk"]["learning_claim_blocking_codes"] = [
+            "promotion_blocked_by_release_batch_manifest_failure"
+        ]
+        self._write_json("build/release/operator-release-summary.json", operator)
         self._write_json(
             "ops/reports/auto-improve-readiness.json",
             {
@@ -663,6 +693,8 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
             manifest = build_manifest(self.vault, context=fixed_context())
 
         self.assertEqual(manifest["status"], "pass")
+        self.assertTrue(manifest["checks"]["gate_attention_clean"])
+        self.assertTrue(manifest["checks"]["learning_claim_clean"])
         self.assertNotIn("auto_improve_result_not_promotable", manifest["failures"])
         self.assertNotIn("auto_improve_blockers_open", manifest["failures"])
         self.assertFalse(manifest["diagnostics"]["auto_improve"]["can_promote_result"])
@@ -676,6 +708,160 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
             0,
         )
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
+
+    def test_release_gate_discount_preserves_mixed_operator_residuals(self) -> None:
+        self._write_inputs()
+        operator = self._operator_summary()
+        operator["accepted_risk"]["gate_attention_count"] = 2
+        operator["accepted_risk"]["learning_claim_blocking_family_count"] = 2
+        operator["accepted_risk"]["gate_attention_codes"] = [
+            "promotion_blocked_by_release_batch_manifest_failure",
+            "unrelated_gate_attention",
+        ]
+        operator["accepted_risk"]["learning_claim_blocking_codes"] = [
+            "promotion_blocked_by_release_batch_manifest_failure",
+            "unrelated_learning_claim",
+        ]
+        self._write_json("build/release/operator-release-summary.json", operator)
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["can_promote_result"] = False
+        readiness["promotion_blockers"] = [
+            {
+                "id": "promotion_blocked_by_release_batch_manifest_failure",
+                "scope": "release_gate",
+            }
+        ]
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        gate_diagnostics = manifest["diagnostics"]["operator"]["gate_attention"]
+        learning_diagnostics = manifest["diagnostics"]["operator"]["learning_claim"]
+        self.assertEqual(gate_diagnostics["raw_count"], 2)
+        self.assertEqual(gate_diagnostics["gate_attention_count"], 1)
+        self.assertEqual(
+            gate_diagnostics["discounted_ids"],
+            ["promotion_blocked_by_release_batch_manifest_failure"],
+        )
+        self.assertEqual(learning_diagnostics["raw_count"], 2)
+        self.assertEqual(learning_diagnostics["learning_claim_blocking_family_count"], 1)
+        self.assertIn("gate_attention_count_not_zero", manifest["failures"])
+        self.assertIn("learning_claim_blocking_family_count_not_zero", manifest["failures"])
+
+    def test_release_gate_same_count_with_unrelated_ids_fails_closed(self) -> None:
+        self._write_inputs()
+        operator = self._operator_summary()
+        operator["accepted_risk"]["gate_attention_count"] = 1
+        operator["accepted_risk"]["learning_claim_blocking_family_count"] = 1
+        operator["accepted_risk"]["gate_attention_codes"] = ["unrelated_gate_attention"]
+        operator["accepted_risk"]["learning_claim_blocking_codes"] = [
+            "unrelated_learning_claim"
+        ]
+        self._write_json("build/release/operator-release-summary.json", operator)
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["can_promote_result"] = False
+        readiness["promotion_blockers"] = [
+            {
+                "id": "promotion_blocked_by_release_batch_manifest_failure",
+                "scope": "release_gate",
+            }
+        ]
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        self.assertEqual(manifest["status"], "fail")
+        self.assertEqual(
+            manifest["diagnostics"]["operator"]["gate_attention"]["discounted_ids"],
+            [],
+        )
+        self.assertIn("gate_attention_count_not_zero", manifest["failures"])
+        self.assertIn("learning_claim_blocking_family_count_not_zero", manifest["failures"])
+
+    def test_release_gate_identity_count_mismatch_fails_closed(self) -> None:
+        self._write_inputs()
+        operator = self._operator_summary()
+        operator["accepted_risk"]["gate_attention_count"] = 1
+        operator["accepted_risk"]["gate_attention_codes"] = [
+            "promotion_blocked_by_release_batch_manifest_failure",
+            "unrelated_gate_attention",
+        ]
+        self._write_json("build/release/operator-release-summary.json", operator)
+        readiness = json.loads(
+            (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        readiness["can_promote_result"] = False
+        readiness["promotion_blockers"] = [
+            {
+                "id": "promotion_blocked_by_release_batch_manifest_failure",
+                "scope": "release_gate",
+            }
+        ]
+        self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+
+        with self._patch_current_repo():
+            manifest = build_manifest(self.vault, context=fixed_context())
+
+        gate_diagnostics = manifest["diagnostics"]["operator"]["gate_attention"]
+        self.assertEqual(manifest["status"], "fail")
+        self.assertTrue(gate_diagnostics["identity_count_mismatch"])
+        self.assertEqual(gate_diagnostics["discounted_ids"], [])
+        self.assertEqual(gate_diagnostics["gate_attention_count"], 2)
+
+    def test_release_gate_discount_rejects_explicit_unknown_lower_authority(self) -> None:
+        for manifest_path, field in (
+            ("build/release/release-run-manifest.json", "release_authority_status"),
+            ("build/release/release-sealed-run-manifest.json", "sealed_release_status"),
+        ):
+            with self.subTest(field=field):
+                self._write_inputs()
+                operator = self._operator_summary()
+                operator["accepted_risk"]["gate_attention_count"] = 1
+                operator["accepted_risk"]["gate_attention_codes"] = [
+                    "promotion_blocked_by_release_batch_manifest_failure"
+                ]
+                self._write_json("build/release/operator-release-summary.json", operator)
+                readiness = json.loads(
+                    (self.vault / "ops/reports/auto-improve-readiness.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                readiness["can_promote_result"] = False
+                readiness["promotion_blockers"] = [
+                    {
+                        "id": "promotion_blocked_by_release_batch_manifest_failure",
+                        "scope": "release_gate",
+                    }
+                ]
+                self._write_json("ops/reports/auto-improve-readiness.json", readiness)
+                authority = json.loads(
+                    (self.vault / manifest_path).read_text(encoding="utf-8")
+                )
+                authority[field] = "unknown"
+                if field == "release_authority_status":
+                    authority["machine_release_allowed"] = False
+                self._write_json(manifest_path, authority)
+
+                with self._patch_current_repo():
+                    manifest = build_manifest(self.vault, context=fixed_context())
+
+                gate_diagnostics = manifest["diagnostics"]["operator"]["gate_attention"]
+                self.assertEqual(manifest["status"], "fail")
+                self.assertEqual(gate_diagnostics["discounted_ids"], [])
+                self.assertEqual(gate_diagnostics["gate_attention_count"], 1)
 
     def test_non_release_gate_auto_improve_blocker_still_blocks_stage3(self) -> None:
         self._write_inputs()
@@ -766,6 +952,8 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
         operator["accepted_risk"]["accepted_risk_count"] = 1
         operator["accepted_risk"]["gate_attention_count"] = 1
         operator["accepted_risk"]["advisory_lifecycle_family_count"] = 1
+        operator["accepted_risk"]["gate_attention_codes"] = ["archive_review_backlog"]
+        operator["accepted_risk"]["advisory_lifecycle_codes"] = ["archive_review_backlog"]
         self._write_json("build/release/operator-release-summary.json", operator)
 
         with self._patch_current_repo():
@@ -779,8 +967,8 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
             1,
         )
         self.assertEqual(
-            manifest["diagnostics"]["operator"]["gate_attention"],
-            {"gate_attention_count": 0},
+            manifest["diagnostics"]["operator"]["gate_attention"]["gate_attention_count"],
+            0,
         )
         self.assertNotIn("accepted_risk_count_not_zero", manifest["failures"])
         self.assertEqual(validate_with_schema(manifest, load_schema(SCHEMA_PATH)), [])
@@ -822,12 +1010,14 @@ class ReleaseAutoPromotionReadyTests(unittest.TestCase):
             manifest["diagnostics"]["operator"]["accepted_risk"],
         )
         self.assertEqual(
-            manifest["diagnostics"]["operator"]["gate_attention"],
-            {"gate_attention_count": 1},
+            manifest["diagnostics"]["operator"]["gate_attention"]["gate_attention_count"],
+            1,
         )
         self.assertEqual(
-            manifest["diagnostics"]["operator"]["learning_claim"],
-            {"learning_claim_blocking_family_count": 2},
+            manifest["diagnostics"]["operator"]["learning_claim"][
+                "learning_claim_blocking_family_count"
+            ],
+            2,
         )
         self.assertIn("gate_attention_count_not_zero", manifest["failures"])
         self.assertIn("learning_claim_blocking_family_count_not_zero", manifest["failures"])

@@ -59,7 +59,16 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             publish.get("permissions"),
             {"contents": "read", "id-token": "write", "attestations": "write"},
         )
-        _assert_locked_install_shape(self, workflow, expected_job_count=2)
+        _assert_locked_install_shape(
+            self,
+            workflow,
+            expected_job_count=4,
+            jobs_requiring_setup=(
+                "trusted-ci-full-suite-evidence",
+                "verify-clean-release",
+                "publish",
+            ),
+        )
         _assert_workflow_uses_are_sha_pinned(self, workflow)
         _assert_run_contains(
             self,
@@ -91,6 +100,46 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         )
         publish_runs = "\n".join(_run_text(step) for step in _steps(publish))
         self.assertNotIn("python -m pip install -r requirements-dev.txt build", publish_runs)
+
+    def test_trusted_ci_full_suite_attestation_is_additive_and_minimal(self) -> None:
+        workflow = _workflow()
+        evidence = _job(workflow, "trusted-ci-full-suite-evidence")
+        attestation = _job(workflow, "attest-trusted-ci-full-suite-evidence")
+        publish = _job(workflow, "publish")
+
+        self.assertNotIn("permissions", evidence)
+        self.assertEqual(evidence.get("runs-on"), "ubuntu-latest")
+        _assert_run_contains(
+            self,
+            _step(evidence, "Run test-execution-summary-full once"),
+            ("make test-execution-summary-full-body",),
+        )
+        _assert_run_contains(
+            self,
+            _step(evidence, "Materialize trusted CI full-suite evidence bundle"),
+            ("make trusted-ci-evidence-bundle",),
+        )
+        upload = _step(evidence, "Upload trusted CI full-suite evidence bundle")
+        self.assertEqual(
+            _path_entries(upload),
+            ("build/trusted-ci/test-execution-summary-full-evidence.zip",),
+        )
+        self.assertEqual(attestation.get("needs"), "trusted-ci-full-suite-evidence")
+        self.assertEqual(
+            attestation.get("permissions"),
+            {"contents": "read", "id-token": "write", "attestations": "write"},
+        )
+        self.assertEqual(len(_steps(attestation)), 2)
+        attest_step = _step(attestation, "Attest trusted CI full-suite evidence bundle")
+        self.assertEqual(
+            attest_step.get("uses"),
+            PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
+        )
+        self.assertEqual(
+            attest_step.get("with"),
+            {"subject-path": "tmp/trusted-ci/test-execution-summary-full-evidence.zip"},
+        )
+        self.assertEqual(publish.get("needs"), "verify-clean-release")
 
     def test_release_governance_policy_matches_remote_visible_workflows(self) -> None:
         governance = _governance()

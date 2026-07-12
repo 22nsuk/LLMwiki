@@ -59,11 +59,20 @@ When a request says "full pytest", choose the lane by intent:
 | Developer full regression | `make test-all` | Runs all current pytest tests with the default parallel/cache policy and does not write canonical release evidence. |
 | Exact serial reproduction or xdist isolation debugging | `make test-all-serial` or focused `.venv/bin/python -m pytest tests/...` | Use only when the serial behavior itself is the thing being investigated. |
 | Release-grade full-suite evidence | `make test-execution-summary-full` | Runs the full-suite summary lane and records canonical release evidence. |
+| Trusted-CI evidence ZIP | `make trusted-ci-evidence-bundle` | Packages an already-produced full summary, exact collection manifest, and JUnit into one deterministic ZIP; it does not run pytest. |
+| Trusted-CI evidence import diagnostic | `make trusted-ci-evidence-import` | Verifies the ZIP attestation and embedded evidence against the current registry/revision/tree without promoting the summary. Requires authenticated `gh` attestation access. |
 | Runnable release authority | `make release-run-ready` | Owns the runnable release stage, including full-suite evidence plus release smoke, public-check, package, and manifest authority. |
 
 The registry-backed test lane inventory is recorded in
 `ops/test-lane-registry.json`, reconciled against `mk/test.mk` and sibling
 Makefiles, and summarized for operators by `make help`.
+The same registry owns the expected trusted-CI repository, signer workflow,
+runner, summary command, and Python/pytest environment. This Phase 2 import is
+additive evidence only: release CI emits and attests the ZIP in separate jobs,
+the test-running job has no OIDC permission, and a successful local import
+writes only `tmp/trusted-ci-evidence-import-report.json`. It does not replace
+the local full-suite, report-contract, public, or release-authority lanes and
+does not copy imported evidence into `ops/reports/`.
 Treat registry surfaces by ownership rather than by name alone: raw registry
 state preserves full-vault source trace and ingest lifecycle, test-lane registry
 state owns Make/CI/pytest lane semantics, and policy registries own runtime
@@ -126,6 +135,10 @@ inventory, and selector-registry drift before the full `make public-check` lane.
 treated as checkpoint-grade work.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.
+Changed-path handoff plans use
+`make test-execution-summary-current-or-refresh` so the same selector either
+reuses current evidence or promotes the summary consumed by release readiness.
+Direct CI lane checks continue to use `make test-report-contract-core`.
 `make test-report-contract-all` intentionally sweeps every `report_contract`
 marker and is a checkpoint, release-style, or final contract proof, not the
 default for every vertical slice. Report-contract, release-sealing, and
@@ -216,7 +229,10 @@ those diagnostics before assuming a timed-out public pytest is still running.
 Reuse-only public-check paths also compare the stored
 `input_fingerprints.public_check_config` against the requested public export
 directory, export boundary, public Python identity, pytest flags, and
-ruff/mypy targets, plus the runner timeout and heartbeat settings. The
+ruff/mypy targets, plus the runner timeout and heartbeat settings. Default
+`public-check` and selectorless `public-check-all` use separate canonical,
+candidate, check, and reuse paths; currentness also binds the mode, source
+command, and pytest selector identity. The
 temporary pytest summary cache path is intentionally not part of that
 fingerprint.
 When CI public-check fails, inspect the printed `failure_causes` and uploaded

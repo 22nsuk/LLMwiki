@@ -427,6 +427,9 @@
         "advisory_lifecycle_family_count": {
           "$ref": "https://llmwiki/schemas/accepted-risk-vocabulary#/$defs/advisory_lifecycle_family_count"
         },
+        "gate_attention_codes": { "$ref": "#/$defs/identity_codes" },
+        "learning_claim_blocking_codes": { "$ref": "#/$defs/identity_codes" },
+        "advisory_lifecycle_codes": { "$ref": "#/$defs/identity_codes" },
         "count_sources": {
           "type": "object",
           "additionalProperties": false,
@@ -456,6 +459,11 @@
     "operator_summary": { "type": "string", "minLength": 1 }
   },
   "$defs": {
+    "identity_codes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
     "accepted_risk_count_source": {
       "type": "object",
       "additionalProperties": false,

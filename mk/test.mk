@@ -52,18 +52,23 @@ TEST_EXECUTION_SUMMARY_FULL_MODE ?= run
 RELEASE_AUDIT_PAYLOAD_STAGING_DIR ?= build/release-payloads
 TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT ?= $(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.junit.xml
 TEST_EXECUTION_SUMMARY_FULL_LOG_OUT ?= $(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.log
+TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT ?= $(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.collection.json
+TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_COLLECTION_MANIFEST_OUT ?= $(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-report-contract.collection.json
+TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_DERIVED_OUT ?= ops/reports/test-execution-summary-report-contract-derived.json
 TEST_EXECUTION_SUMMARY_REUSE_FROM ?= $(TEST_EXECUTION_SUMMARY_OUT)
 TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM ?= $(TEST_EXECUTION_SUMMARY_FULL_OUT)
 TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS ?= $(PYTEST_FLAGS)
 TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR ?= ops/reports/test-execution-summary-full-shards
 TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS ?= 30
+TRUSTED_CI_EVIDENCE_BUNDLE_OUT ?= build/trusted-ci/test-execution-summary-full-evidence.zip
+TRUSTED_CI_EVIDENCE_IMPORT_OUT ?= tmp/trusted-ci-evidence-import-report.json
 REPORT_CONTRACT_SUMMARY_DESELECT_POLICY ?= ops/policies/report-contract-deselections.json
 RELEASE_CLOSEOUT_REGRESSION_FRESHNESS_CHECK_OUT ?= tmp/release-closeout-regression-artifact-freshness-check.json
 RELEASE_CLOSEOUT_COST_EVIDENCE_CI_OUT ?= tmp/release-closeout-fixed-point-cost-trend-ci.json
 RELEASE_CLOSEOUT_FINALITY_VERIFY_CI_OUT ?= tmp/release-closeout-finality-verify-ci.json
 
-.PHONY: fast-smoke runtime-hotspot-smoke makefile-static-gates test-boundary-contract-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact ci-report-contract-tier test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-executor-runtime test-subprocess pytest-markers-sync pytest-markers-sync-check _internal-pytest-markers-sync-check test-selectors-sync test-selectors-sync-check _internal-test-selectors-sync-check release-governance-sync _internal-release-governance-sync-check release-governance-sync-check report-schema-samples-check report-schema-samples-regenerate _internal-report-schema-samples-check runtime-hotspot-goldens-check _internal-runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout report-contract-closeout-generated-artifacts test-execution-summary-fast test-execution-summary-report-contract test-execution-summary test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-revision-rebind test-execution-summary-full test-execution-summary-full-body test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-revision-rebind test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
-.PHONY: test-schema-static-smoke release-closeout-finality-verify-ci-artifact
+.PHONY: fast-smoke runtime-hotspot-smoke makefile-static-gates test-boundary-contract-smoke test-release-closeout-regression-pack release-closeout-regression-dry-run release-closeout-cost-evidence-ci-artifact ci-report-contract-tier test-report-contract-core test-report-contract-all test-release-sealing-core test-release-sealing-all test-executor-runtime test-subprocess pytest-markers-sync pytest-markers-sync-check _internal-pytest-markers-sync-check test-selectors-sync test-selectors-sync-check _internal-test-selectors-sync-check release-governance-sync _internal-release-governance-sync-check release-governance-sync-check report-schema-samples-check report-schema-samples-regenerate _internal-report-schema-samples-check runtime-hotspot-goldens-check _internal-runtime-hotspot-goldens-check full-pytest-generated-preflight report-contract-closeout-precheck report-contract-closeout report-contract-closeout-generated-artifacts test-execution-summary-fast test-execution-summary-report-contract test-execution-summary-report-contract-derived-parity test-execution-summary test-execution-summary-report-contract-refresh test-execution-summary-report-contract-refresh-no-smoke test-execution-summary-current-check test-execution-summary-current-or-refresh test-execution-summary-revision-rebind test-execution-summary-full test-execution-summary-full-body test-execution-summary-full-refresh test-execution-summary-full-refresh-no-converge test-execution-summary-full-revision-rebind test-execution-summary-full-current-check test-execution-summary-full-current-or-refresh test-execution-summary-full-sidecars-current-check test-execution-summary-full-sidecars-current-or-refresh test-fast unit-tests unit-tests-serial unit-tests-parallel unit-tests-all unit-tests-all-serial unit-tests-all-parallel unit-tests-release-check test test-serial test-parallel test-all test-all-serial test-all-parallel test-slow test-slow-serial test-integration test-integration-serial test-integration-heavy test-integration-heavy-serial test-public test-public-serial
+.PHONY: test-schema-static-smoke release-closeout-finality-verify-ci-artifact trusted-ci-evidence-bundle trusted-ci-evidence-import
 
 pytest-markers-sync:
 	$(PYTHON) -m ops.scripts.test.generate_pytest_ini_markers --vault "$(VAULT)"
@@ -244,7 +249,8 @@ test-execution-summary-full:
 	rm -rf "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"
 	mkdir -p "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)" "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)"
 	@printf '%s\n' "test-execution-summary-full: suite=$(TEST_EXECUTION_SUMMARY_FULL_SUITE) shard=full-suite-shard-1 heartbeat_interval_seconds=$(TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS) log=$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)"
-	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)/full-suite-shard-1.json" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE)" --collect-nodeids --heartbeat-interval-seconds "$(TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS)" --heartbeat-label "full-suite-shard-1" --junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" --execution-log-out "$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)" --failed-nodeids-out "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.failed-nodeids.txt" -- $(PYTHON) -m pytest --junit-xml "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" $(TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS)
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE)" --collection-only --collect-nodeids -- $(PYTHON) -m pytest $(TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS)
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)/full-suite-shard-1.json" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE)" --collect-nodeids --collection-manifest "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)" --heartbeat-interval-seconds "$(TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS)" --heartbeat-label "full-suite-shard-1" --junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" --execution-log-out "$(TEST_EXECUTION_SUMMARY_FULL_LOG_OUT)" --failed-nodeids-out "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.failed-nodeids.txt" -- $(PYTHON) -m pytest --junit-xml "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" $(TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS)
 	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_FULL_SUITE)" --aggregate --aggregate-dir "$(TEST_EXECUTION_SUMMARY_FULL_SHARD_DIR)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)" --out "$(TEST_EXECUTION_SUMMARY_FULL_OUT)" --schema ops/schemas/test-execution-summary.schema.json --expected-artifact-kind test_execution_summary --expected-producer ops.scripts.test_execution_summary
 else ifeq ($(TEST_EXECUTION_SUMMARY_FULL_MODE),refresh)
@@ -280,6 +286,18 @@ else
 test-execution-summary-full:
 	@printf '%s\n' "unsupported TEST_EXECUTION_SUMMARY_FULL_MODE=$(TEST_EXECUTION_SUMMARY_FULL_MODE)"; exit 2
 endif
+
+trusted-ci-evidence-bundle:
+	$(PYTHON) -m ops.scripts.test.trusted_ci_evidence_bundle --vault "$(VAULT)" --summary "$(TEST_EXECUTION_SUMMARY_FULL_OUT)" --collection "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)" --junit "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" --out "$(TRUSTED_CI_EVIDENCE_BUNDLE_OUT)"
+
+trusted-ci-evidence-import:
+	$(PYTHON) -m ops.scripts.test.trusted_ci_evidence_import --vault "$(VAULT)" --bundle "$(TRUSTED_CI_EVIDENCE_BUNDLE_OUT)" --out "$(TRUSTED_CI_EVIDENCE_IMPORT_OUT)"
+
+test-execution-summary-report-contract-derived-parity:
+	$(MAKE) test-execution-summary-full-sidecars-current-or-refresh
+	$(MAKE) test-execution-summary-current-check
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_COLLECTION_MANIFEST_OUT)" --suite "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_SUITE)" --collection-only --collect-nodeids --deselection-policy "$(REPORT_CONTRACT_SUMMARY_DESELECT_POLICY)" -- $(PYTHON) -m pytest $(REPORT_CONTRACT_SUMMARY_TESTS) $(PYTEST_REPORT_CONTRACT_FLAGS)
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --out "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_DERIVED_OUT)" --derive-subset-from-full --full-summary "$(TEST_EXECUTION_SUMMARY_FULL_OUT)" --junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)" --full-collection-manifest "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)" --selection-manifest "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_COLLECTION_MANIFEST_OUT)" --parity-direct-summary "$(TEST_EXECUTION_SUMMARY_OUT)"
 
 test-execution-summary: test-execution-summary-report-contract
 
@@ -321,6 +339,24 @@ test-execution-summary-full-current-check:
 
 test-execution-summary-full-current-or-refresh:
 	$(MAKE) test-execution-summary-full TEST_EXECUTION_SUMMARY_FULL_MODE=current-or-refresh
+
+test-execution-summary-full-sidecars-current-check:
+	$(MAKE) test-execution-summary-full-current-check
+	$(PYTHON) -m ops.scripts.test_execution_summary --vault "$(VAULT)" --validate-full-suite-sidecars --full-summary "$(TEST_EXECUTION_SUMMARY_FULL_OUT)" --full-collection-manifest "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)" --junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)"
+
+test-execution-summary-full-sidecars-current-or-refresh:
+	@if $(MAKE) test-execution-summary-full-sidecars-current-check; then \
+		echo "full-suite summary and derivation sidecars are current"; \
+	elif $(MAKE) test-execution-summary-full-current-or-refresh; then \
+		if $(MAKE) test-execution-summary-full-sidecars-current-check; then \
+			echo "full-suite summary was rebound or refreshed and sidecars are current"; \
+		else \
+			$(MAKE) test-execution-summary-full-refresh-no-converge && \
+			$(MAKE) test-execution-summary-full-sidecars-current-check; \
+		fi; \
+	else \
+		exit 1; \
+	fi
 
 test-fast:
 	$(PYTHON) -m pytest -m "$(PYTEST_FAST_MARK_EXPR)" $(PYTEST_FLAGS)

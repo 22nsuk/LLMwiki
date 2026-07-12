@@ -376,7 +376,7 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
             coverage_with_action_basis([raw_release_coverage], status_by_action)[0],
             release_coverage,
         )
-        self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
+        self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "partially_automated")
         self.assertEqual(actions["outcome_provenance_gate_policy"]["current_status"], "implemented")
         self.assertEqual(actions["external_report_lifecycle"]["current_status"], "partially_automated")
         self.assertEqual(actions["active_report_manifest_freshness"]["current_status"], "partially_automated")

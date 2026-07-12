@@ -77,5 +77,9 @@ policy template sync; use `make sync-public-policy` or
 `make sync-public-policy-check` only when debugging that public-specific slice.
 These public policy targets sync or check `ops/templates/public-mirror.gitignore`,
 not the full-vault root `.gitignore`. Use `make public-check-all` when the
-exported tree should run all tests rather than only the public marker tier.
+exported tree should run all tests rather than only the public marker tier. The
+default and selectorless lanes retain independent canonical summaries at
+`ops/reports/public-check-summary.json` and
+`ops/reports/public-check-summary-full.json`, respectively, so one checkpoint
+cannot replace the other's evidence.
 General lane-selection guidance lives in [development.md](development.md).

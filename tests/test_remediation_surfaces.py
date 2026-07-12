@@ -114,17 +114,25 @@ class RemediationSurfaceTests(unittest.TestCase):
             )
             self.assertTrue((vault / "system" / "decision-log.md").is_file())
 
-    def test_source_substance_cohort_classify_demotes_weak_pages(self) -> None:
+    def test_source_substance_cohort_classify_retains_unlinked_weak_pages(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
             seed_minimal_vault(vault)
             wiki = vault / "wiki"
             wiki.mkdir(parents=True, exist_ok=True)
+            raw = vault / "raw" / "weak.md"
+            raw.write_text("synthetic source text\n", encoding="utf-8")
             page = wiki / "source--weak-2026-05-29.md"
             page.write_text(
                 "\n".join(
                     [
+                        "---",
+                        'created: "2026-06-17"',
+                        'raw_path: "raw/weak.md"',
+                        'route_decision: "keep_source_only_seed"',
+                        "---",
+                        "",
                         "# Weak source",
                         "",
                         "## Summary",
@@ -146,5 +154,12 @@ class RemediationSurfaceTests(unittest.TestCase):
                 encoding="utf-8",
             )
             report = build_report(vault)
-            self.assertEqual(report["summary"]["page_count"], 1)
-            self.assertEqual(report["entries"][0]["classification"], "registry_only_demote")
+            entry = next(
+                item
+                for item in report["entries"]
+                if item["page"] == "wiki/source--weak-2026-05-29.md"
+            )
+            self.assertEqual(entry["remediation_route"], "retained_operator_review")
+            self.assertEqual(entry["created"], "2026-06-17")
+            self.assertEqual(entry["filename_date"], "2026-05-29")
+            self.assertIsNone(entry["ingest_cohort"])

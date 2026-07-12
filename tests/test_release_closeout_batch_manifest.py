@@ -88,6 +88,7 @@ def release_inputs(**overrides: Any) -> ReleaseDecisionInputs:
         "accepted_risk_family_count": 0,
         "accepted_risk_count": 0,
         "gate_attention_count": 0,
+        "gate_attention_codes": [],
         "learning_lane_status": "pass",
         "auto_improve_lane_status": "pass",
         "learning_claim_guard_status": "pass",
@@ -382,10 +383,24 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         )
         self.assertEqual(report["release_decision_snapshot"]["accepted_risk_count"], 0)
         self.assertEqual(report["release_decision_snapshot"]["gate_attention_count"], 0)
+        self.assertEqual(report["release_decision_snapshot"]["gate_attention_codes"], [])
         self.assertTrue(report["coherence"]["all_required_present"])
         self.assertTrue(report["coherence"]["all_required_current"])
         self.assertEqual(report["summary"]["present_count"], 14)
         self.assertEqual(report["summary"]["current_count"], 14)
+
+    def test_dashboard_attention_summary_must_match_observed_gates(self) -> None:
+        self._write_required_artifacts(currentness_status="current")
+        self._write_closeout_summary()
+        dashboard_path = self.vault / "ops/reports/release-evidence-dashboard.json"
+        dashboard = json.loads(dashboard_path.read_text(encoding="utf-8"))
+        dashboard["summary"]["gate_attention_count"] = 1
+        dashboard_path.write_text(json.dumps(dashboard), encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            ValueError, "dashboard gate_attention_count does not match attention gates"
+        ):
+            build_batch_manifest(self.vault, context=fixed_context())
 
     def test_distribution_zip_retires_nonsealed_external_report_attention(
         self,
@@ -455,6 +470,10 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         self.assertEqual(unsealed["release_decision_snapshot"]["accepted_risk_count"], 1)
         self.assertEqual(unsealed["release_decision_snapshot"]["gate_attention_count"], 1)
         self.assertEqual(
+            unsealed["release_decision_snapshot"]["gate_attention_codes"],
+            ["external_report_strict_unavailable"],
+        )
+        self.assertEqual(
             unsealed["release_decision_snapshot"]["advisory_lifecycle_family_count"],
             1,
         )
@@ -473,6 +492,7 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         snapshot = sealed["release_decision_snapshot"]
         self.assertEqual(snapshot["accepted_risk_count"], 0)
         self.assertEqual(snapshot["gate_attention_count"], 0)
+        self.assertEqual(snapshot["gate_attention_codes"], [])
         self.assertEqual(snapshot["accepted_risk_family_count"], 0)
         self.assertEqual(snapshot["advisory_lifecycle_family_count"], 0)
         self.assertEqual(snapshot["accepted_risks"], [])
@@ -567,6 +587,9 @@ class ReleaseCloseoutBatchManifestTests(unittest.TestCase):
         snapshot = sealed["release_decision_snapshot"]
         self.assertEqual(snapshot["accepted_risk_count"], 1)
         self.assertEqual(snapshot["gate_attention_count"], 1)
+        self.assertEqual(
+            snapshot["gate_attention_codes"], ["artifact_freshness_attention"]
+        )
         self.assertEqual(snapshot["accepted_risk_family_count"], 1)
         self.assertEqual(snapshot["advisory_lifecycle_family_count"], 1)
         self.assertEqual(snapshot["accepted_risks"], [active_risk])

@@ -3,6 +3,15 @@
   "title": "Test Execution Summary",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "evidence_origin": { "const": "derived_full_suite" } },
+        "required": ["evidence_origin"]
+      },
+      "then": { "required": ["derivation"] }
+    }
+  ],
   "required": [
     "$schema",
     "artifact_kind",
@@ -402,6 +411,15 @@
     "pytest_collect_nodeid_digest": {
       "type": "object",
       "additionalProperties": false,
+      "dependentRequired": {
+        "manifest_path": [
+          "manifest_sha256",
+          "manifest_schema",
+          "manifest_nodeids_sha256",
+          "source_tree_fingerprint",
+          "source_revision"
+        ]
+      },
       "required": [
         "status",
         "command",
@@ -442,7 +460,13 @@
         "duration_ms": {
           "type": "integer",
           "minimum": 0
-        }
+        },
+        "manifest_path": { "type": "string", "minLength": 1 },
+        "manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "manifest_schema": { "const": "ops/schemas/test-execution-collection-manifest.schema.json" },
+        "manifest_nodeids_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+        "source_revision": { "type": "string", "minLength": 1 }
       }
     },
     "nodeid_outcome_consistency": {
@@ -505,7 +529,14 @@
     },
     "summary_mode": {
       "type": "string",
-      "enum": ["single", "aggregate", "reused"]
+      "enum": ["single", "aggregate", "reused", "derived"]
+    },
+    "evidence_origin": {
+      "type": "string",
+      "enum": ["direct", "derived_full_suite"]
+    },
+    "derivation": {
+      "$ref": "#/$defs/derivation"
     },
     "reused_from": {
       "type": "string",
@@ -525,6 +556,27 @@
     }
   },
   "$defs": {
+    "derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent_summary_sha256", "junit_sha256", "full_collection_manifest_sha256",
+        "full_collection_nodeids_sha256", "full_collection_nodeid_count",
+        "selected_collection_manifest_sha256", "selected_collection_nodeids_sha256",
+        "selected_collection_nodeid_count", "selector_semantic_command_sha256"
+      ],
+      "properties": {
+        "parent_summary_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "junit_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "full_collection_manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "full_collection_nodeids_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "full_collection_nodeid_count": { "type": "integer", "minimum": 0 },
+        "selected_collection_manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "selected_collection_nodeids_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "selected_collection_nodeid_count": { "type": "integer", "minimum": 0 },
+        "selector_semantic_command_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
     "duration_telemetry": {
       "type": "object",
       "additionalProperties": false,

@@ -2,6 +2,23 @@
   "$schema": "ops/schemas/test-lane-registry.schema.json",
   "version": 2,
   "description": "Authoritative registry for persistent pytest lanes, derived execution packs, CI routing, and documentation boundaries validated against Make, CI, and public-safe docs.",
+  "trusted_ci_evidence": {
+    "status": "additive_non_authoritative",
+    "repository": "22nsuk/LLMwiki",
+    "signer_workflow": "22nsuk/LLMwiki/.github/workflows/release.yml",
+    "workflow_path": ".github/workflows/release.yml",
+    "runner": "ubuntu-latest",
+    "summary_suite": "full",
+    "semantic_command": "aggregate test execution summary shards",
+    "environment": {
+      "python_major_minor": "3.12",
+      "minimum_pytest_major": 8,
+      "plugin_autoload_disabled": true,
+      "interpreter_path_class": "path_lookup",
+      "toolchain_status": "pass",
+      "release_evidence_effect": "eligible"
+    }
+  },
   "changed_path_minimums": {
     "version": 1,
     "default_duration_budget_seconds": 300,
@@ -20,7 +37,7 @@
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_derived_surfaces.py": 30,
       "make makefile-static-gates": 210,
-      "make test-report-contract-core": 180,
+      "make test-execution-summary-current-or-refresh": 180,
       "make workflow-dependency-planner-check": 60,
       "make runtime-hotspot-smoke": 240,
       "make test-executor-runtime": 120,
@@ -72,7 +89,7 @@
           "make static",
           "make report-schema-samples-check",
           "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_report_schema_sample_regeneration.py",
-          "make test-report-contract-core"
+          "make test-execution-summary-current-or-refresh"
         ],
         "reason": "Report schema sample generator and helper changes need static analysis, seed-backed generation checks, focused generator coverage, and schema-contract validation.",
         "coverage_class": "report_schema_sample_generation",
@@ -244,7 +261,7 @@
         ],
         "commands": [
           "make static",
-          "make test-report-contract-core"
+          "make test-execution-summary-current-or-refresh"
         ],
         "reason": "Schema or policy changes need report-contract coverage plus static checks.",
         "coverage_class": "report_contract",

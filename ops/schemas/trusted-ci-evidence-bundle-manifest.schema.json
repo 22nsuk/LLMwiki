@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Trusted CI Full-Suite Evidence Bundle Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "artifact_kind", "schema_version", "manifest_member", "members",
+    "source_revision", "source_tree_fingerprint", "semantic_command",
+    "semantic_command_sha256", "toolchain_fingerprint", "execution_environment",
+    "collection", "junit"
+  ],
+  "properties": {
+    "$schema": { "const": "ops/schemas/trusted-ci-evidence-bundle-manifest.schema.json" },
+    "artifact_kind": { "const": "trusted_ci_full_suite_evidence_bundle_manifest" },
+    "schema_version": { "const": 1 },
+    "manifest_member": { "const": "trusted-ci-evidence-bundle-manifest.json" },
+    "members": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "size_bytes"],
+        "properties": {
+          "path": { "enum": ["test-execution-summary-full.json", "test-execution-summary-full.collection.json", "test-execution-summary-full.junit.xml"] },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "size_bytes": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "source_revision": { "type": "string", "minLength": 1 },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "semantic_command": { "type": "string", "minLength": 1 },
+    "semantic_command_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "toolchain_fingerprint": { "type": "string", "minLength": 1 },
+    "execution_environment": {
+      "type": "object",
+      "required": ["python_version", "pytest_version", "plugin_autoload_policy", "interpreter_path_class", "toolchain_contract"]
+    },
+    "collection": { "$ref": "#/$defs/collection_identity" },
+    "junit": { "$ref": "#/$defs/digest_count" }
+  },
+  "$defs": {
+    "collection_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "manifest_sha256", "count"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "digest_count": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "count"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

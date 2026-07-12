@@ -43,6 +43,7 @@ PYTEST_OPTION_VALUE_FLAGS = {
 }
 PYTEST_COLLECTION_FILTER_FLAGS = {"-k", "-m", "--deselect"}
 PYTEST_PLUGIN_AUTOLOAD_ENV = "PYTEST_DISABLE_PLUGIN_AUTOLOAD"
+PYTEST_JUNIT_OUTPUT_FLAGS = {"--junit-xml", "--junitxml"}
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:
@@ -87,6 +88,23 @@ def semantic_command(command: list[str]) -> list[str]:
             return command[idx:]
         idx += 1
     return command[1:] if len(command) > 1 else command
+
+
+def collection_semantic_command(command: list[str]) -> list[str]:
+    semantic = semantic_command(command)
+    normalized: list[str] = []
+    skip_next = False
+    for token in semantic:
+        if skip_next:
+            skip_next = False
+            continue
+        if token in PYTEST_JUNIT_OUTPUT_FLAGS:
+            skip_next = True
+            continue
+        if any(token.startswith(f"{flag}=") for flag in PYTEST_JUNIT_OUTPUT_FLAGS):
+            continue
+        normalized.append(token)
+    return normalized
 
 
 def _pytest_version() -> str:
@@ -166,6 +184,12 @@ def display_command(vault: Path, command: list[str]) -> str:
 
 def semantic_command_text(vault: Path, command: list[str]) -> str:
     return shlex.join([sanitize_report_text(vault, item) for item in semantic_command(command)])
+
+
+def collection_semantic_command_text(vault: Path, command: list[str]) -> str:
+    return shlex.join(
+        [sanitize_report_text(vault, item) for item in collection_semantic_command(command)]
+    )
 
 
 def toolchain_fingerprint(execution_environment: dict[str, Any]) -> str:

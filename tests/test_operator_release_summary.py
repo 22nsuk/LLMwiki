@@ -180,6 +180,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
                     "auto_improve_lane_status": "pass",
                     "accepted_risk_count": 0,
                     "gate_attention_count": 0,
+                    "gate_attention_codes": [],
                     "learning_claim_blocking_family_count": 0,
                     "advisory_lifecycle_family_count": 0,
                 },
@@ -213,6 +214,12 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
             report["learning_claim"]["confirmed_blocking_predicate_ids"],
             ["repeated_same_family_evidence"],
         )
+        archived_v1 = json.loads(json.dumps(report))
+        archived_v1_accepted_risk = archived_v1["accepted_risk"]
+        archived_v1_accepted_risk.pop("gate_attention_codes")
+        archived_v1_accepted_risk.pop("learning_claim_blocking_codes")
+        archived_v1_accepted_risk.pop("advisory_lifecycle_codes")
+        self.assertEqual(validate_with_schema(archived_v1, load_schema(SCHEMA_PATH)), [])
         self.assertIn("confirmed_learning=not_ready", report["operator_summary"])
         self.assertIn("valid_runs=0/0", report["operator_summary"])
         self.assertIn("eligible_families=0", report["operator_summary"])
@@ -494,6 +501,9 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertEqual(report["accepted_risk"]["gate_attention_count"], 0)
         self.assertEqual(report["accepted_risk"]["learning_claim_blocking_family_count"], 0)
         self.assertEqual(report["accepted_risk"]["advisory_lifecycle_family_count"], 0)
+        self.assertEqual(report["accepted_risk"]["gate_attention_codes"], [])
+        self.assertEqual(report["accepted_risk"]["learning_claim_blocking_codes"], [])
+        self.assertEqual(report["accepted_risk"]["advisory_lifecycle_codes"], [])
         sources = report["accepted_risk"]["count_sources"]
         self.assertEqual(
             sources["operator_accepted_risk_family_count"]["field_path"],
@@ -581,6 +591,7 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
             {
                 "accepted_risk_count": 0,
                 "gate_attention_count": 1,
+                "gate_attention_codes": ["dashboard_attention_gate"],
                 "learning_claim_blocking_family_count": 2,
                 "advisory_lifecycle_family_count": 3,
             }
@@ -593,6 +604,10 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertEqual(report["accepted_risk"]["release_accepted_risk_count"], 0)
         self.assertEqual(report["accepted_risk"]["accepted_learning_risk_count"], 0)
         self.assertEqual(report["accepted_risk"]["gate_attention_count"], 1)
+        self.assertEqual(
+            report["accepted_risk"]["gate_attention_codes"],
+            ["dashboard_attention_gate"],
+        )
         self.assertNotIn("dashboard_attention_gate_count", report["accepted_risk"])
         self.assertEqual(report["accepted_risk"]["learning_claim_blocking_family_count"], 2)
         self.assertEqual(report["accepted_risk"]["advisory_lifecycle_family_count"], 3)
@@ -600,6 +615,37 @@ class OperatorReleaseSummaryTests(unittest.TestCase):
         self.assertIn("learning_risk_acceptances=0", report["operator_summary"])
         self.assertNotIn("accepted_risks=0", report["operator_summary"])
         self.assertIn("gate_attention=1", report["operator_summary"])
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_operator_summary_keeps_gate_and_closeout_lane_identities_separate(self) -> None:
+        closeout_path = self.vault / "ops/reports/release-closeout-summary.json"
+        closeout = json.loads(closeout_path.read_text(encoding="utf-8"))
+        learning_issue = {
+            "code": "promotion_blocked_by_release_batch_manifest_failure",
+            "learning_lane_effect": "blocks_learning_claim",
+            "advisory_lifecycle_effect": "not_applicable",
+        }
+        advisory_issue = {
+            "code": "archive_review_backlog",
+            "learning_lane_effect": "not_applicable",
+            "advisory_lifecycle_effect": "review_backlog",
+        }
+        closeout["blockers"] = [learning_issue, learning_issue.copy()]
+        closeout["accepted_risks"] = [advisory_issue, advisory_issue.copy()]
+        self._write_json("ops/reports/release-closeout-summary.json", closeout)
+
+        report = build_report(self.vault, context=fixed_context())
+
+        accepted_risk = report["accepted_risk"]
+        self.assertEqual(accepted_risk["gate_attention_codes"], [])
+        self.assertEqual(
+            accepted_risk["learning_claim_blocking_codes"],
+            ["promotion_blocked_by_release_batch_manifest_failure"],
+        )
+        self.assertEqual(
+            accepted_risk["advisory_lifecycle_codes"],
+            ["archive_review_backlog"],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
     def test_operator_summary_keeps_total_accepted_risks_out_of_release_blockers(self) -> None:

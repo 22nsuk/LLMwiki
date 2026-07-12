@@ -31,6 +31,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 TEST_EXECUTION_SUMMARY_PHONY_TARGETS = (
     "test-execution-summary-fast",
     "test-execution-summary-report-contract",
+    "test-execution-summary-report-contract-derived-parity",
     "test-execution-summary-full",
 )
 
@@ -104,6 +105,18 @@ TEST_EXECUTION_SUMMARY_ASSIGNMENTS = (
         "TEST_EXECUTION_SUMMARY_FULL_LOG_OUT",
         "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.log",
     ),
+    (
+        "TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT",
+        "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-full.collection.json",
+    ),
+    (
+        "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_COLLECTION_MANIFEST_OUT",
+        "$(RELEASE_AUDIT_PAYLOAD_STAGING_DIR)/test-execution-summary-report-contract.collection.json",
+    ),
+    (
+        "TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_DERIVED_OUT",
+        "ops/reports/test-execution-summary-report-contract-derived.json",
+    ),
     ("TEST_EXECUTION_SUMMARY_REUSE_FROM", "$(TEST_EXECUTION_SUMMARY_OUT)"),
     ("TEST_EXECUTION_SUMMARY_FULL_REUSE_FROM", "$(TEST_EXECUTION_SUMMARY_FULL_OUT)"),
     ("TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS", "$(PYTEST_FLAGS)"),
@@ -112,6 +125,14 @@ TEST_EXECUTION_SUMMARY_ASSIGNMENTS = (
         "ops/reports/test-execution-summary-full-shards",
     ),
     ("TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS", "30"),
+    (
+        "TRUSTED_CI_EVIDENCE_BUNDLE_OUT",
+        "build/trusted-ci/test-execution-summary-full-evidence.zip",
+    ),
+    (
+        "TRUSTED_CI_EVIDENCE_IMPORT_OUT",
+        "tmp/trusted-ci-evidence-import-report.json",
+    ),
 )
 
 TEST_EXECUTION_SUMMARY_ABSENT_ASSIGNMENTS = (
@@ -229,6 +250,32 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 "ops.scripts.canonical_artifact_promote",
             ),
         )
+
+    def test_trusted_ci_bundle_and_import_are_additive_wrappers(self) -> None:
+        text = _makefile_text()
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "trusted-ci-evidence-bundle",
+            (
+                "ops.scripts.test.trusted_ci_evidence_bundle",
+                "$(TEST_EXECUTION_SUMMARY_FULL_OUT)",
+                "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)",
+                "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)",
+            ),
+        )
+        _assert_recipe_contains_tokens(
+            self,
+            text,
+            "trusted-ci-evidence-import",
+            (
+                "ops.scripts.test.trusted_ci_evidence_import",
+                "$(TRUSTED_CI_EVIDENCE_BUNDLE_OUT)",
+                "$(TRUSTED_CI_EVIDENCE_IMPORT_OUT)",
+            ),
+        )
+        self.assertNotIn("trusted-ci-evidence-import", _target_block(text, "release-run-ready"))
+
     def test_report_contract_modes_separate_revision_rebind_from_test_execution(self) -> None:
         text = _makefile_text()
 
@@ -301,6 +348,9 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
                 '--heartbeat-interval-seconds "$(TEST_EXECUTION_SUMMARY_FULL_HEARTBEAT_INTERVAL_SECONDS)"',
                 '--heartbeat-label "full-suite-shard-1"',
                 "--junit-xml-path",
+                "--collection-only",
+                '--out "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)"',
+                '--collection-manifest "$(TEST_EXECUTION_SUMMARY_FULL_COLLECTION_MANIFEST_OUT)"',
                 "--execution-log-out",
                 "--failed-nodeids-out",
                 "--aggregate",
@@ -330,6 +380,55 @@ class MakefileTestExecutionSummaryGateTests(unittest.TestCase):
         self.assertIn(
             'test -f "$(TEST_EXECUTION_SUMMARY_FULL_CANDIDATE_OUT)"',
             rebind_block,
+        )
+
+    def test_derived_report_contract_parity_is_additive_and_fail_closed(self) -> None:
+        text = _makefile_text()
+        block = _target_block(text, "test-execution-summary-report-contract-derived-parity")
+
+        _assert_recipe_contains_tokens(
+            self,
+            block,
+            "test-execution-summary-report-contract-derived-parity",
+            (
+                "$(MAKE) test-execution-summary-full-sidecars-current-or-refresh",
+                "$(MAKE) test-execution-summary-current-check",
+                "--collection-only",
+                '--out "$(TEST_EXECUTION_SUMMARY_REPORT_CONTRACT_COLLECTION_MANIFEST_OUT)"',
+                "--derive-subset-from-full",
+                '--full-summary "$(TEST_EXECUTION_SUMMARY_FULL_OUT)"',
+                '--junit-xml-path "$(TEST_EXECUTION_SUMMARY_FULL_JUNIT_OUT)"',
+                '--parity-direct-summary "$(TEST_EXECUTION_SUMMARY_OUT)"',
+            ),
+        )
+        self.assertNotIn("test-execution-summary-full-current-check", block)
+        self.assertIn(
+            "test-execution-summary: test-execution-summary-report-contract",
+            text,
+        )
+
+    def test_full_sidecar_current_or_refresh_checks_before_and_after_refresh(self) -> None:
+        text = _makefile_text()
+        current_check = _target_block(
+            text, "test-execution-summary-full-sidecars-current-check"
+        )
+        current_or_refresh = _target_block(
+            text, "test-execution-summary-full-sidecars-current-or-refresh"
+        )
+
+        self.assertIn("$(MAKE) test-execution-summary-full-current-check", current_check)
+        self.assertIn("--validate-full-suite-sidecars", current_check)
+        self.assertIn(
+            "$(MAKE) test-execution-summary-full-sidecars-current-check",
+            current_or_refresh,
+        )
+        self.assertIn(
+            "$(MAKE) test-execution-summary-full-current-or-refresh",
+            current_or_refresh,
+        )
+        self.assertIn(
+            "$(MAKE) test-execution-summary-full-refresh-no-converge",
+            current_or_refresh,
         )
 
     def test_compatibility_summary_targets_delegate_to_mode_targets(self) -> None:

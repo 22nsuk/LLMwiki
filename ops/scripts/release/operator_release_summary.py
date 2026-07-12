@@ -926,6 +926,35 @@ def _release_decision_snapshot(batch_manifest: dict[str, Any]) -> dict[str, Any]
     return snapshot if isinstance(snapshot, dict) else {}
 
 
+def _closeout_issue_codes(
+    closeout: dict[str, Any],
+    *,
+    collections: tuple[str, ...],
+    effect_field: str | None = None,
+    effect_value: str | None = None,
+) -> list[str]:
+    codes: set[str] = set()
+    for collection in collections:
+        issues = closeout.get(collection, [])
+        if not isinstance(issues, list):
+            continue
+        for issue in issues:
+            if not isinstance(issue, dict):
+                continue
+            if effect_field and str(issue.get(effect_field, "")).strip() != effect_value:
+                continue
+            code = str(issue.get("code", "")).strip()
+            if code:
+                codes.add(code)
+    return sorted(codes)
+
+
+def _identity_codes(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return sorted({str(code).strip() for code in value if str(code).strip()})
+
+
 def _accepted_risk_summary(
     closeout: dict[str, Any],
     release_decision_snapshot: dict[str, Any],
@@ -951,13 +980,19 @@ def _accepted_risk_summary(
     )
     release_blocking_count = int(_scope_count(closeout, "release_blocking_family_count") or 0)
     release_accepted_risk_count = max(clean_lane_blocking_count, release_blocking_count)
+    gate_attention_count = int(
+        release_decision_snapshot.get("gate_attention_count", 0) or 0
+    )
+    gate_attention_codes = _identity_codes(
+        release_decision_snapshot.get("gate_attention_codes", [])
+    )
     return {
         "operator_accepted_risk_family_count": operator_count,
         "clean_lane_blocking_accepted_risk_family_count": clean_lane_blocking_count,
         "accepted_risk_count": accepted_risk_count,
         "release_accepted_risk_count": release_accepted_risk_count,
         "accepted_learning_risk_count": 1 if learning_readiness["accepted_learning_risk"] else 0,
-        "gate_attention_count": int(release_decision_snapshot.get("gate_attention_count", 0) or 0),
+        "gate_attention_count": gate_attention_count,
         "learning_claim_blocking_family_count": int(
             release_decision_snapshot.get(
                 "learning_claim_blocking_family_count",
@@ -971,6 +1006,19 @@ def _accepted_risk_summary(
                 _scope_count(closeout, "advisory_lifecycle_family_count"),
             )
             or 0
+        ),
+        "gate_attention_codes": gate_attention_codes,
+        "learning_claim_blocking_codes": _closeout_issue_codes(
+            closeout,
+            collections=("blockers", "accepted_risks"),
+            effect_field="learning_lane_effect",
+            effect_value="blocks_learning_claim",
+        ),
+        "advisory_lifecycle_codes": _closeout_issue_codes(
+            closeout,
+            collections=("blockers", "accepted_risks"),
+            effect_field="advisory_lifecycle_effect",
+            effect_value="review_backlog",
         ),
         "count_sources": _accepted_risk_count_sources(),
     }

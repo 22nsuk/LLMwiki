@@ -45,6 +45,13 @@ from ops.scripts.release.release_sealed_run_manifest import (
     _json_identity,
     _unique_failures,
 )
+from ops.scripts.release.stage3_operator_authority_runtime import (
+    current_lower_authority_pass,
+    release_gate_blocker_ids,
+    run_manifest_authority_pass,
+    sealed_manifest_authority_pass,
+    stage3_count_audit,
+)
 
 DEFAULT_OUT = "build/release/release-auto-promotion-ready-manifest.json"
 SCHEMA_PATH = "ops/schemas/release-auto-promotion-ready-manifest.schema.json"
@@ -130,23 +137,6 @@ def _bool_value(value: Any) -> bool:
     return False
 
 
-def _run_manifest_authority_pass(payload: dict[str, Any]) -> bool:
-    authority_status = str(payload.get("release_authority_status", "")).strip()
-    if authority_status and authority_status != "unknown":
-        machine_allowed = payload.get("machine_release_allowed")
-        if isinstance(machine_allowed, bool):
-            return authority_status == "clean_pass" and machine_allowed
-        return authority_status == "clean_pass"
-    return str(payload.get("status", "")).strip() == "pass"
-
-
-def _sealed_manifest_authority_pass(payload: dict[str, Any]) -> bool:
-    sealed_status = str(payload.get("sealed_release_status", "")).strip()
-    if sealed_status and sealed_status != "unknown":
-        return sealed_status == "sealed_clean_pass"
-    return str(payload.get("status", "")).strip() == "pass"
-
-
 def _load_report(vault: Path, path_value: str) -> tuple[dict[str, Any], dict[str, Any]]:
     path = _resolve(vault, path_value)
     payload, diagnostics = load_optional_json_object_with_diagnostics(path)
@@ -171,13 +161,6 @@ def _operator_count_group(operator_summary: dict[str, Any], fields: tuple[str, .
     return {field: _int_value(accepted_risk.get(field, 0)) for field in fields}
 
 
-def _blocking_gate_attention(operator_summary: dict[str, Any]) -> dict[str, int]:
-    accepted_risk = _dict(operator_summary.get("accepted_risk"))
-    raw_attention = _int_value(accepted_risk.get("gate_attention_count", 0))
-    advisory_attention = _int_value(accepted_risk.get("advisory_lifecycle_family_count", 0))
-    return {"gate_attention_count": max(0, raw_attention - advisory_attention)}
-
-
 def _release_gate_diagnostic_blockers(blockers: list[Any]) -> list[dict[str, Any]]:
     return [
         blocker
@@ -194,9 +177,28 @@ def _stage3_blocking_promotion_blockers(blockers: list[Any]) -> list[dict[str, A
     ]
 
 
-def _operator_diagnostics(operator_summary: dict[str, Any]) -> dict[str, Any]:
+def _operator_diagnostics(
+    operator_summary: dict[str, Any],
+    *,
+    release_gate_ids: set[str],
+    lower_authority_pass: bool,
+) -> dict[str, Any]:
     test_evidence = _dict(operator_summary.get("test_evidence"))
     learning_readiness = _dict(operator_summary.get("learning_readiness"))
+    accepted_risk = _dict(operator_summary.get("accepted_risk"))
+    gate_attention = stage3_count_audit(
+        _int_value(accepted_risk.get("gate_attention_count", 0)),
+        operator_ids=accepted_risk.get("gate_attention_codes"),
+        release_gate_ids=release_gate_ids,
+        lower_authority_pass=lower_authority_pass,
+        advisory_ids=accepted_risk.get("advisory_lifecycle_codes"),
+    )
+    learning_claim = stage3_count_audit(
+        _int_value(accepted_risk.get("learning_claim_blocking_family_count", 0)),
+        operator_ids=accepted_risk.get("learning_claim_blocking_codes"),
+        release_gate_ids=release_gate_ids,
+        lower_authority_pass=lower_authority_pass,
+    )
     return {
         "status": str(operator_summary.get("status", "")).strip(),
         "source_zip_policy_status": str(operator_summary.get("source_zip_policy_status", "")).strip(),
@@ -206,8 +208,12 @@ def _operator_diagnostics(operator_summary: dict[str, Any]) -> dict[str, Any]:
         "full_suite_status": str(test_evidence.get("full_suite_status", "")).strip(),
         "learning_revalidation_status": str(learning_readiness.get("revalidation_status", "")).strip(),
         "accepted_risk": _operator_count_group(operator_summary, ACCEPTED_RISK_DIAGNOSTIC_FIELDS),
-        "gate_attention": _blocking_gate_attention(operator_summary),
-        "learning_claim": _operator_count_group(operator_summary, STRICT_ZERO_LEARNING_CLAIM_FIELDS),
+        "gate_attention": gate_attention.diagnostics(
+            count_field="gate_attention_count",
+        ),
+        "learning_claim": learning_claim.diagnostics(
+            count_field="learning_claim_blocking_family_count",
+        ),
     }
 
 
@@ -245,6 +251,9 @@ def _auto_improve_diagnostics(
         "promotion_blocker_count": len(promotion_blockers),
         "stage3_blocking_promotion_blocker_count": len(stage3_promotion_blockers),
         "release_gate_diagnostic_promotion_blocker_count": len(release_gate_diagnostic_blockers),
+        "release_gate_diagnostic_promotion_blocker_ids": sorted(
+            release_gate_blocker_ids(auto_improve_readiness)
+        ),
         "clean_release_blocker_count": len(clean_release_blockers),
     }
 
@@ -599,7 +608,11 @@ def _operator_zero_count_requirements(operator: dict[str, Any]) -> list[Requirem
         fields = (
             STRICT_ZERO_ACCEPTED_RISK_FIELDS
             if group == "accepted_risk"
-            else tuple(operator[group].keys())
+            else (
+                STRICT_ZERO_GATE_ATTENTION_FIELDS
+                if group == "gate_attention"
+                else STRICT_ZERO_LEARNING_CLAIM_FIELDS
+            )
         )
         for field in fields:
             count = int(operator[group].get(field, 0))
@@ -790,7 +803,7 @@ def _manifest_authority_ready_checks(request: _ReadyCheckInputs) -> dict[str, bo
             request.inputs["run_manifest"]["source_tree_fingerprint"] == request.fingerprint
             and request.inputs["run_manifest"]["source_revision"] == request.revision
         ),
-        "run_manifest_pass": _run_manifest_authority_pass(request.run_payload),
+        "run_manifest_pass": run_manifest_authority_pass(request.run_payload),
         "sealed_run_manifest_load_ok": (
             request.inputs["sealed_run_manifest"]["load_status"] == "ok"
         ),
@@ -801,7 +814,7 @@ def _manifest_authority_ready_checks(request: _ReadyCheckInputs) -> dict[str, bo
             request.inputs["sealed_run_manifest"]["source_tree_fingerprint"] == request.fingerprint
             and request.inputs["sealed_run_manifest"]["source_revision"] == request.revision
         ),
-        "sealed_run_manifest_pass": _sealed_manifest_authority_pass(request.sealed_payload),
+        "sealed_run_manifest_pass": sealed_manifest_authority_pass(request.sealed_payload),
     }
 
 
@@ -829,8 +842,10 @@ def _operator_ready_checks(request: _ReadyCheckInputs) -> dict[str, bool]:
             operator["accepted_risk"].get(field, 0) == 0
             for field in STRICT_ZERO_ACCEPTED_RISK_FIELDS
         ),
-        "gate_attention_clean": all(count == 0 for count in operator["gate_attention"].values()),
-        "learning_claim_clean": all(count == 0 for count in operator["learning_claim"].values()),
+        "gate_attention_clean": operator["gate_attention"]["gate_attention_count"] == 0,
+        "learning_claim_clean": (
+            operator["learning_claim"]["learning_claim_blocking_family_count"] == 0
+        ),
     }
 
 
@@ -999,6 +1014,44 @@ def _ready_manifest_payload(
     }
 
 
+def _stage3_operator_and_auto_diagnostics(
+    *,
+    inputs: dict[str, dict[str, Any]],
+    run_payload: dict[str, Any],
+    sealed_payload: dict[str, Any],
+    operator_payload: dict[str, Any],
+    auto_payload: dict[str, Any],
+    fingerprint: str,
+    revision: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    auto_improve = _auto_improve_diagnostics(
+        auto_payload,
+        current_fingerprint=fingerprint,
+        current_revision=revision,
+    )
+    auto_identity = inputs["auto_improve_readiness"]
+    auto_is_current = (
+        auto_identity["load_status"] == "ok"
+        and auto_identity["artifact_kind"] == "auto_improve_readiness_report"
+        and auto_improve["currentness_status"] == "current"
+    )
+    operator = _operator_diagnostics(
+        operator_summary=operator_payload,
+        release_gate_ids=(
+            release_gate_blocker_ids(auto_payload) if auto_is_current else set()
+        ),
+        lower_authority_pass=current_lower_authority_pass(
+            run_payload=run_payload,
+            sealed_payload=sealed_payload,
+            run_identity=inputs["run_manifest"],
+            sealed_identity=inputs["sealed_run_manifest"],
+            current_fingerprint=fingerprint,
+            current_revision=revision,
+        ),
+    )
+    return operator, auto_improve
+
+
 def build_manifest(
     vault: Path,
     *,
@@ -1038,11 +1091,14 @@ def build_manifest(
         goal_runtime_certificate,
     )
 
-    operator = _operator_diagnostics(operator_payload)
-    auto_improve = _auto_improve_diagnostics(
-        auto_payload,
-        current_fingerprint=fingerprint,
-        current_revision=commit,
+    operator, auto_improve = _stage3_operator_and_auto_diagnostics(
+        inputs=inputs,
+        run_payload=run_payload,
+        sealed_payload=sealed_payload,
+        operator_payload=operator_payload,
+        auto_payload=auto_payload,
+        fingerprint=fingerprint,
+        revision=commit,
     )
     preflight = _preflight_diagnostics(preflight_payload)
     preseal = _preflight_diagnostics(preseal_payload)

@@ -10,7 +10,8 @@
     "persistent_lanes",
     "derived_packs",
     "compatibility_layers",
-    "documentation_boundary"
+    "documentation_boundary",
+    "trusted_ci_evidence"
   ],
   "properties": {
     "$schema": {
@@ -48,6 +49,9 @@
     },
     "documentation_boundary": {
       "$ref": "#/$defs/documentation_boundary"
+    },
+    "trusted_ci_evidence": {
+      "$ref": "#/$defs/trusted_ci_evidence"
     }
   },
   "$defs": {
@@ -410,6 +414,39 @@
         },
         "out_of_scope_documents": {
           "$ref": "#/$defs/string_list"
+        }
+      }
+    },
+    "trusted_ci_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "repository", "signer_workflow", "workflow_path", "runner",
+        "summary_suite", "semantic_command", "environment"
+      ],
+      "properties": {
+        "status": { "const": "additive_non_authoritative" },
+        "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "signer_workflow": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml$" },
+        "workflow_path": { "type": "string", "pattern": "^\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml$" },
+        "runner": { "const": "ubuntu-latest" },
+        "summary_suite": { "const": "full" },
+        "semantic_command": { "const": "aggregate test execution summary shards" },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "python_major_minor", "minimum_pytest_major", "plugin_autoload_disabled",
+            "interpreter_path_class", "toolchain_status", "release_evidence_effect"
+          ],
+          "properties": {
+            "python_major_minor": { "const": "3.12" },
+            "minimum_pytest_major": { "type": "integer", "minimum": 1 },
+            "plugin_autoload_disabled": { "const": true },
+            "interpreter_path_class": { "const": "path_lookup" },
+            "toolchain_status": { "const": "pass" },
+            "release_evidence_effect": { "const": "eligible" }
+          }
         }
       }
     }

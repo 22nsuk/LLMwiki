@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llmwiki.local/schemas/source-substance-cohort-classification.schema.json",
+  "title": "Source Substance Cohort Classification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "artifact_kind",
+    "generated_at",
+    "producer",
+    "source_command",
+    "source_revision",
+    "source_tree_fingerprint",
+    "input_fingerprints",
+    "schema_version",
+    "artifact_status",
+    "retention_policy",
+    "encoding",
+    "currentness",
+    "vault",
+    "policy",
+    "status",
+    "summary",
+    "entries"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "ops/schemas/source-substance-cohort-classification.schema.json"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "const": "source_substance_cohort_classification"
+    },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "string",
+      "const": "ops.scripts.registry.source_substance_cohort_classify"
+    },
+    "source_command": { "type": "string", "minLength": 1 },
+    "source_revision": { "type": "string" },
+    "source_tree_fingerprint": { "type": "string", "minLength": 1 },
+    "input_fingerprints": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "schema_version": { "type": "integer", "const": 2 },
+    "artifact_status": { "type": "string", "const": "current" },
+    "retention_policy": { "type": "string", "const": "canonical_report" },
+    "encoding": { "type": "string", "const": "utf-8" },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "checked_at"],
+      "properties": {
+        "status": { "type": "string", "const": "current" },
+        "checked_at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "vault": { "type": "string", "minLength": 1 },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "status": { "type": "string", "enum": ["pass", "attention"] },
+    "summary": { "$ref": "#/$defs/summary" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "routeCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "no_action",
+        "recover_from_text_raw",
+        "recover_from_pdf_raw",
+        "retained_operator_review",
+        "operator_review"
+      ],
+      "properties": {
+        "no_action": { "type": "integer", "minimum": 0 },
+        "recover_from_text_raw": { "type": "integer", "minimum": 0 },
+        "recover_from_pdf_raw": { "type": "integer", "minimum": 0 },
+        "retained_operator_review": { "type": "integer", "minimum": 0 },
+        "operator_review": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_source_count",
+        "passing_count",
+        "failing_count",
+        "remediation_route_counts",
+        "failing_by_corpus",
+        "failure_reason_counts"
+      ],
+      "properties": {
+        "total_source_count": { "type": "integer", "minimum": 0 },
+        "passing_count": { "type": "integer", "minimum": 0 },
+        "failing_count": { "type": "integer", "minimum": 0 },
+        "remediation_route_counts": { "$ref": "#/$defs/routeCounts" },
+        "failing_by_corpus": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["wiki", "system"],
+          "properties": {
+            "wiki": { "type": "integer", "minimum": 0 },
+            "system": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "failure_reason_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "substanceMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_point_count",
+        "limitation_count",
+        "title_independent_fact_count"
+      ],
+      "properties": {
+        "key_point_count": { "type": "integer", "minimum": 0 },
+        "limitation_count": { "type": "integer", "minimum": 0 },
+        "title_independent_fact_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "synthesisLinkage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["linked", "linkage_count", "direct_links", "inverse_links"],
+      "properties": {
+        "linked": { "type": "boolean" },
+        "linkage_count": { "type": "integer", "minimum": 0 },
+        "direct_links": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "inverse_links": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "page_sha256",
+        "corpus",
+        "registry_id",
+        "created",
+        "filename_date",
+        "ingest_cohort",
+        "substance_pass",
+        "substance_failure_reasons",
+        "substance_metrics",
+        "raw_path",
+        "raw_exists",
+        "raw_media_class",
+        "raw_sha256",
+        "route_decision",
+        "synthesis_linkage",
+        "remediation_route"
+      ],
+      "properties": {
+        "page": { "type": "string", "pattern": "^(wiki|system)/source--.+\\.md$" },
+        "page_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "corpus": { "type": "string", "enum": ["wiki", "system"] },
+        "registry_id": { "type": ["string", "null"] },
+        "created": { "type": ["string", "null"] },
+        "filename_date": {
+          "type": ["string", "null"],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "ingest_cohort": { "type": "null" },
+        "substance_pass": { "type": "boolean" },
+        "substance_failure_reasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "substance_metrics": { "$ref": "#/$defs/substanceMetrics" },
+        "raw_path": { "type": ["string", "null"] },
+        "raw_exists": { "type": "boolean" },
+        "raw_media_class": {
+          "type": "string",
+          "enum": ["text", "pdf", "other", "missing"]
+        },
+        "raw_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "route_decision": { "type": ["string", "null"] },
+        "synthesis_linkage": { "$ref": "#/$defs/synthesisLinkage" },
+        "remediation_route": {
+          "type": "string",
+          "enum": [
+            "no_action",
+            "recover_from_text_raw",
+            "recover_from_pdf_raw",
+            "retained_operator_review",
+            "operator_review"
+          ]
+        }
+      }
+    }
+  }
+}

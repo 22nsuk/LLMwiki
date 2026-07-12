@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import shlex
-import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -20,8 +20,11 @@ from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 from ops.scripts.test.test_execution_command_runtime import (
-    build_execution_environment,
     toolchain_fingerprint as _toolchain_fingerprint,
+)
+from ops.scripts.test.test_execution_derivation_runtime import (
+    collection_manifest_reference_is_current,
+    collection_manifest_reference_is_rebindable,
 )
 from ops.scripts.test.test_execution_evidence_runtime import (
     evidence_artifact_consistency as _evidence_artifact_consistency,
@@ -74,6 +77,18 @@ def reusable_aggregate_summary_diagnostics(
 
     current_source_revision = resolve_source_revision(vault).revision
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    digest = existing.get("pytest_collect_nodeid_digest", {})
+    has_collection_manifest = bool(
+        isinstance(digest, dict) and digest.get("manifest_path")
+    )
+    collection_manifest_current = (
+        not has_collection_manifest
+        or collection_manifest_reference_is_current(vault, digest)
+    )
+    collection_manifest_rebindable = bool(
+        has_collection_manifest
+        and collection_manifest_reference_is_rebindable(vault, digest)
+    )
     checks = {
         "artifact_kind": existing.get("artifact_kind") == "test_execution_summary",
         "status": existing.get("status") == "pass",
@@ -85,11 +100,21 @@ def reusable_aggregate_summary_diagnostics(
             suite.strip().lower().replace("_", "-") not in FULL_SUITE_SCOPES
             or bool(existing.get("represents_full_suite"))
         ),
+        "collection_manifest": (
+            suite.strip().lower().replace("_", "-") not in FULL_SUITE_SCOPES
+            or collection_manifest_current
+        ),
     }
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         diagnostics["reason"] = f"not_current:{','.join(failed)}"
-        diagnostics["result_reusable"] = failed == ["source_revision"]
+        diagnostics["result_reusable"] = failed == ["source_revision"] or (
+            set(failed) == {"source_revision", "collection_manifest"}
+            and collection_manifest_rebindable
+        )
+        diagnostics["collection_manifest_rebindable"] = (
+            collection_manifest_rebindable
+        )
         diagnostics["checks"] = checks
         diagnostics["current_source_revision"] = current_source_revision
         diagnostics["observed_source_revision"] = str(existing.get("source_revision", ""))
@@ -147,6 +172,23 @@ def aggregate_counts(shards: list[dict[str, Any]]) -> dict[str, int]:
         for key in counts:
             counts[key] += int(shard_counts.get(key, 0) or 0)
     return counts
+
+
+def aggregate_execution_environment(shards: list[dict[str, Any]]) -> dict[str, Any]:
+    environments: list[dict[str, Any]] = []
+    for index, shard in enumerate(shards, start=1):
+        environment = shard.get("execution_environment")
+        if not isinstance(environment, dict):
+            raise ValueError(
+                f"aggregate shard {index} has no execution_environment"
+            )
+        environments.append(environment)
+    if not environments:
+        raise ValueError("aggregate report received no shard execution environments")
+    first = environments[0]
+    if any(environment != first for environment in environments[1:]):
+        raise ValueError("aggregate shard execution_environment mismatch")
+    return deepcopy(first)
 
 
 def summary_shard_paths(vault: Path, aggregate_from: list[str], aggregate_dir: str) -> list[str]:
@@ -293,6 +335,10 @@ def aggregate_nodeid_digest(shards: list[dict[str, Any]]) -> dict[str, Any]:
             "sha256": "",
             "reason": "one or more shard nodeid digests were not collected",
         }
+    if len(digests) == 1:
+        aggregate = dict(digests[0])
+        aggregate["reason"] = "aggregate report reuses the exact shard collection digest"
+        return aggregate
     digest_input = "\n".join(
         f"{digest.get('sha256', '')}:{int(digest.get('nodeid_count', 0) or 0)}"
         for digest in digests
@@ -357,11 +403,11 @@ def build_aggregate_report(
         deselected_tests=deselected_tests,
         generated_at=generated_at,
     )
-    execution_environment = build_execution_environment(vault, [sys.executable, "-m", "pytest"])
+    execution_environment = aggregate_execution_environment(shards)
     coverage = _apply_toolchain_contract_to_coverage(
         _suite_coverage(
             suite=suite,
-            command=[sys.executable, "-m", "pytest"],
+            command=[],
             summary_mode="aggregate",
             shards=shards,
         ),

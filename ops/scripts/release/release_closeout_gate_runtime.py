@@ -933,9 +933,14 @@ def closeout_gates(
     *,
     current_source_tree_fingerprint: str,
 ) -> CloseoutGates:
+    live_make_check_result = live_make_check_gate(
+        collection.components,
+        collection.source_payloads,
+    )
     test_failure_lanes_result = test_failure_lanes(
         collection.test_summary_payload,
         collection.test_summary_load_status,
+        full_suite_ready=bool(live_make_check_result["ready"]),
     )
     source_tree_coherence_result, coherence_blockers, coherence_risks = (
         source_tree_coherence(
@@ -957,10 +962,7 @@ def closeout_gates(
         release_smoke_boundedness_gate=release_smoke_boundedness_gate(
             collection.source_payloads
         ),
-        live_make_check=live_make_check_gate(
-            collection.components,
-            collection.source_payloads,
-        ),
+        live_make_check=live_make_check_result,
     )
 
 

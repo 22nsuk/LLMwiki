@@ -11,11 +11,23 @@ from ops.scripts.public.export_public_repo import (
     build_parser,
     export_public_repo,
 )
+from ops.scripts.release.external_report_lifecycle_status_decision_runtime import (
+    single_source_status,
+)
+from tests.minimal_vault_runtime import REPO_ROOT
 
 pytestmark = pytest.mark.public
 
 
 class ExportPublicRepoTests(unittest.TestCase):
+    def test_public_export_retains_live_release_writer_single_source_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            public_dir = Path(temp_dir) / "public"
+            export_public_repo(REPO_ROOT, public_dir)
+
+            self.assertFalse((public_dir / "ops/reports").exists())
+            self.assertEqual(single_source_status(public_dir), "implemented")
+
     def test_export_public_repo_cli_defaults_to_system_tempdir(self) -> None:
         parsed = build_parser().parse_args([])
 

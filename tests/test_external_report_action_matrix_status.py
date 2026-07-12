@@ -10,6 +10,7 @@ from ops.scripts.core.source_tree_fingerprint_runtime import (
 )
 from tests.external_report_action_matrix_test_runtime import (
     FINALITY_ATTESTATION_PATH,
+    FIXED_POINT_POLICY_PATH,
     REPO_ROOT,
     SCHEMA_PATH,
     ExternalReportActionMatrixTestBase,
@@ -119,6 +120,45 @@ _GOAL_NATIVE_COMPLETED_CONTRACT_ACTION_IDS = (
 
 
 class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
+    def test_single_source_status_requires_all_live_source_owners(self) -> None:
+        self.assertEqual(
+            action_statuses(self.vault)["release_writer_dependency_single_source"],
+            "partially_automated",
+        )
+
+        self._write_json("ops/reports/release-workflow-order-guard.json", {"status": "pass"})
+        self._write_json("ops/reports/workflow-dependency-planner.json", {"status": "pass"})
+
+        self.assertEqual(
+            action_statuses(self.vault)["release_writer_dependency_single_source"],
+            "partially_automated",
+        )
+
+    def test_single_source_action_evidence_uses_policy_not_obsolete_planner_report(
+        self,
+    ) -> None:
+        report = build_report(self.vault, context=fixed_context())
+        action = self._actions_by_id(report)["release_writer_dependency_single_source"]
+        evidence_paths = {item["path"] for item in action["evidence"]}
+
+        self.assertEqual(
+            evidence_paths,
+            {
+                FIXED_POINT_POLICY_PATH,
+                "Makefile",
+                "ops/policies/release-workflow-order-guard.json",
+            },
+        )
+        self.assertNotIn("ops/reports/workflow-dependency-planner.json", evidence_paths)
+
+    def test_single_source_status_is_planned_without_policy_or_guard(self) -> None:
+        (self.vault / FIXED_POINT_POLICY_PATH).unlink()
+
+        self.assertEqual(
+            action_statuses(self.vault)["release_writer_dependency_single_source"],
+            "planned",
+        )
+
     def test_active_summary_prioritizes_source_action_targets_over_freshness(self) -> None:
         summary = _active_action_resolution_summary(
             [
@@ -1486,7 +1526,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             self.assertEqual(actions[action_id]["verification_readiness_status"], "ready")
             self.assertEqual(actions[action_id]["status_reason_ids"], [])
             self.assertEqual(actions[action_id]["status_reason_details"], [])
-        self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
+        self.assertEqual(
+            actions["release_writer_dependency_single_source"]["current_status"],
+            "partially_automated",
+        )
         self.assertEqual(report["summary"]["requires_release_run_verification_count"], 0)
     def test_finality_report_failure_blocks_only_evidence_bundle_attestation(self) -> None:
         self._write_release_verification_reports()
@@ -2886,7 +2929,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "promotion_truth_ladder",
         ):
             self.assertEqual(actions[action_id]["current_status"], "implemented")
-        self.assertEqual(actions["release_writer_dependency_single_source"]["current_status"], "implemented")
+        self.assertEqual(
+            actions["release_writer_dependency_single_source"]["current_status"],
+            "partially_automated",
+        )
     def test_release_verified_actions_allow_non_authoritative_learning_dashboard_fail(self) -> None:
         self._write_release_verification_reports()
         self._write_json(
