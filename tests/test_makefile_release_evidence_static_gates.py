@@ -270,8 +270,9 @@ _RELEASE_CLOSEOUT_FINALITY_ASSIGNMENTS = (
 _RELEASE_DISTRIBUTION_ASSIGNMENTS = (
     "RELEASE_DISTRIBUTION_ZIP_OUT ?= build/release/LLMwiki-source.zip",
     "RELEASE_DISTRIBUTION_ZIP_SMOKE_OUT ?= build/release/release-distribution-zip-smoke.json",
-    "RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?=",
+    "RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?= $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_DISTRIBUTION_ZIP_OUT))",
     "RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?=",
+    "RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP = $(strip $(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP))",
     "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
     "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json",
     "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
@@ -540,6 +541,8 @@ _BATCH_MANIFEST_CLOSEOUT_TARGET_CONTRACTS = (
             '--out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)"',
             "--schema ops/schemas/release-closeout-fixed-point.schema.json",
             '--initial-target "$(target)"',
+            '--make-variable "RELEASE_EVIDENCE_COHORT_POLICY=$(RELEASE_EVIDENCE_COHORT_POLICY)"',
+            '--make-variable "RELEASE_EVIDENCE_COHORT_ZIP_METADATA=$(RELEASE_EVIDENCE_COHORT_ZIP_METADATA)"',
             "--binding-mode revision",
             "$(MAKE) release-closeout-finality-attestation",
         ),
@@ -622,6 +625,7 @@ def _assert_surface_tokens(
 def _assert_release_closeout_manifest_phony_and_vars(case: unittest.TestCase, text: str) -> None:
     _assert_phony_targets(case, text, _RELEASE_CLOSEOUT_MANIFEST_PHONY_TARGETS)
     _assert_surface_tokens(case, text, _RELEASE_CLOSEOUT_ASSIGNMENT_SURFACES)
+    case.assertNotIn("RELEASE_AUTO_PROMOTION_RUN_MANIFEST_DISTRIBUTION_ZIP", text)
 
 
 def _assert_external_report_release_basis_targets(case: unittest.TestCase, text: str) -> None:

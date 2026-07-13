@@ -1019,6 +1019,49 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             self.assertFalse(diagnostics["current"])
             self.assertIn("currentness_status_mismatch", diagnostics["reasons"])
 
+    def test_current_check_rejects_schema_invalid_cached_index(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            canonical_path = self._write_canonical_index(vault)
+            baseline = json.loads(canonical_path.read_text(encoding="utf-8"))
+
+            cases = {
+                "missing_required_field": (
+                    {
+                        key: value
+                        for key, value in baseline.items()
+                        if key != "canonical_reports"
+                    },
+                    "$: missing required property 'canonical_reports'",
+                ),
+                "wrong_schema": (
+                    {**baseline, "$schema": "ops/schemas/wrong.schema.json"},
+                    (
+                        "$.$schema: expected one of "
+                        "['ops/schemas/generated-artifact-index.schema.json']"
+                    ),
+                ),
+            }
+            for name, (payload, expected_error) in cases.items():
+                with self.subTest(name=name):
+                    canonical_path.write_text(json.dumps(payload), encoding="utf-8")
+
+                    diagnostics = currentness_diagnostics(vault)
+
+                    self.assertFalse(diagnostics["current"])
+                    self.assertFalse(diagnostics["checks"]["schema_validation"])
+                    self.assertIn("schema_validation_mismatch", diagnostics["reasons"])
+                    self.assertIn(expected_error, diagnostics["schema_errors"])
+                    self.assertTrue(
+                        all(
+                            passed
+                            for check, passed in diagnostics["checks"].items()
+                            if check != "schema_validation"
+                        )
+                    )
+
     def test_index_surfaces_run_artifact_load_issues_in_reason(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

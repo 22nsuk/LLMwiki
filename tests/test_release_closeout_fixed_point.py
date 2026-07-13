@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
+import hashlib
 import inspect
 import json
 import tempfile
@@ -312,6 +313,44 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         written = write_report(self.vault, report)
         self.assertTrue(written.is_file())
+
+    def test_explicit_make_variables_reach_every_fixed_point_writer(self) -> None:
+        commands: list[list[str]] = []
+        make_variables = (
+            "RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint",
+            "RELEASE_EVIDENCE_COHORT_ZIP_METADATA=build/release/LLMwiki-source.zip",
+        )
+        successful_runner = self._successful_runner([])
+
+        def runner(
+            argv: Sequence[str],
+            cwd: Path,
+            timeout_seconds: int,
+            env: Mapping[str, str],
+        ) -> dict[str, Any]:
+            commands.append(list(argv))
+            return successful_runner(argv, cwd, timeout_seconds, env)
+
+        report = build_report(
+            self.vault,
+            timeout_seconds=30,
+            python_executable="python",
+            make_variables=make_variables,
+            context=fixed_context(),
+            command_runner=runner,
+        )
+
+        self.assertTrue(commands)
+        for command in commands:
+            with self.subTest(target=command[1]):
+                self.assertEqual(command[-len(make_variables) :], list(make_variables))
+        expected_fingerprint = hashlib.sha256(
+            "\n".join(make_variables).encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(
+            report["input_fingerprints"]["make_variables"],
+            expected_fingerprint,
+        )
 
     def test_terminal_operator_writer_reads_final_batch_and_self_check(self) -> None:
         calls: list[str] = []

@@ -25,6 +25,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.schema_constants_runtime import (
         GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
     )
+    from ops.scripts.core.schema_runtime import (
+        load_schema_with_vault_override,
+        validate_with_schema,
+    )
     from ops.scripts.core.source_revision_runtime import resolve_source_revision
     from ops.scripts.core.source_tree_fingerprint_runtime import (
         release_source_tree_fingerprint,
@@ -80,6 +84,7 @@ else:
     from .policy_runtime import load_policy, report_path
     from .runtime_context import RuntimeContext
     from .schema_constants_runtime import GENERATED_ARTIFACT_INDEX_SCHEMA_PATH
+    from .schema_runtime import load_schema_with_vault_override, validate_with_schema
     from .source_revision_runtime import resolve_source_revision
     from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
@@ -900,6 +905,7 @@ def currentness_diagnostics(
         "input_fingerprints": current_input_fingerprints,
     }
     empty_checks = {
+        "schema_validation": False,
         "artifact_kind": False,
         "producer": False,
         "artifact_status": False,
@@ -915,6 +921,7 @@ def currentness_diagnostics(
             "current": False,
             "path": report_path(vault, canonical_path),
             "reasons": ["canonical_artifact_unavailable"],
+            "schema_errors": [],
             "source_revision_status": "unknown",
             "load_error": type(exc).__name__,
             "checks": empty_checks,
@@ -924,6 +931,10 @@ def currentness_diagnostics(
 
     if not isinstance(payload, dict):
         payload = {}
+    schema_errors = validate_with_schema(
+        payload,
+        load_schema_with_vault_override(vault, GENERATED_ARTIFACT_INDEX_SCHEMA_PATH),
+    )
     currentness = payload.get("currentness")
     source_revision_status = (
         "current"
@@ -931,6 +942,7 @@ def currentness_diagnostics(
         else "provenance_only"
     )
     checks = {
+        "schema_validation": not schema_errors,
         "artifact_kind": payload.get("artifact_kind")
         == "generated_artifact_index_report",
         "producer": payload.get("producer") == PRODUCER,
@@ -949,6 +961,7 @@ def currentness_diagnostics(
         "current": current,
         "path": report_path(vault, canonical_path),
         "reasons": reasons,
+        "schema_errors": schema_errors,
         "source_revision_status": source_revision_status,
         "checks": checks,
         "expected": expected,
