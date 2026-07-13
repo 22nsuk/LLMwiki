@@ -9,6 +9,7 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.artifact_envelope_runtime import artifact_input_fingerprints
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -29,6 +30,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SPRINT_PRIORITIES,
     )
     from ops.scripts.release.external_report_inventory_runtime import (
+        LOCAL_REPORT_LINE_DIGESTS,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
@@ -49,6 +51,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         status_from_evidence,
     )
 else:
+    from ops.scripts.core.artifact_envelope_runtime import artifact_input_fingerprints
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -67,6 +70,7 @@ else:
 
     from .external_report_action_catalog import ACTION_CATALOG, SPRINT_PRIORITIES
     from .external_report_inventory_runtime import (
+        LOCAL_REPORT_LINE_DIGESTS,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
@@ -92,6 +96,13 @@ DEFAULT_OUT = "ops/reports/external-report-action-matrix.json"
 PRODUCER = "ops.scripts.external_report_action_matrix"
 SCHEMA_PATH = "ops/schemas/external-report-action-matrix.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.external_report_action_matrix --vault ."
+SOURCE_PATHS = [
+    "ops/scripts/release/external_report_action_matrix.py",
+    "ops/scripts/release/external_report_action_catalog.py",
+    "ops/scripts/release/external_report_inventory_runtime.py",
+    "ops/scripts/release/external_report_lifecycle_runtime.py",
+    "ops/scripts/release/external_report_reference_manifest.py",
+]
 SOURCE_ACTION_STATUSES = ("implemented", "partially_automated", "planned")
 VERIFICATION_READINESS_STATUSES = (
     "ready",
@@ -552,6 +563,87 @@ def _stabilize_self_evidence(actions: list[dict[str, Any]], *, status: str) -> N
                 evidence["producer"] = PRODUCER
 
 
+def _action_matrix_envelope_inputs(
+    vault: Path,
+    *,
+    report_paths: list[Path] | None = None,
+    archive_paths: list[Path] | None = None,
+) -> dict[str, Any]:
+    active_paths = report_paths if report_paths is not None else active_report_paths(vault)
+    archived_paths = (
+        archive_paths if archive_paths is not None else archived_report_paths(vault)
+    )
+    return {
+        "source_paths": SOURCE_PATHS,
+        "file_inputs": {
+            "external_report_reference_manifest": REFERENCE_MANIFEST,
+            "external_report_line_digests": LOCAL_REPORT_LINE_DIGESTS,
+        },
+        "path_group_inputs": {
+            "action_evidence_files": _action_evidence_paths(vault),
+            "active_external_reports": [report_path(vault, path) for path in active_paths],
+            "archived_external_reports": [
+                report_path(vault, path) for path in archived_paths
+            ],
+            "archive_reconciliation_observation_paths": (
+                archive_reconciliation_observation_paths(vault)
+            ),
+        },
+        "text_inputs": {
+            "archive_reconciliation_observations": json.dumps(
+                archive_reconciliation_observation_inventory(vault),
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+            "action_catalog": json.dumps(
+                ACTION_CATALOG,
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+        },
+    }
+
+
+def _action_evidence_paths(vault: Path) -> list[str]:
+    from ops.scripts.release.release_closeout_fixed_point import (
+        fixed_point_output_paths_at_or_downstream,
+        fixed_point_writer_specs_from_policy,
+    )
+
+    matrix_target = next(
+        str(writer["target"])
+        for writer in fixed_point_writer_specs_from_policy(vault)
+        if writer.get("name") == "external-report-action-matrix"
+    )
+    excluded_paths = fixed_point_output_paths_at_or_downstream(
+        vault,
+        matrix_target,
+    )
+    return sorted(
+        {
+            str(path).strip()
+            for action in ACTION_CATALOG
+            for path in action.get("evidence_paths", [])
+            if str(path).strip() and str(path).strip() not in excluded_paths
+        }
+    )
+
+
+def action_matrix_input_fingerprints(
+    vault: Path,
+    *,
+    policy_path: str | None = None,
+) -> dict[str, str]:
+    resolved_vault = vault.resolve()
+    _, resolved_policy_path = load_policy(resolved_vault, policy_path)
+    return artifact_input_fingerprints(
+        resolved_vault,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        **_action_matrix_envelope_inputs(resolved_vault),
+    )
+
+
 def build_report(
     vault: Path,
     *,
@@ -604,33 +696,11 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/release/external_report_action_matrix.py",
-                "ops/scripts/release/external_report_action_catalog.py",
-                "ops/scripts/release/external_report_inventory_runtime.py",
-                "ops/scripts/release/external_report_lifecycle_runtime.py",
-                "ops/scripts/release/external_report_reference_manifest.py",
-            ],
-            file_inputs={
-                "external_report_reference_manifest": REFERENCE_MANIFEST,
-            },
-            path_group_inputs={
-                "active_external_reports": [report_path(resolved_vault, path) for path in report_paths],
-                "archived_external_reports": [
-                    report_path(resolved_vault, path) for path in archive_paths
-                ],
-                "archive_reconciliation_observation_paths": archive_reconciliation_observation_paths(
-                    resolved_vault
-                ),
-            },
-            text_inputs={
-                "archive_reconciliation_observations": json.dumps(
-                    archive_reconciliation_observation_inventory(resolved_vault),
-                    ensure_ascii=False,
-                    sort_keys=True,
-                ),
-                "action_catalog": json.dumps(ACTION_CATALOG, ensure_ascii=False, sort_keys=True),
-            },
+            **_action_matrix_envelope_inputs(
+                resolved_vault,
+                report_paths=report_paths,
+                archive_paths=archive_paths,
+            ),
         ),
         "vault": report_path(resolved_vault, resolved_vault),
         "status": status,

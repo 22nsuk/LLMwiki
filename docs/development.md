@@ -67,12 +67,15 @@ The registry-backed test lane inventory is recorded in
 `ops/test-lane-registry.json`, reconciled against `mk/test.mk` and sibling
 Makefiles, and summarized for operators by `make help`.
 The same registry owns the expected trusted-CI repository, signer workflow,
-runner, summary command, and Python/pytest environment. This Phase 2 import is
-additive evidence only: release CI emits and attests the ZIP in separate jobs,
-the test-running job has no OIDC permission, and a successful local import
-writes only `tmp/trusted-ci-evidence-import-report.json`. It does not replace
-the local full-suite, report-contract, public, or release-authority lanes and
-does not copy imported evidence into `ops/reports/`.
+runner, aggregate command, concrete collection suite and pytest command, and
+Python/pytest environment. Import also requires an exact collection-to-JUnit
+nodeid match, matching outcomes and subtest counts, and a passing zero
+deselection lifecycle. This evidence remains diagnostic only: release CI emits
+and attests the ZIP in separate jobs, the test-running job has no OIDC
+permission, and a successful local import writes only
+`tmp/trusted-ci-evidence-import-report.json`. It does not replace the local
+full-suite, report-contract, public, or release-authority lanes and does not
+copy imported evidence into `ops/reports/`.
 Treat registry surfaces by ownership rather than by name alone: raw registry
 state preserves full-vault source trace and ingest lifecycle, test-lane registry
 state owns Make/CI/pytest lane semantics, and policy registries own runtime

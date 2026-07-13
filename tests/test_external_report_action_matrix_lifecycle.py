@@ -567,6 +567,45 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
             stale_manifest_report["input_fingerprints"]["active_external_reports"],
         )
         self.assertEqual(validate_with_schema(current_manifest_report, load_schema(SCHEMA_PATH)), [])
+
+    def test_matrix_fingerprints_action_evidence_and_line_digest_inputs(self) -> None:
+        baseline = build_report(self.vault, context=fixed_context())
+
+        self._write_json("ops/script-output-surfaces.json", {"status": "pass"})
+        evidence_changed = build_report(self.vault, context=fixed_context())
+
+        self._write_json(
+            "external-reports/report-line-action-digests.json",
+            {"reports": {}},
+        )
+        line_digest_changed = build_report(self.vault, context=fixed_context())
+
+        self.assertNotEqual(
+            baseline["input_fingerprints"]["action_evidence_files"],
+            evidence_changed["input_fingerprints"]["action_evidence_files"],
+        )
+        self.assertNotEqual(
+            evidence_changed["input_fingerprints"]["external_report_line_digests"],
+            line_digest_changed["input_fingerprints"]["external_report_line_digests"],
+        )
+
+    def test_matrix_evidence_fingerprint_excludes_graph_outputs(self) -> None:
+        baseline = build_report(self.vault, context=fixed_context())
+
+        self._write_json(
+            "ops/reports/external-report-action-matrix.json",
+            {"status": "stale", "producer": "previous.writer"},
+        )
+        self._write_json(
+            "ops/reports/generated-artifact-index.json",
+            {"status": "pass", "producer": "downstream.writer"},
+        )
+        with_graph_outputs = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            baseline["input_fingerprints"]["action_evidence_files"],
+            with_graph_outputs["input_fingerprints"]["action_evidence_files"],
+        )
     def test_open_archive_reconciliation_observations_keep_absorption_actions_active(self) -> None:
         self._write_static_github_security_surfaces()
         for rel_path, text in {

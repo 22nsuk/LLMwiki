@@ -18,9 +18,9 @@ release-evidence-converge-phase-1:
 	$(MAKE) registry-preflight
 	$(MAKE) static
 	$(MAKE) report-schema-samples-check
-	$(MAKE) external-report-reference-manifest-settle
 	$(MAKE) release-smoke-full
 	$(MAKE) release-source-package-check
+	$(MAKE) external-report-reference-manifest-settle
 	$(MAKE) generated-artifact-converge
 	$(MAKE) test-execution-summary-report-contract-refresh
 	$(MAKE) generated-artifact-converge
@@ -264,7 +264,7 @@ external-report-reference-manifest-release-check:
 	$(if $(EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH),$(MAKE) external-report-reference-manifest-strict,$(MAKE) external-report-reference-manifest EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE=advisory)
 
 external-report-reference-manifest-settle:
-	$(MAKE) external-report-reference-manifest-release-check $(if $(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP),EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)",)
+	$(MAKE) external-report-reference-manifest-release-check $(if $(RELEASE_AUTO_PROMOTION_MATERIALIZED_DISTRIBUTION_ZIP),EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_MATERIALIZED_DISTRIBUTION_ZIP)" EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_MATERIALIZED_DISTRIBUTION_ZIP)",)
 
 external-report-action-matrix:
 	$(PYTHON) -m ops.scripts.external_report_action_matrix --vault "$(VAULT)" --out "$(EXTERNAL_REPORT_ACTION_MATRIX_OUT)"
@@ -290,7 +290,7 @@ release-provenance-clean: release-clean supply-chain-check
 release-sbom-clean: release-provenance-clean sbom-readiness-check
 release-closeout-fixed-point:
 	$(MAKE) bootstrap-preflight
-	$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --timeout-seconds "$(RELEASE_CLOSEOUT_FIXED_POINT_TIMEOUT_SECONDS)" $(foreach target,$(RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS),--initial-target "$(target)") $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)",) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--make-variable "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)
+	$(PYTHON) -m ops.scripts.release_closeout_fixed_point --vault "$(VAULT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --timeout-seconds "$(RELEASE_CLOSEOUT_FIXED_POINT_TIMEOUT_SECONDS)" $(foreach target,$(RELEASE_CLOSEOUT_FIXED_POINT_INITIAL_TARGETS),--initial-target "$(target)") $(if $(RELEASE_EVIDENCE_COHORT_POLICY),--make-variable "RELEASE_EVIDENCE_COHORT_POLICY=$(RELEASE_EVIDENCE_COHORT_POLICY)",) $(if $(RELEASE_EVIDENCE_COHORT_ZIP_METADATA),--make-variable "RELEASE_EVIDENCE_COHORT_ZIP_METADATA=$(RELEASE_EVIDENCE_COHORT_ZIP_METADATA)",) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA)",) $(if $(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE),--make-variable "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE=$(RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_TIMESTAMP_TIMEZONE)",) $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),--make-variable "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP)",)
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(RELEASE_CLOSEOUT_FIXED_POINT_CANDIDATE_OUT)" --out "$(RELEASE_CLOSEOUT_FIXED_POINT_OUT)" --schema ops/schemas/release-closeout-fixed-point.schema.json --expected-artifact-kind release_closeout_fixed_point_report --expected-producer ops.scripts.release_closeout_fixed_point --binding-mode revision
 	$(MAKE) release-closeout-finality-attestation
 

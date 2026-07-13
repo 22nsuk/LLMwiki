@@ -16,6 +16,7 @@ from ops.scripts.core.payload_field_runtime import dict_field
 from .auto_improve_queue_runtime import build_proposal_queue
 from .auto_improve_readiness_constants_runtime import (
     AUTO_IMPROVE_GOAL_RUN_COMMAND,
+    AUTO_IMPROVE_SESSIONS_DIR,
     FALLBACK_PRIMARY_TARGETS,
     FALLBACK_SUPPORTING_TARGETS,
     FALLBACK_TEST_FILES,
@@ -41,7 +42,6 @@ from .auto_improve_readiness_queue_telemetry_runtime import (
     same_eval_telemetry_summary,
 )
 
-AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
 LATEST_SESSION_ATTEMPTED_BLOCKER = "latest_session_attempted"
 LATEST_SESSION_QUARANTINED_BLOCKER = "latest_session_quarantined"
 

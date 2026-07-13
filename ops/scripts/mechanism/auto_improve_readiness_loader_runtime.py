@@ -46,6 +46,10 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+def load_current_mutation_proposal_report(vault: Path) -> dict[str, Any]:
+    return _load_json(vault / MUTATION_PROPOSAL_REPORT_REL_PATH)
+
+
 def _load_selected_contract_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
@@ -97,7 +101,7 @@ def load_readiness_report_payloads(
         "mutation_proposal": (
             mutation_proposal_report
             if isinstance(mutation_proposal_report, dict)
-            else _load_json(vault / MUTATION_PROPOSAL_REPORT_REL_PATH)
+            else load_current_mutation_proposal_report(vault)
         ),
         "artifact_freshness": _load_json(vault / ARTIFACT_FRESHNESS_REPORT_REL_PATH),
         "selected_contract": _load_selected_contract_json(

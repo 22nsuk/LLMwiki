@@ -2,12 +2,21 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
-from ops.scripts.core.generated_artifact_index import build_report, write_report
+from ops.scripts.core.generated_artifact_index import (
+    build_report,
+    currentness_diagnostics,
+    main as generated_artifact_index_main,
+    write_report,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.release.external_report_action_matrix import (
@@ -41,6 +50,10 @@ def _sha256_file(path: Path) -> str:
 
 
 class GeneratedArtifactIndexTests(unittest.TestCase):
+    def _write_canonical_index(self, vault: Path) -> Path:
+        report = build_report(vault, context=fixed_context())
+        return write_report(vault, report)
+
     def test_index_marks_current_reports_and_archive_candidates(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -49,7 +62,7 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
             graph_owned_paths = fixed_point_output_paths_at_or_downstream(
                 vault,
-                "generated-artifact-index-body",
+                "generated-artifact-index-body-current-or-refresh",
             )
             for rel_path in graph_owned_paths:
                 path = vault / rel_path
@@ -489,7 +502,7 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 report["external_report_action_matrix_basis"]["status"], "current"
             )
             self.assertIn(
-                "external_report_action_matrix_statuses",
+                "external_report_action_matrix",
                 report["input_fingerprints"],
             )
 
@@ -581,7 +594,7 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 [],
             )
 
-    def test_external_report_lifecycle_rejects_input_stale_action_matrix_snapshot(
+    def test_external_report_lifecycle_rejects_action_matrix_after_report_drift(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -602,15 +615,17 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                     "current_status": "implemented",
                 }
             ]
-            action_matrix["input_fingerprints"] = {
-                **action_matrix["input_fingerprints"],
-                "action_catalog": "stale-fingerprint",
-            }
             (vault / "ops" / "reports").mkdir(parents=True, exist_ok=True)
             (
                 vault / "ops" / "reports" / "external-report-action-matrix.json"
             ).write_text(
                 json.dumps(action_matrix),
+                encoding="utf-8",
+            )
+            (
+                vault / "external-reports" / "closed_release_evidence_report.md"
+            ).write_text(
+                "# Closed\n\nevidence bundle\n\npost-matrix drift\n",
                 encoding="utf-8",
             )
 
@@ -621,13 +636,13 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             )
             self.assertEqual(
                 report["external_report_action_matrix_basis"]["reason_id"],
-                "action_matrix_input_fingerprint_mismatch",
+                "action_matrix_input_fingerprints_mismatch",
             )
             self.assertEqual(
                 report["external_report_action_matrix_basis"][
                     "input_fingerprint_mismatch_keys"
                 ],
-                ["action_catalog"],
+                ["active_external_reports"],
             )
             candidate_paths = {item["path"] for item in report["archive_candidates"]}
             current_paths = {item["path"] for item in report["canonical_reports"]}
@@ -666,6 +681,12 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
 
             updated_report = build_report(vault, context=fixed_context())
 
+            (task_dir / "improvement-observations.json").write_text(
+                '{"observations":[{"status":"planned"}]}',
+                encoding="utf-8",
+            )
+            content_changed_report = build_report(vault, context=fixed_context())
+
             self.assertIn(
                 "task_improvement_observation_inventory",
                 baseline_report["input_fingerprints"],
@@ -681,6 +702,14 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                     "task_improvement_observation_inventory"
                 ],
                 updated_report["input_fingerprints"][
+                    "task_improvement_observation_inventory"
+                ],
+            )
+            self.assertNotEqual(
+                updated_report["input_fingerprints"][
+                    "task_improvement_observation_inventory"
+                ],
+                content_changed_report["input_fingerprints"][
                     "task_improvement_observation_inventory"
                 ],
             )
@@ -752,11 +781,11 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             updated_report = build_report(vault, context=fixed_context())
 
             self.assertIn(
-                "external_report_inventory", baseline_report["input_fingerprints"]
+                "external_report_files", baseline_report["input_fingerprints"]
             )
             self.assertNotEqual(
-                baseline_report["input_fingerprints"]["external_report_inventory"],
-                updated_report["input_fingerprints"]["external_report_inventory"],
+                baseline_report["input_fingerprints"]["external_report_files"],
+                updated_report["input_fingerprints"]["external_report_files"],
             )
 
     def test_written_index_remains_equal_to_regenerated_payload(self) -> None:
@@ -778,6 +807,260 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             regenerated = build_report(vault, context=fixed_context())
 
             self.assertEqual(regenerated, reloaded)
+
+    def test_current_check_is_structured_exact_and_does_not_write_or_render_report(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            canonical_path = self._write_canonical_index(vault)
+            before_bytes = canonical_path.read_bytes()
+            before_mtime_ns = canonical_path.stat().st_mtime_ns
+            stdout = io.StringIO()
+
+            with patch(
+                "ops.scripts.release.external_report_action_matrix.build_report",
+                side_effect=AssertionError(
+                    "current check must not rebuild the action matrix producer"
+                ),
+            ), patch(
+                "ops.scripts.core.generated_artifact_index._ops_reports",
+                side_effect=AssertionError("current check must not render report inventory"),
+            ), patch(
+                "ops.scripts.core.generated_artifact_index._operator_reports",
+                side_effect=AssertionError("current check must not render report inventory"),
+            ), patch(
+                "ops.scripts.core.generated_artifact_index._external_reports",
+                side_effect=AssertionError("current check must not render report inventory"),
+            ), patch(
+                "ops.scripts.core.generated_artifact_index._runs",
+                side_effect=AssertionError("current check must not render report inventory"),
+            ), redirect_stdout(stdout):
+                exit_code = generated_artifact_index_main(
+                    ["--vault", str(vault), "--current-check"]
+                )
+
+            diagnostics = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(diagnostics["current"])
+            self.assertEqual(diagnostics["status"], "pass")
+            self.assertEqual(diagnostics["reasons"], [])
+            self.assertTrue(all(diagnostics["checks"].values()))
+            self.assertEqual(
+                diagnostics["path"], "ops/reports/generated-artifact-index.json"
+            )
+            self.assertEqual(canonical_path.read_bytes(), before_bytes)
+            self.assertEqual(canonical_path.stat().st_mtime_ns, before_mtime_ns)
+
+    def test_current_check_accepts_revision_alias_and_rejects_tree_or_input_drift(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            self._write_canonical_index(vault)
+
+            with patch(
+                "ops.scripts.core.generated_artifact_index.resolve_source_revision",
+                return_value=SimpleNamespace(revision="different-revision"),
+            ):
+                revision_diagnostics = currentness_diagnostics(vault)
+            self.assertTrue(revision_diagnostics["current"])
+            self.assertEqual(revision_diagnostics["reasons"], [])
+            self.assertEqual(
+                revision_diagnostics["source_revision_status"], "provenance_only"
+            )
+            self.assertTrue(revision_diagnostics["checks"]["source_tree_fingerprint"])
+
+            with patch(
+                "ops.scripts.core.generated_artifact_index.release_source_tree_fingerprint",
+                return_value="different-tree-fingerprint",
+            ):
+                tree_diagnostics = currentness_diagnostics(vault)
+            self.assertFalse(tree_diagnostics["current"])
+            self.assertIn(
+                "source_tree_fingerprint_mismatch", tree_diagnostics["reasons"]
+            )
+
+            extra_report = vault / "ops" / "reports" / "new-current-report.json"
+            extra_report.write_text("{}", encoding="utf-8")
+            input_diagnostics = currentness_diagnostics(vault)
+            self.assertFalse(input_diagnostics["current"])
+            self.assertIn("input_fingerprints_mismatch", input_diagnostics["reasons"])
+            self.assertTrue(input_diagnostics["checks"]["source_tree_fingerprint"])
+
+    def test_current_check_binds_action_matrix_bytes_without_rebuilding_owner(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            matrix_path = (
+                vault / "ops" / "reports" / "external-report-action-matrix.json"
+            )
+            matrix_path.parent.mkdir(parents=True, exist_ok=True)
+            matrix_path.write_text("{}", encoding="utf-8")
+            self._write_canonical_index(vault)
+
+            matrix_path.write_text('{"changed":true}', encoding="utf-8")
+            with patch(
+                "ops.scripts.release.external_report_action_matrix.build_report",
+                side_effect=AssertionError(
+                    "current check must not rebuild the action matrix producer"
+                ),
+            ):
+                diagnostics = currentness_diagnostics(vault)
+
+            self.assertFalse(diagnostics["current"])
+            self.assertIn("input_fingerprints_mismatch", diagnostics["reasons"])
+            self.assertNotEqual(
+                diagnostics["expected"]["input_fingerprints"][
+                    "external_report_action_matrix"
+                ],
+                diagnostics["observed"]["input_fingerprints"][
+                    "external_report_action_matrix"
+                ],
+            )
+
+    def test_current_check_tracks_action_matrix_basis_input_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            evidence_path = vault / "ops" / "script-output-surfaces.json"
+            evidence_path.parent.mkdir(parents=True, exist_ok=True)
+            evidence_path.write_text('{"status":"first"}', encoding="utf-8")
+            matrix_path = (
+                vault / "ops" / "reports" / "external-report-action-matrix.json"
+            )
+            matrix_path.parent.mkdir(parents=True, exist_ok=True)
+            matrix_path.write_text(
+                json.dumps(build_action_matrix_report(vault, context=fixed_context())),
+                encoding="utf-8",
+            )
+            self._write_canonical_index(vault)
+
+            evidence_path.write_text('{"status":"second"}', encoding="utf-8")
+            diagnostics = currentness_diagnostics(vault)
+
+            self.assertFalse(diagnostics["current"])
+            self.assertIn("input_fingerprints_mismatch", diagnostics["reasons"])
+            key = "action_matrix_input_fingerprints"
+            self.assertNotEqual(
+                diagnostics["expected"]["input_fingerprints"][key],
+                diagnostics["observed"]["input_fingerprints"][key],
+            )
+
+    def test_current_check_rejects_task_observation_content_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            observation_path = (
+                vault
+                / "ops"
+                / "reports"
+                / "task-improvement-observations"
+                / "task-demo"
+                / "improvement-observations.json"
+            )
+            observation_path.parent.mkdir(parents=True, exist_ok=True)
+            observation_path.write_text(
+                '{"observations":[{"status":"planned"}]}',
+                encoding="utf-8",
+            )
+            self._write_canonical_index(vault)
+
+            observation_path.write_text(
+                '{"observations":[{"status":"automated"}]}',
+                encoding="utf-8",
+            )
+            diagnostics = currentness_diagnostics(vault)
+
+            self.assertFalse(diagnostics["current"])
+            self.assertIn("input_fingerprints_mismatch", diagnostics["reasons"])
+            key = "task_improvement_observation_inventory"
+            self.assertNotEqual(
+                diagnostics["expected"]["input_fingerprints"][key],
+                diagnostics["observed"]["input_fingerprints"][key],
+            )
+
+    def test_current_check_rejects_canonical_contract_metadata_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            canonical_path = self._write_canonical_index(vault)
+            baseline = json.loads(canonical_path.read_text(encoding="utf-8"))
+
+            cases = {
+                "artifact_kind": ("wrong_kind", "artifact_kind_mismatch"),
+                "producer": ("wrong.producer", "producer_mismatch"),
+                "artifact_status": ("stale", "artifact_status_mismatch"),
+            }
+            for field, (value, reason) in cases.items():
+                with self.subTest(field=field):
+                    payload = {**baseline, field: value}
+                    canonical_path.write_text(json.dumps(payload), encoding="utf-8")
+                    diagnostics = currentness_diagnostics(vault)
+                    self.assertFalse(diagnostics["current"])
+                    self.assertIn(reason, diagnostics["reasons"])
+
+            payload = {
+                **baseline,
+                "currentness": {**baseline["currentness"], "status": "stale"},
+            }
+            canonical_path.write_text(json.dumps(payload), encoding="utf-8")
+            diagnostics = currentness_diagnostics(vault)
+            self.assertFalse(diagnostics["current"])
+            self.assertIn("currentness_status_mismatch", diagnostics["reasons"])
+
+    def test_current_check_rejects_schema_invalid_cached_index(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            canonical_path = self._write_canonical_index(vault)
+            baseline = json.loads(canonical_path.read_text(encoding="utf-8"))
+
+            cases = {
+                "missing_required_field": (
+                    {
+                        key: value
+                        for key, value in baseline.items()
+                        if key != "canonical_reports"
+                    },
+                    "$: missing required property 'canonical_reports'",
+                ),
+                "wrong_schema": (
+                    {**baseline, "$schema": "ops/schemas/wrong.schema.json"},
+                    (
+                        "$.$schema: expected one of "
+                        "['ops/schemas/generated-artifact-index.schema.json']"
+                    ),
+                ),
+            }
+            for name, (payload, expected_error) in cases.items():
+                with self.subTest(name=name):
+                    canonical_path.write_text(json.dumps(payload), encoding="utf-8")
+
+                    diagnostics = currentness_diagnostics(vault)
+
+                    self.assertFalse(diagnostics["current"])
+                    self.assertFalse(diagnostics["checks"]["schema_validation"])
+                    self.assertIn("schema_validation_mismatch", diagnostics["reasons"])
+                    self.assertIn(expected_error, diagnostics["schema_errors"])
+                    self.assertTrue(
+                        all(
+                            passed
+                            for check, passed in diagnostics["checks"].items()
+                            if check != "schema_validation"
+                        )
+                    )
 
     def test_index_surfaces_run_artifact_load_issues_in_reason(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

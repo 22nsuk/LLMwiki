@@ -4,12 +4,16 @@ import datetime as dt
 import hashlib
 import importlib.abc
 import importlib.machinery
+import io
 import json
 import os
 import runpy
 import sys
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
@@ -20,6 +24,9 @@ from ops.scripts.mechanism.auto_improve_readiness_constants_runtime import (
 from ops.scripts.mechanism.auto_improve_readiness_learning_runtime import (
     learning_claim_blocker_payloads,
 )
+from ops.scripts.mechanism.auto_improve_readiness_queue_telemetry_runtime import (
+    readiness_run_telemetry_paths,
+)
 from ops.scripts.mechanism.auto_improve_readiness_remediation_runtime import (
     remediation_backlog_summary,
 )
@@ -29,6 +36,7 @@ from ops.scripts.mechanism.auto_improve_readiness_runtime import (
     load_readiness_inputs,
     readiness_can_run,
     readiness_exit_code,
+    readiness_report_currentness_diagnostics,
     write_readiness_report,
 )
 from tests.auto_improve_readiness_test_runtime import (
@@ -56,6 +64,11 @@ class _BlockFlatReadinessAlias(importlib.abc.MetaPathFinder):
 class AutoImproveReadinessRuntimeTests(
     AutoImproveReadinessRuntimeFixture, unittest.TestCase
 ):
+    def _write_canonical_readiness_report(self) -> Path:
+        self._write_ready_queue_reports()
+        report = build_readiness_report(self.vault, context=fixed_context())
+        return write_readiness_report(self.vault, report)
+
     def test_source_paths_track_decomposed_runtime_modules(self) -> None:
         self.assertEqual(
             READINESS_SOURCE_PATHS,
@@ -66,6 +79,7 @@ class AutoImproveReadinessRuntimeTests(
                 "ops/scripts/core/payload_field_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_queue_telemetry_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_next_run_repair_runtime.py",
                 "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
@@ -139,6 +153,196 @@ class AutoImproveReadinessRuntimeTests(
             )
 
         self.assertFalse(outside_path.exists())
+
+    def test_currentness_diagnostics_pass_for_exact_canonical_report(self) -> None:
+        self._write_canonical_readiness_report()
+
+        diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+        self.assertTrue(diagnostics["current"])
+        self.assertEqual(diagnostics["status"], "pass")
+        self.assertEqual(diagnostics["reasons"], [])
+        self.assertTrue(all(diagnostics["checks"].values()))
+
+    def test_currentness_diagnostics_reject_schema_invalid_cached_report(self) -> None:
+        canonical_path = self._write_canonical_readiness_report()
+        baseline = json.loads(canonical_path.read_text(encoding="utf-8"))
+
+        cases = {
+            "missing_required_field": (
+                {
+                    key: value
+                    for key, value in baseline.items()
+                    if key != "promotion_readiness"
+                },
+                "$: missing required property 'promotion_readiness'",
+            ),
+            "wrong_schema": (
+                {**baseline, "$schema": "ops/schemas/wrong.schema.json"},
+                (
+                    "$.$schema: expected one of "
+                    "['ops/schemas/auto-improve-readiness-report.schema.json']"
+                ),
+            ),
+        }
+        for name, (payload, expected_error) in cases.items():
+            with self.subTest(name=name):
+                canonical_path.write_text(json.dumps(payload), encoding="utf-8")
+
+                diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+                self.assertFalse(diagnostics["current"])
+                self.assertFalse(diagnostics["checks"]["schema_validation"])
+                self.assertIn("schema_validation_mismatch", diagnostics["reasons"])
+                self.assertIn(expected_error, diagnostics["schema_errors"])
+                self.assertTrue(
+                    all(
+                        passed
+                        for check, passed in diagnostics["checks"].items()
+                        if check != "schema_validation"
+                    )
+                )
+
+    def test_currentness_diagnostics_reject_source_revision_drift(self) -> None:
+        self._write_canonical_readiness_report()
+
+        with patch(
+            "ops.scripts.mechanism.auto_improve_readiness_runtime.resolve_source_revision",
+            return_value=SimpleNamespace(revision="different-revision"),
+        ):
+            diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+        self.assertFalse(diagnostics["current"])
+        self.assertFalse(diagnostics["checks"]["source_revision"])
+        self.assertIn("source_revision_mismatch", diagnostics["reasons"])
+        self.assertTrue(diagnostics["checks"]["source_tree_fingerprint"])
+        self.assertTrue(diagnostics["checks"]["input_fingerprints"])
+
+    def test_currentness_diagnostics_reject_input_file_tamper(self) -> None:
+        self._write_canonical_readiness_report()
+        input_path = self.vault / "ops/reports/outcome-metrics.json"
+        input_path.write_bytes(input_path.read_bytes() + b"\n")
+
+        diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+        self.assertFalse(diagnostics["current"])
+        self.assertFalse(diagnostics["checks"]["input_fingerprints"])
+        self.assertIn("input_fingerprints_mismatch", diagnostics["reasons"])
+        self.assertTrue(diagnostics["checks"]["source_revision"])
+        self.assertTrue(diagnostics["checks"]["source_tree_fingerprint"])
+
+    def test_currentness_diagnostics_track_dynamic_readiness_inputs(self) -> None:
+        cases = {
+            "auto_improve_session_reports": (
+                "ops/reports/auto-improve-sessions/session.json"
+            ),
+            "routing_provenance_aggregate_reports": (
+                "ops/reports/routing-provenance-aggregates/session.json"
+            ),
+            "run_telemetry_reports": "runs/run-demo/run-telemetry.json",
+        }
+        for fingerprint_key, rel_path in cases.items():
+            with self.subTest(fingerprint_key=fingerprint_key):
+                input_path = self.vault / rel_path
+                input_path.parent.mkdir(parents=True, exist_ok=True)
+                input_path.write_text("{}", encoding="utf-8")
+                self._write_canonical_readiness_report()
+
+                input_path.write_text("{}\n", encoding="utf-8")
+                diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+                self.assertFalse(diagnostics["current"])
+                self.assertIn(
+                    "input_fingerprints_mismatch", diagnostics["reasons"]
+                )
+                self.assertNotEqual(
+                    diagnostics["expected"]["input_fingerprints"][fingerprint_key],
+                    diagnostics["observed"]["input_fingerprints"][fingerprint_key],
+                )
+
+    def test_currentness_ignores_rejected_mutation_proposal_telemetry(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            {
+                "proposals": [
+                    {
+                        "blocked_by": [],
+                        "failure_mode": "repeated_same_eval_or_discard",
+                        "run_ids": ["run-rejected"],
+                    }
+                ]
+            },
+            enveloped=False,
+        )
+        report = build_readiness_report(self.vault, context=fixed_context())
+        write_readiness_report(self.vault, report)
+
+        diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+        self.assertTrue(diagnostics["current"])
+        self.assertEqual(diagnostics["reasons"], [])
+
+    def test_readiness_telemetry_fingerprints_reject_traversal_run_ids(self) -> None:
+        outside_path = self.vault.parent / "outside" / "run-telemetry.json"
+        outside_path.parent.mkdir(parents=True, exist_ok=True)
+        outside_path.write_text('{"finalized":true}', encoding="utf-8")
+        proposal_report = {
+            "proposals": [
+                {
+                    "blocked_by": [],
+                    "failure_mode": "repeated_same_eval_or_discard",
+                    "run_ids": ["../../outside", "..\\outside"],
+                }
+            ]
+        }
+
+        paths = readiness_run_telemetry_paths(self.vault, proposal_report)
+
+        self.assertFalse(any("outside" in path for path in paths))
+
+    def test_readiness_telemetry_fingerprints_reject_glob_run_ids(self) -> None:
+        telemetry_path = self.vault / "runs/archive/run-target/run-telemetry.json"
+        telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+        telemetry_path.write_text('{"finalized":true}', encoding="utf-8")
+
+        for run_id in ("run-*", "run-?", "run-[target]"):
+            with self.subTest(run_id=run_id):
+                paths = readiness_run_telemetry_paths(
+                    self.vault,
+                    {
+                        "proposals": [
+                            {
+                                "blocked_by": [],
+                                "failure_mode": "repeated_same_eval_or_discard",
+                                "run_ids": [run_id],
+                            }
+                        ]
+                    },
+                )
+
+                self.assertEqual(paths, [])
+
+    def test_cli_current_check_is_structured_and_does_not_write(self) -> None:
+        canonical_path = self._write_canonical_readiness_report()
+        before_bytes = canonical_path.read_bytes()
+        before_mtime_ns = canonical_path.stat().st_mtime_ns
+        stdout = io.StringIO()
+
+        with patch(
+            "ops.scripts.mechanism.auto_improve_readiness_runtime.load_readiness_inputs",
+            side_effect=AssertionError("current check must not build readiness inputs"),
+        ), redirect_stdout(stdout):
+            exit_code = readiness_cli_main(
+                ["--vault", str(self.vault), "--current-check"]
+            )
+
+        diagnostics = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(diagnostics["current"])
+        self.assertEqual(diagnostics["path"], "ops/reports/auto-improve-readiness.json")
+        self.assertEqual(canonical_path.read_bytes(), before_bytes)
+        self.assertEqual(canonical_path.stat().st_mtime_ns, before_mtime_ns)
 
     def test_load_readiness_inputs_rejects_missing_artifact_envelope_on_disk_reports(
         self,
