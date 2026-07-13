@@ -24,6 +24,8 @@ from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
 from ops.scripts.test.test_execution_derivation_runtime import (
+    OUTCOME_LABELS,
+    parse_junit_testcases,
     validate_collection_manifest_payload,
 )
 from ops.scripts.test.trusted_ci_evidence_runtime import (
@@ -241,11 +243,88 @@ def _collection_check(
     )
 
 
+def _deselection_lifecycle_passes(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    zero_fields = (
+        "actual_deselected_count",
+        "expired_count",
+        "release_blocking_count",
+        "missing_lifecycle_count",
+        "duplicate_policy_entry_count",
+        "unused_policy_entry_count",
+    )
+    return (
+        value.get("status") == "pass"
+        and not value.get("over_budget")
+        and not value.get("blockers")
+        and all(value.get(field) == 0 for field in zero_fields)
+    )
+
+
+def _collection_contract_check(
+    collection: dict[str, Any], contract: dict[str, Any]
+) -> dict[str, str]:
+    valid = (
+        collection.get("selection_kind") == "full_suite"
+        and collection.get("suite") == contract["collection_suite"]
+        and collection.get("semantic_command")
+        == contract["collection_semantic_command"]
+        and collection.get("deselected_tests") == []
+        and _deselection_lifecycle_passes(
+            collection.get("deselection_lifecycle")
+        )
+    )
+    return _check(
+        "collection_contract",
+        valid,
+        "collection is the exact full-suite command with no explicit deselections and a passing lifecycle",
+    )
+
+
+def _summary_collection_metadata_check(
+    summary: dict[str, Any], collection: dict[str, Any], contract: dict[str, Any]
+) -> dict[str, str]:
+    shards = summary.get("shards")
+    shard = shards[0] if isinstance(shards, list) and len(shards) == 1 else {}
+    digest = summary.get("pytest_collect_nodeid_digest", {})
+    valid = (
+        isinstance(shard, dict)
+        and shard.get("suite") == contract["collection_suite"]
+        and shard.get("status") == "pass"
+        and shard.get("represents_full_suite") is True
+        and shard.get("counts") == summary.get("counts")
+        and summary.get("summary_mode") == "aggregate"
+        and digest.get("command") == collection.get("semantic_command")
+        and summary.get("deselected_tests") == collection.get("deselected_tests") == []
+        and _deselection_lifecycle_passes(summary.get("deselection_lifecycle"))
+    )
+    return _check(
+        "summary_collection_metadata",
+        valid,
+        "summary shard, collection command, counts, and deselection metadata are consistent",
+    )
+
+
 def _junit_check(
-    members: dict[str, bytes], manifest: dict[str, Any], summary: dict[str, Any]
+    members: dict[str, bytes],
+    manifest: dict[str, Any],
+    summary: dict[str, Any],
+    collection: dict[str, Any],
 ) -> dict[str, str]:
     junit_sha = sha256_bytes(members[JUNIT_MEMBER])
     junit_count = junit_test_count(members[JUNIT_MEMBER])
+    junit = parse_junit_testcases(
+        members[JUNIT_MEMBER], expected_nodeids=collection["nodeids"]
+    )
+    summary_counts = summary.get("counts", {})
+    outcome_counts_match = all(
+        summary_counts.get(label) == junit["counts"][label]
+        for label in OUTCOME_LABELS
+    )
+    subtest_counts_match = (
+        summary_counts.get("subtests_passed") == junit["subtests_passed"]
+    )
     artifacts = [
         item
         for item in summary["evidence_artifacts"]
@@ -253,6 +332,10 @@ def _junit_check(
     ]
     valid = (
         len(artifacts) == 1
+        and junit["testcase_count"] == collection["nodeid_count"]
+        and junit_count == junit["testcase_count"] + junit["subtests_passed"]
+        and outcome_counts_match
+        and subtest_counts_match
         and artifacts[0].get("sha256") == junit_sha
         and artifacts[0].get("observed_count") == junit_count
         and artifacts[0].get("consistency_status") == "pass"
@@ -261,7 +344,7 @@ def _junit_check(
     return _check(
         "junit",
         valid,
-        "JUnit digest and suite test count match manifest and summary",
+        "JUnit testcase identities, outcomes, subtests, digest, and count match collection and summary",
     )
 
 
@@ -277,7 +360,7 @@ def _contract_checks(
     command_ok = (
         manifest["semantic_command"]
         == summary["semantic_command"]
-        == contract["semantic_command"]
+        == contract["summary_semantic_command"]
         and manifest["semantic_command_sha256"]
         == semantic_digest(manifest["semantic_command"])
     )
@@ -333,7 +416,9 @@ def _embedded_checks(
         *_member_identity_checks(members, manifest),
         *_contract_checks(vault, manifest, summary, collection, contract),
         _collection_check(members, manifest, summary, collection),
-        _junit_check(members, manifest, summary),
+        _collection_contract_check(collection, contract),
+        _summary_collection_metadata_check(summary, collection, contract),
+        _junit_check(members, manifest, summary, collection),
     ]
 
 
@@ -418,7 +503,9 @@ def _write_import_report(
     report = {
         **envelope,
         "status": status,
-        "authority_effect": "diagnostic_only_no_promotion",
+        "authority_effect": str(
+            contract.get("authority_effect", "diagnostic_only_no_promotion")
+        ),
         "bundle": {
             "path": bundle_path,
             "sha256": bundle_sha,

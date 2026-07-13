@@ -261,7 +261,7 @@ _RELEASE_CLOSEOUT_BATCH_MANIFEST_ASSIGNMENTS = (
 )
 
 _RELEASE_CLOSEOUT_FINALITY_ASSIGNMENTS = (
-    "OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS ?= generated-artifact-index-body artifact-freshness external-report-action-matrix release-closeout-summary-report learning-readiness-signoff-revalidation release-evidence-cohort release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger release-closeout-batch-manifest-promote release-evidence-closeout-self-check",
+    "OPERATOR_EVIDENCE_FINALITY_INITIAL_TARGETS ?= generated-artifact-index-body-current-or-refresh artifact-freshness external-report-action-matrix release-closeout-summary-report learning-readiness-signoff-revalidation release-evidence-cohort release-evidence-dashboard-report release-lane-summary release-clean-blocker-ledger release-closeout-batch-manifest-promote release-evidence-closeout-self-check",
     "OPERATOR_EVIDENCE_ARTIFACT_FRESHNESS_PROGRESS ?= jsonl-stable",
     "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_OUT ?= ops/reports/release-closeout-finality-attestation.json",
     "RELEASE_CLOSEOUT_FINALITY_ATTESTATION_CANDIDATE_OUT ?= tmp/release-closeout-finality-attestation.candidate.json",

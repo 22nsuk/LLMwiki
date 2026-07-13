@@ -127,9 +127,21 @@ def _recipe_line_for_role(role: str) -> str:
     protected_line = _protected_recipe_lines().get(role)
     if protected_line is not None:
         return f"\t{protected_line['raw_line']}\n"
-    override = _role_overrides().get(role)
+    override = next(
+        (
+            entry
+            for entry in _workflow_order_spec()["role_overrides"]
+            if isinstance(entry, dict) and entry.get("role") == role
+        ),
+        None,
+    )
     if override is not None:
-        return f"\t$(MAKE) {override}\n"
+        assignments = " ".join(
+            f"{name}={shlex.quote(str(value))}"
+            for name, value in override.get("required_assignments", {}).items()
+        )
+        suffix = f" {assignments}" if assignments else ""
+        return f"\t$(MAKE) {override['target']}{suffix}\n"
     return f"\t$(MAKE) {role}\n"
 
 
@@ -363,6 +375,9 @@ RELEASE_TERMINAL_FINALITY_LINES = _make_recipe(
 RELEASE_AUTHORITY_POST_READY_FINALITY_LINES = _make_recipe(
     *_sequence_roles("release_authority_post_ready_finality_sequence")
 )
+RELEASE_AUTHORITY_FINALITY_CURRENT_CHECK_LINES = _make_recipe(
+    *_sequence_roles("release_authority_finality_current_check_sequence")
+)
 RELEASE_AUTHORITY_SETTLE_LINES = _make_recipe(
     *_sequence_roles("release_authority_settle_sequence")
 )
@@ -449,9 +464,11 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "release-auto-promotion-ready:\n"
     "\t@true\n"
     "release-authority-archive-candidate-gate:\n"
-    "\t@true\n"
+    "\t$(MAKE) archive-execution-manifest-check\n"
     "release-authority-post-ready-finality-current-or-refresh:\n"
     "\t@true\n"
+    "release-authority-finality-current-check:\n"
+    "{release_authority_finality_current_check_lines}"
     "release-check-all-surfaces:\n"
     "\t@true\n"
     "sync-public-policy:\n"
@@ -514,6 +531,8 @@ RELEASE_WORKFLOW_ORDER_MAKEFILE_TEMPLATE = (
     "\t@true\n"
     "generated-artifact-index-body:\n"
     "\t@true\n"
+    "archive-execution-manifest-check:\n"
+    "\t@true\n"
     "artifact-freshness:\n"
     "\t@true\n"
     "release-closeout-batch-manifest-promote:\n"
@@ -564,6 +583,9 @@ def _workflow_order_guard_makefile_text(
         release_finality_resettle_lines=RELEASE_FINALITY_RESETTLE_LINES,
         release_terminal_finality_lines=RELEASE_TERMINAL_FINALITY_LINES,
         release_authority_post_ready_finality_lines=RELEASE_AUTHORITY_POST_READY_FINALITY_LINES,
+        release_authority_finality_current_check_lines=(
+            RELEASE_AUTHORITY_FINALITY_CURRENT_CHECK_LINES
+        ),
         release_authority_settle_lines=RELEASE_AUTHORITY_SETTLE_LINES,
         check_finalized_lines=(
             CHECK_FINALIZED_MISORDER_LINES
@@ -989,12 +1011,10 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             "release-closeout-post-check-finalizer-dry-run",
         )
         for role in (
-            "auto-improve-readiness-report-body-worktree-guard-refresh",
-            "release-run-ready-plan-check-auto-promotion-distribution",
-            "release-run-ready-check-auto-promotion-distribution",
+            "auto-improve-readiness-current-or-refresh-worktree-guard-refresh",
             "release-evidence-cohort-preseal-refresh-auto-promotion-metadata",
+            "release-closeout-fixed-point-strict-auto-promotion-artifacts",
             "release-closeout-fixed-point-auto-promotion-artifacts",
-            "release-run-ready-auto-promotion-distribution",
             "release-evidence-cohort-strict-same-fingerprint-auto-promotion-metadata",
         ):
             with self.subTest(role=role, surface="role-overrides"):
@@ -1049,7 +1069,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             ),
         )
         self.assertIn(
-            "auto-improve-readiness-report-body-worktree-guard-refresh",
+            "auto-improve-readiness-current-or-refresh-worktree-guard-refresh",
             _sequence_roles("release_auto_promotion_preflight_sequence"),
         )
         self.assertEqual(
@@ -1060,7 +1080,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             ),
         )
         self.assertIn(
-            "release-closeout-fixed-point-auto-promotion-artifacts",
+            "release-closeout-fixed-point-strict-auto-promotion-artifacts",
             _sequence_roles("release_auto_promotion_preseal_sequence"),
         )
         self.assertEqual(
@@ -1610,6 +1630,13 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             if item["id"] == "release_auto_promotion_preseal_protected_recipe"
         )
         self.assertEqual(auto_promotion_preseal_recipe["status"], "pass")
+        archive_candidate_recipe = next(
+            item
+            for item in report["checks"]
+            if item["id"]
+            == "release_authority_archive_candidate_gate_protected_recipe"
+        )
+        self.assertEqual(archive_candidate_recipe["status"], "pass")
         auto_promotion_preseal_forbidden_check = next(
             item
             for item in report["checks"]
@@ -2117,9 +2144,9 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
                 and entry["id"] == "release_auto_promotion_preflight_sequence"
             ):
                 entry["roles"] = [
-                    "auto-improve-readiness-report-body"
+                    "auto-improve-readiness-report-body-current-or-refresh"
                     if role
-                    == "auto-improve-readiness-report-body-worktree-guard-refresh"
+                    == "auto-improve-readiness-current-or-refresh-worktree-guard-refresh"
                     else role
                     for role in entry["roles"]
                 ]
@@ -2133,7 +2160,7 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             check_id="role_override_sequence_coverage",
             reason="role_override_missing_from_expected_subsequence",
             target="release-auto-promotion-preflight",
-            expected_role="auto-improve-readiness-report-body-worktree-guard-refresh",
+            expected_role="auto-improve-readiness-current-or-refresh-worktree-guard-refresh",
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")
@@ -2197,14 +2224,17 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             if (
                 isinstance(override, dict)
                 and override.get("role")
-                == "release-run-ready-plan-check-auto-promotion-distribution"
+                == "release-evidence-cohort-strict-same-fingerprint-auto-promotion-metadata"
             ):
                 override["required_assignments"] = {
-                    "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP": "$(WRONG_DISTRIBUTION_ZIP)"
+                    "RELEASE_EVIDENCE_COHORT_POLICY": "wrong_policy",
+                    "RELEASE_EVIDENCE_COHORT_ZIP_METADATA": (
+                        "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)"
+                    ),
                 }
                 break
         else:
-            self.fail("missing auto-promotion distribution role override")
+            self.fail("missing strict cohort role override")
         self._write_workflow_order_spec(spec)
 
         report = build_report(self.vault, context=fixed_context())
@@ -2214,12 +2244,12 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
             check_id="release_auto_promotion_preseal_protected_recipe",
             reason="protected_recipe_role_mismatch",
             target="release-auto-promotion-preseal",
-            expected_role="release-run-ready-plan-check-auto-promotion-distribution",
+            expected_role="release-evidence-cohort-strict-same-fingerprint-auto-promotion-metadata",
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")
 
-    def test_guard_fails_when_auto_promotion_preseal_misorders_run_ready_checks(
+    def test_guard_fails_when_auto_promotion_preseal_misorders_preflight_checks(
         self,
     ) -> None:
         self._write_makefile(misorder_auto_promotion_preseal=True)
@@ -2229,7 +2259,31 @@ class ReleaseWorkflowOrderGuardTests(unittest.TestCase):
         check = self._check_with_violation(
             report,
             check_id="release_auto_promotion_preseal_sequence",
-            expected_role="release-run-ready-check-auto-promotion-distribution",
+            expected_role="registry-preflight",
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(check["status"], "fail")
+
+    def test_guard_fails_when_archive_candidate_gate_gains_a_writer(self) -> None:
+        makefile = self.vault.joinpath("Makefile")
+        makefile.write_text(
+            makefile.read_text(encoding="utf-8").replace(
+                "release-authority-archive-candidate-gate:\n"
+                "\t$(MAKE) archive-execution-manifest-check\n",
+                "release-authority-archive-candidate-gate:\n"
+                "\t$(MAKE) external-report-action-matrix\n"
+                "\t$(MAKE) archive-execution-manifest-check\n",
+            ),
+            encoding="utf-8",
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        check = self._check_with_violation(
+            report,
+            check_id="release_authority_archive_candidate_gate_protected_recipe",
+            reason="protected_recipe_line_count_mismatch",
+            target="release-authority-archive-candidate-gate",
         )
         self.assertEqual(report["status"], "fail")
         self.assertEqual(check["status"], "fail")

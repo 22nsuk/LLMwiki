@@ -505,10 +505,12 @@ def _raw_input_paths(vault: Path, pages: Sequence[Path]) -> list[str]:
         except ValueError:
             continue
         raw_path = (frontmatter or {}).get("raw_path")
-        if not isinstance(raw_path, str) or Path(raw_path).is_absolute():
-            continue
-        if (vault / raw_path).is_file() and raw_path not in raw_paths:
-            raw_paths.append(raw_path)
+        resolution = resolve_source_raw_path(vault, raw_path)
+        if (
+            resolution.relative_path is not None
+            and resolution.relative_path not in raw_paths
+        ):
+            raw_paths.append(resolution.relative_path)
     return sorted(raw_paths)
 
 
@@ -517,6 +519,7 @@ def _canonical_envelope(
     *,
     context: RuntimeContext,
     pages: Sequence[Path],
+    classification_input_fingerprints: dict[str, str],
     source_command: str,
 ) -> tuple[dict[str, Any], dict[str, Any], Path]:
     policy, resolved_policy_path = load_policy(vault)
@@ -533,9 +536,18 @@ def _canonical_envelope(
             "ops/scripts/registry/source_substance_cohort_classify.py",
             "ops/scripts/eval/source_page_substance_runtime.py",
         ],
+        file_inputs={"raw_registry": "ops/raw-registry.json"},
         path_group_inputs={
             "source_pages": [report_path(vault, page_path) for page_path in pages],
             "raw_sources": _raw_input_paths(vault, pages),
+        },
+        text_inputs={
+            "classification_input_fingerprints": json.dumps(
+                classification_input_fingerprints,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
         },
     )
     return envelope, policy, resolved_policy_path
@@ -620,6 +632,9 @@ def build_remediation(
         resolved_vault,
         context=runtime_context,
         pages=pages,
+        classification_input_fingerprints=dict(
+            classification.get("input_fingerprints", {})
+        ),
         source_command=SOURCE_COMMAND,
     )
     report = {
@@ -701,10 +716,17 @@ def apply_remediation(
         entry["page_sha256_after"] = _sha256_text(page_path.read_text(encoding="utf-8"))
     report["status"] = _report_status(report["entries"])
     runtime_context = context or RuntimeContext(display_timezone=dt.UTC)
+    refreshed_classification = build_classification_report(
+        resolved_vault,
+        context=runtime_context,
+    )
     refreshed, _policy, _resolved_policy_path = _canonical_envelope(
         resolved_vault,
         context=runtime_context,
         pages=_discover_source_pages(resolved_vault),
+        classification_input_fingerprints=dict(
+            refreshed_classification.get("input_fingerprints", {})
+        ),
         source_command=f"{SOURCE_COMMAND} --apply",
     )
     for key in (

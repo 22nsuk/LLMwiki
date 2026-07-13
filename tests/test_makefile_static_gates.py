@@ -523,7 +523,7 @@ class MakefileStaticGateTests(unittest.TestCase):
         }
 
         for target in (
-            "auto-improve-readiness-report-body",
+            "auto-improve-readiness-report-body-current-or-refresh",
             "release-closeout-summary-report",
             "release-evidence-cohort",
             "release-closeout-batch-manifest-promote",

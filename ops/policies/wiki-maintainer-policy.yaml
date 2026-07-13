@@ -1278,13 +1278,13 @@ subagent_routing_policy:
   ladder:
   - rung: 1
     model: gpt-5.6-sol
-    reasoning_effort: medium
+    reasoning_effort: high
   - rung: 2
     model: gpt-5.6-sol
-    reasoning_effort: high
+    reasoning_effort: xhigh
   - rung: 3
     model: gpt-5.6-sol
-    reasoning_effort: xhigh
+    reasoning_effort: max
   score_bands:
     low:
       max_score: 24

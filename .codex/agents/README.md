@@ -37,13 +37,13 @@ repo-shared defaults는 아래 rung만 사용한다.
 
 | Rung | Model | Effort | Typical use in this repo |
 | --- | --- | --- | --- |
-| 1 | `gpt-5.6-sol` | `medium` | read-heavy mapping, route discovery, owner boundary clarification |
-| 2 | `gpt-5.6-sol` | `high` | bounded implementation, low/moderate-risk validation, risk-focused review, and architecture-sensitive analysis |
-| 3 | `gpt-5.6-sol` | `xhigh` | high-complexity validation, replayability, provenance, benchmark, and policy-weight audits |
+| 1 | `gpt-5.6-sol` | `high` | read-heavy mapping, route discovery, owner boundary clarification |
+| 2 | `gpt-5.6-sol` | `xhigh` | bounded implementation, low/moderate-risk validation, risk-focused review, and architecture-sensitive analysis |
+| 3 | `gpt-5.6-sol` | `max` | high-complexity validation, replayability, provenance, benchmark, and policy-weight audits |
 
 추가 규칙:
 - repo-shared default model은 모든 rung에서 `gpt-5.6-sol`로 통일한다.
-- rung 차이는 모델 계열이 아니라 `reasoning_effort`의 `medium`, `high`, `xhigh` 차이로만 표현한다.
+- rung 차이는 모델 계열이 아니라 `reasoning_effort`의 `high`, `xhigh`, `max` 차이로만 표현한다.
 - wire-level `reasoning_effort` override가 필요해도 repo-shared default는 위 3단계 ladder를 벗어나지 않는다.
 - override가 정말 필요하면 세션에서 명시적으로 승인받고 올린다.
 
@@ -101,24 +101,24 @@ hand-edit their `tmp/` outputs into public source.
 
 | File | Default rung | Sandbox | Use when |
 | --- | --- | --- | --- |
-| `explorer.toml` | `gpt-5.6-sol` + `medium` | `read-only` | owning path, router entry point, contract boundary를 먼저 맵핑해야 할 때 |
-| `worker.toml` | `gpt-5.6-sol` + `high` | `workspace-write` | bounded implementation or repo edit가 필요할 때 |
-| `reviewer.toml` | `gpt-5.6-sol` + `high` | `workspace-write` in temp workspace, source read-only contract | PR-style risk review, missing tests, source-fidelity drift를 보고 싶을 때 |
-| `validator.toml` | `gpt-5.6-sol` + `high` | `workspace-write` in temp workspace, source read-only contract | bounded validation, command replay planning, executable regression risk를 확인할 때. Routing policy가 schema/policy/security/high-score 신호를 보면 `xhigh`로 승격한다. |
+| `explorer.toml` | `gpt-5.6-sol` + `high` | `read-only` | owning path, router entry point, contract boundary를 먼저 맵핑해야 할 때 |
+| `worker.toml` | `gpt-5.6-sol` + `xhigh` | `workspace-write` | bounded implementation or repo edit가 필요할 때 |
+| `reviewer.toml` | `gpt-5.6-sol` + `xhigh` | `workspace-write` in temp workspace, source read-only contract | PR-style risk review, missing tests, source-fidelity drift를 보고 싶을 때 |
+| `validator.toml` | `gpt-5.6-sol` + `xhigh` | `workspace-write` in temp workspace, source read-only contract | bounded validation, command replay planning, executable regression risk를 확인할 때. Routing policy가 schema/policy/security/high-score 신호를 보면 `max`로 승격한다. |
 
 ### Specialized read-only add-ons
 
 | File | Default rung | Use when |
 | --- | --- | --- |
-| `provenance-auditor.toml` | `gpt-5.6-sol` + `xhigh` | `Source trace`, raw registry, frontmatter provenance, claim fidelity를 엄격히 감사할 때 |
-| `parity-replay-auditor.toml` | `gpt-5.6-sol` + `xhigh` | `make check`, packaged-copy parity, baseline/candidate replayability를 따질 때 |
-| `benchmark-evidence-analyst.toml` | `gpt-5.6-sol` + `xhigh` | eval/lint/stage2/promotion artifact가 keep/discard를 정당화하는지 판단할 때 |
-| `owner-boundary-mapper.toml` | `gpt-5.6-sol` + `medium` | `wiki/`, `system/`, `ops/`, `tests/`, `runs/` 사이의 canonical owner boundary를 잡을 때 |
-| `scope-gate-reviewer.toml` | `gpt-5.6-sol` + `high` | 작업이 public/private/generated/release/runtime 경계를 넘는지 구현 전에 차단하거나 좁힐 때 |
-| `valuation-policy-auditor.toml` | `gpt-5.6-sol` + `xhigh` | same-eval promotion, policy exception, decision-weight 과대평가 여부를 감사할 때 |
-| `release-authority-auditor.toml` | `gpt-5.6-sol` + `xhigh` | release-run/sealed/auto-promotion authority blocker와 stale evidence 원인을 분리할 때 |
-| `goal-runtime-triage-auditor.toml` | `gpt-5.6-sol` + `xhigh` | goal runtime trial admission, quarantine, next-run repair, readiness blockers를 분류할 때 |
-| `external-report-action-auditor.toml` | `gpt-5.6-sol` + `high` | external report prose, action matrix status/lifecycle, remediation backlog, improvement observations의 구현/보류 상태를 대조할 때 |
+| `provenance-auditor.toml` | `gpt-5.6-sol` + `max` | `Source trace`, raw registry, frontmatter provenance, claim fidelity를 엄격히 감사할 때 |
+| `parity-replay-auditor.toml` | `gpt-5.6-sol` + `max` | `make check`, packaged-copy parity, baseline/candidate replayability를 따질 때 |
+| `benchmark-evidence-analyst.toml` | `gpt-5.6-sol` + `max` | eval/lint/stage2/promotion artifact가 keep/discard를 정당화하는지 판단할 때 |
+| `owner-boundary-mapper.toml` | `gpt-5.6-sol` + `high` | `wiki/`, `system/`, `ops/`, `tests/`, `runs/` 사이의 canonical owner boundary를 잡을 때 |
+| `scope-gate-reviewer.toml` | `gpt-5.6-sol` + `xhigh` | 작업이 public/private/generated/release/runtime 경계를 넘는지 구현 전에 차단하거나 좁힐 때 |
+| `valuation-policy-auditor.toml` | `gpt-5.6-sol` + `max` | same-eval promotion, policy exception, decision-weight 과대평가 여부를 감사할 때 |
+| `release-authority-auditor.toml` | `gpt-5.6-sol` + `max` | release-run/sealed/auto-promotion authority blocker와 stale evidence 원인을 분리할 때 |
+| `goal-runtime-triage-auditor.toml` | `gpt-5.6-sol` + `max` | goal runtime trial admission, quarantine, next-run repair, readiness blockers를 분류할 때 |
+| `external-report-action-auditor.toml` | `gpt-5.6-sol` + `xhigh` | external report prose, action matrix status/lifecycle, remediation backlog, improvement observations의 구현/보류 상태를 대조할 때 |
 
 ### Role boundaries
 

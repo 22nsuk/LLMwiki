@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_envelope_runtime import artifact_input_fingerprints
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
@@ -14,6 +16,10 @@ from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_constants_runtime import (
     AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH,
+)
+from ops.scripts.core.source_revision_runtime import resolve_source_revision
+from ops.scripts.core.source_tree_fingerprint_runtime import (
+    release_source_tree_fingerprint,
 )
 from ops.scripts.learning.learning_readiness_signoff_state import (
     learning_readiness_signoff_summary,
@@ -340,6 +346,104 @@ def _execution_status(execution: ExecutionReadinessAssessment) -> str:
     return "pass" if execution.can_run else "blocked"
 
 
+def _readiness_path_group_inputs() -> dict[str, list[str]]:
+    return {
+        "release_authority_preflight_report_candidates": list(
+            RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS
+        )
+    }
+
+
+def readiness_report_currentness_diagnostics(
+    vault: Path,
+    *,
+    policy_path: str | None = None,
+    remediation_backlog_path: str = REMEDIATION_BACKLOG_REPORT_REL_PATH,
+) -> dict[str, Any]:
+    canonical_path = vault / READINESS_REPORT_REL_PATH
+    _, resolved_policy_path = load_policy(vault, policy_path)
+    current_source_revision = resolve_source_revision(vault).revision
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    current_input_fingerprints = artifact_input_fingerprints(
+        vault,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=READINESS_REPORT_SCHEMA_PATH,
+        source_paths=READINESS_SOURCE_PATHS,
+        file_inputs=readiness_file_inputs(
+            remediation_backlog_path=remediation_backlog_path
+        ),
+        path_group_inputs=_readiness_path_group_inputs(),
+    )
+
+    try:
+        payload = json.loads(canonical_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "fail",
+            "current": False,
+            "path": report_path(vault, canonical_path),
+            "reasons": ["canonical_artifact_unavailable"],
+            "load_error": type(exc).__name__,
+            "checks": {
+                "artifact_kind": False,
+                "producer": False,
+                "artifact_status": False,
+                "currentness_status": False,
+                "source_revision": False,
+                "source_tree_fingerprint": False,
+                "input_fingerprints": False,
+            },
+            "expected": {
+                "source_revision": current_source_revision,
+                "source_tree_fingerprint": current_source_tree_fingerprint,
+                "input_fingerprints": current_input_fingerprints,
+            },
+            "observed": {},
+        }
+
+    if not isinstance(payload, dict):
+        payload = {}
+    currentness = payload.get("currentness")
+    checks = {
+        "artifact_kind": payload.get("artifact_kind")
+        == "auto_improve_readiness_report",
+        "producer": payload.get("producer") == READINESS_REPORT_PRODUCER,
+        "artifact_status": payload.get("artifact_status") == "current",
+        "currentness_status": isinstance(currentness, dict)
+        and currentness.get("status") == "current",
+        "source_revision": payload.get("source_revision") == current_source_revision,
+        "source_tree_fingerprint": payload.get("source_tree_fingerprint")
+        == current_source_tree_fingerprint,
+        "input_fingerprints": payload.get("input_fingerprints")
+        == current_input_fingerprints,
+    }
+    reasons = [f"{name}_mismatch" for name, passed in checks.items() if not passed]
+    current = not reasons
+    return {
+        "status": "pass" if current else "fail",
+        "current": current,
+        "path": report_path(vault, canonical_path),
+        "reasons": reasons,
+        "checks": checks,
+        "expected": {
+            "source_revision": current_source_revision,
+            "source_tree_fingerprint": current_source_tree_fingerprint,
+            "input_fingerprints": current_input_fingerprints,
+        },
+        "observed": {
+            "artifact_kind": payload.get("artifact_kind"),
+            "producer": payload.get("producer"),
+            "artifact_status": payload.get("artifact_status"),
+            "currentness_status": (
+                currentness.get("status") if isinstance(currentness, dict) else None
+            ),
+            "source_revision": payload.get("source_revision"),
+            "source_tree_fingerprint": payload.get("source_tree_fingerprint"),
+            "input_fingerprints": payload.get("input_fingerprints"),
+        },
+    }
+
+
 def render_readiness_report(
     vault: Path,
     inputs: ReadinessInputs,
@@ -373,11 +477,7 @@ def render_readiness_report(
             file_inputs=readiness_file_inputs(
                 remediation_backlog_path=inputs.remediation_backlog_path
             ),
-            path_group_inputs={
-                "release_authority_preflight_report_candidates": list(
-                    RELEASE_AUTHORITY_PREFLIGHT_REPORT_REL_PATHS
-                )
-            },
+            path_group_inputs=_readiness_path_group_inputs(),
         ),
         "vault": report_path(vault, vault),
         "policy": {

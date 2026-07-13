@@ -84,7 +84,7 @@ class PolicyRuntimeTest(unittest.TestCase):
             {
                 "rung": 1,
                 "model": "gpt-5.6-sol",
-                "reasoning_effort": "medium",
+                "reasoning_effort": "high",
             },
         )
         self.assertEqual(

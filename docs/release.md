@@ -118,16 +118,16 @@ surface comparison; this document owns release evidence and staged authority.
   `delete_allowed=true` by the retention report.
 - `make release-auto-promotion-preseal`: refresh clean closeout, strict
   same-fingerprint cohort, remediation, learning, and auto-improve diagnostics
-  after run-ready and before sealing. It refreshes cheap cohort inputs such as
+  before the runnable and sealing stages. It refreshes cheap cohort inputs such as
   bootstrap, registry, fast smoke, generated index, artifact freshness, and
   external report references through the safe cleanup lane, then refreshes
   auto-improve readiness after those sealed-batch inputs settle so strict
-  cohort checks do not read stale release-gate blockers. It only checks
-  run-ready's full release-smoke and full-suite
-  evidence for currentness instead of rerunning them. It removes any older final
-  ready manifest before writing new preseal evidence, and writes a final
-  fixed-point after its tracked report refreshes so finality remains terminal
-  before sealing.
+  cohort checks do not read stale release-gate blockers. It does not check or
+  rewrite run-ready evidence. It removes any older final ready manifest, writes
+  the strict cohort before the final fixed-point, cleans temporary JSON, and
+  leaves the preseal authority writer terminal after fixed-point finality.
+  Its readiness checkpoints use an exact revision/tree/input currentness check;
+  the expensive readiness writer runs only when that check fails.
 - `make release-auto-promotion-operator-summary`: manual fallback to refresh the
   cheap build-local operator diagnostics used by the promotion verdict when
   sealed sidecars are already current. It invalidates the final ready manifest
@@ -180,16 +180,15 @@ surface comparison; this document owns release evidence and staged authority.
   names the owning authority target.
   `make head-aligned-evidence-converge` is a compatibility alias for this target.
 - `make release-authority-settle`: explicit staged-authority writer lane for
-  unattended promotion after release evidence is current. Its entry check uses
-  the one-call `release-finality-resettle-current-or-refresh` controller, then it
-  writes preflight, run-ready, preseal, sealed-run-ready, and
-  auto-promotion-ready manifests. The archive-candidate gate remains before the
-  post-ready finality controller because an approved archive move changes
-  tracked generated evidence. The post-ready controller reuses current
-  ZIP-bound evidence or performs its conditional refresh and terminal
-  verification. A blocked ready verdict is preserved after finality handling.
-  Callers do not replay individual fixed-point writers or invoke the attestation
-  writer as a repair step; the controllers own that sequence.
+  unattended promotion after release evidence is current. It verifies the goal
+  run, writes preflight and preseal evidence, then requires
+  `release-authority-finality-current-check` to pass before writing run-ready,
+  sealed-run-ready, and auto-promotion-ready authority. The archive-candidate
+  gate after Stage 3 is read-only and invokes only
+  `archive-execution-manifest-check`; it does not refresh the action matrix or
+  generated index. The remaining authority checks and post-commit verification
+  are also read-only, and there is no terminal post-ready finality refresh. A
+  blocked ready verdict is preserved through those checks.
   It does not regenerate long-tail report producers; run
   `make release-evidence-converge` or the owning evidence refresh target first
   when stale generated reports are the blocker.
@@ -237,19 +236,19 @@ surface comparison; this document owns release evidence and staged authority.
    run/certificate evidence. Missing verified runtime evidence is carried as a
    final promotion blocker; it does not stop this diagnostic bridge from
    proving cheaper release blockers.
-3. Run `make release-run-ready-plan-check` when you want a cheap preflight that
-   reports stale run-ready evidence and the minimal next target without
-   refreshing local evidence. Run `make release-run-ready` from the committed
-   tree when the planner is ready or when you intentionally want the runnable
-   authority stage to refresh the required evidence.
-4. If unattended promotion is the intended outcome, run
-   `make release-auto-promotion-preseal` before sealing. As with preflight, an
-   explicit `GOAL_RUN_ID=<goal-run-id>` is allowed but the guard can infer the
-   effective id from verified global evidence. This includes
+3. If unattended promotion is the intended outcome, run
+   `make release-auto-promotion-preseal` before the runnable stage. As with
+   preflight, an explicit `GOAL_RUN_ID=<goal-run-id>` is allowed but the guard
+   can infer the effective id from verified global evidence. This includes
    `make release-auto-promotion-goal-run-id-guard` and
    `make release-auto-promotion-safe-cleanup-cleanup-only`; run the cleanup-only
    target directly when you need to settle safe generated evidence before
    retrying preseal.
+4. Require `make release-authority-finality-current-check` to pass, then run
+   `make release-run-ready-plan-check` when you want a cheap runnable-stage plan
+   without refreshing local evidence. Run `make release-run-ready` from the
+   committed tree when the planner is ready or when you intentionally want the
+   runnable authority stage to refresh the required evidence.
 5. Run `make release-sealed-run-ready` when you need source ZIP and sidecar
    evidence sealed for release review. Its planner requires a current passing
    run-ready manifest plus current passing auto-promotion preseal evidence, and
@@ -448,14 +447,14 @@ only when the operator is renewing or replacing the acceptance decision.
    worktree, auto-improve readiness, or fast smoke currentness fails. Missing
    verified runtime certificate evidence is carried forward as a final
    promotion blocker instead of forcing a runtime trial inside release closeout.
-2. Run `make release-run-ready` only after preflight passes. This is the
-   expensive runnable authority stage and is the owner of full-suite test
-   evidence for the current fingerprint.
-3. Run `make release-auto-promotion-preseal`. Stop here if the clean cohort,
+2. Run `make release-auto-promotion-preseal`. Stop here if the clean cohort,
    clean-lane-blocking accepted-risk family, gate attention, source-tree coherence, or
    same-fingerprint evidence cohort fails. Do not move failure diagnosis into
    Stage 3. Preseal runs the safe cleanup lane before accepted-risk and
    gate-attention evidence is evaluated.
+3. Require `make release-authority-finality-current-check` to pass, then run
+   `make release-run-ready`. This is the expensive runnable authority stage and
+   is the owner of full-suite test evidence for the current fingerprint.
 4. Run `make release-sealed-run-ready` only after preseal passes. This creates
    the sealed package evidence and the sealed operator summary diagnostic for
    Stage 3 reuse.
@@ -465,9 +464,8 @@ only when the operator is renewing or replacing the acceptance decision.
    If its planner reports release/clean-lane blocking accepted-risk counts or
    residual non-advisory gate attention, the verdict remains blocked and names
    the owning preseal or sealed-run target. The `release-authority-settle` tail
-   then uses its current-or-refresh controller to reuse current ZIP-bound
-   evidence or conditionally refresh and verify it before returning the original
-   ready verdict.
+   runs only the read-only archive candidate gate, staged-authority checks, and
+   post-commit verification before returning the original ready verdict.
 
 Completion is proven only by
 `build/release/release-auto-promotion-ready-manifest.json` with:
@@ -634,8 +632,8 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   auto-improve-readiness-worktree-guard
     -> artifact-freshness
     -> external-report-action-matrix
-    -> generated-artifact-index-body
-    -> auto-improve-readiness-report-body
+    -> generated-artifact-index-body-current-or-refresh
+    -> auto-improve-readiness-report-body-current-or-refresh
     -> release-closeout-summary-report
     -> learning-readiness-signoff-revalidation
     -> release-evidence-cohort

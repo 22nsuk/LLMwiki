@@ -10,6 +10,7 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.artifact_envelope_runtime import artifact_input_fingerprints
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -32,11 +33,13 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         improvement_observation_paths,
     )
     from ops.scripts.release.external_report_action_matrix import (
-        build_report as build_action_matrix_report,
+        action_matrix_input_fingerprints,
     )
     from ops.scripts.release.external_report_inventory_runtime import (
+        LOCAL_REPORT_LINE_DIGESTS,
         REFERENCE_MANIFEST,
         active_report_paths,
+        archived_report_paths,
     )
     from ops.scripts.release.external_report_lifecycle_runtime import (
         action_statuses,
@@ -50,11 +53,13 @@ else:
         improvement_observation_paths,
     )
     from ops.scripts.release.external_report_action_matrix import (
-        build_report as build_action_matrix_report,
+        action_matrix_input_fingerprints,
     )
     from ops.scripts.release.external_report_inventory_runtime import (
+        LOCAL_REPORT_LINE_DIGESTS,
         REFERENCE_MANIFEST,
         active_report_paths,
+        archived_report_paths,
     )
     from ops.scripts.release.external_report_lifecycle_runtime import (
         action_statuses,
@@ -64,6 +69,7 @@ else:
         report_lifecycle_profiles,
     )
 
+    from .artifact_envelope_runtime import artifact_input_fingerprints
     from .artifact_freshness_runtime import build_canonical_report_envelope
     from .artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
@@ -86,6 +92,11 @@ SOURCE_COMMAND = (
     "--vault . "
     "--policy-path ops/policies/wiki-maintainer-policy.yaml"
 )
+SOURCE_PATHS = [
+    "ops/scripts/core/generated_artifact_index.py",
+    "ops/scripts/release/external_report_inventory_runtime.py",
+    "ops/scripts/release/external_report_lifecycle_runtime.py",
+]
 COMPACT_YYYYMMDD_RE = re.compile(r"(?<!\d)(20\d{6})(?!\d)")
 DASHED_YYYYMMDD_RE = re.compile(r"(?<!\d)(20\d{2}-\d{2}-\d{2})(?!\d)")
 COMPACT_YYMMDD_RE = re.compile(r"(?<!\d)(\d{6})(?!\d)")
@@ -180,11 +191,17 @@ def _task_improvement_observation_reports(vault: Path) -> list[str]:
 def _index_exclusion_paths(vault: Path) -> set[str]:
     from ops.scripts.release.release_closeout_fixed_point import (
         fixed_point_output_paths_at_or_downstream,
+        fixed_point_writer_specs_from_policy,
     )
 
+    index_target = next(
+        str(writer["target"])
+        for writer in fixed_point_writer_specs_from_policy(vault)
+        if writer.get("name") == "generated-artifact-index"
+    )
     return NON_GRAPH_INDEX_EXCLUSION_PATHS | fixed_point_output_paths_at_or_downstream(
         vault,
-        "generated-artifact-index-body",
+        index_target,
     )
 
 
@@ -323,14 +340,8 @@ def _action_matrix_basis_state(vault: Path) -> dict[str, Any]:
             "reason_id": "action_matrix_input_fingerprints_invalid",
         }
     try:
-        live_fingerprints = build_action_matrix_report(vault).get("input_fingerprints")
+        live_fingerprints = action_matrix_input_fingerprints(vault)
     except (OSError, TypeError, ValueError, RuntimeError):
-        return {
-            **base,
-            "status": "stale",
-            "reason_id": "action_matrix_input_fingerprints_unverifiable",
-        }
-    if not isinstance(live_fingerprints, dict):
         return {
             **base,
             "status": "stale",
@@ -347,7 +358,7 @@ def _action_matrix_basis_state(vault: Path) -> dict[str, Any]:
         return {
             **base,
             "status": "stale",
-            "reason_id": "action_matrix_input_fingerprint_mismatch",
+            "reason_id": "action_matrix_input_fingerprints_mismatch",
             "input_fingerprint_mismatch_keys": mismatch_keys,
         }
     return base
@@ -779,6 +790,179 @@ def _operator_digest(
     return now, next_steps, why_blocked
 
 
+def _external_report_direct_inputs(vault: Path) -> list[str]:
+    paths = [*active_report_paths(vault), *archived_report_paths(vault)]
+    reference_manifest = vault / REFERENCE_MANIFEST
+    if reference_manifest.is_file():
+        paths.append(reference_manifest)
+    return sorted({report_path(vault, path) for path in paths})
+
+
+def _run_direct_inputs(vault: Path) -> list[str]:
+    runs_root = vault / "runs"
+    if not runs_root.is_dir():
+        return []
+    paths: list[str] = []
+    for run_dir in sorted(
+        path for path in runs_root.iterdir() if path.is_dir() and path.name != "archive"
+    ):
+        for filename in ("promotion-report.json", "run-ledger.json"):
+            path = run_dir / filename
+            if path.is_file():
+                paths.append(report_path(vault, path))
+    return paths
+
+
+def _run_directory_inventory(vault: Path) -> dict[str, list[str]]:
+    runs_root = vault / "runs"
+    active = (
+        sorted(
+            path.name
+            for path in runs_root.iterdir()
+            if path.is_dir() and path.name != "archive"
+        )
+        if runs_root.is_dir()
+        else []
+    )
+    archive_root = runs_root / "archive"
+    archived = (
+        sorted(path.name for path in archive_root.iterdir() if path.is_dir())
+        if archive_root.is_dir()
+        else []
+    )
+    return {"active": active, "archived": archived}
+
+
+def _report_file_inputs() -> dict[str, str]:
+    return {
+        "external_report_action_matrix": EXTERNAL_REPORT_ACTION_MATRIX_PATH,
+        "external_report_line_digests": LOCAL_REPORT_LINE_DIGESTS,
+    }
+
+
+def _report_path_group_inputs(vault: Path) -> dict[str, list[str]]:
+    return {
+        "external_report_files": _external_report_direct_inputs(vault),
+        "run_state_files": _run_direct_inputs(vault),
+    }
+
+
+def _report_text_inputs(vault: Path) -> dict[str, str]:
+    return {
+        "ops_report_inventory": _canonical_inventory_text(_ops_report_inventory(vault)),
+        "operator_report_inventory": _canonical_inventory_text(
+            _operator_report_inventory(vault)
+        ),
+        "run_directory_inventory": _canonical_inventory_text(
+            _run_directory_inventory(vault)
+        ),
+        "task_improvement_observation_inventory": _canonical_inventory_text(
+            _task_improvement_observation_reports(vault)
+        ),
+    }
+
+
+def _current_input_fingerprints(
+    vault: Path,
+    *,
+    resolved_policy_path: Path,
+) -> dict[str, str]:
+    return artifact_input_fingerprints(
+        vault,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
+        source_paths=SOURCE_PATHS,
+        file_inputs=_report_file_inputs(),
+        path_group_inputs=_report_path_group_inputs(vault),
+        text_inputs=_report_text_inputs(vault),
+    )
+
+
+def currentness_diagnostics(
+    vault: Path,
+    *,
+    policy_path: str | None = None,
+) -> dict[str, Any]:
+    canonical_path = vault / DEFAULT_OUT
+    _, resolved_policy_path = load_policy(vault, policy_path)
+    current_source_revision = resolve_source_revision(vault).revision
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
+    current_input_fingerprints = _current_input_fingerprints(
+        vault,
+        resolved_policy_path=resolved_policy_path,
+    )
+    expected = {
+        "source_revision": current_source_revision,
+        "source_tree_fingerprint": current_source_tree_fingerprint,
+        "input_fingerprints": current_input_fingerprints,
+    }
+    empty_checks = {
+        "artifact_kind": False,
+        "producer": False,
+        "artifact_status": False,
+        "currentness_status": False,
+        "source_tree_fingerprint": False,
+        "input_fingerprints": False,
+    }
+    try:
+        payload = json.loads(canonical_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "fail",
+            "current": False,
+            "path": report_path(vault, canonical_path),
+            "reasons": ["canonical_artifact_unavailable"],
+            "source_revision_status": "unknown",
+            "load_error": type(exc).__name__,
+            "checks": empty_checks,
+            "expected": expected,
+            "observed": {},
+        }
+
+    if not isinstance(payload, dict):
+        payload = {}
+    currentness = payload.get("currentness")
+    source_revision_status = (
+        "current"
+        if payload.get("source_revision") == current_source_revision
+        else "provenance_only"
+    )
+    checks = {
+        "artifact_kind": payload.get("artifact_kind")
+        == "generated_artifact_index_report",
+        "producer": payload.get("producer") == PRODUCER,
+        "artifact_status": payload.get("artifact_status") == "current",
+        "currentness_status": isinstance(currentness, dict)
+        and currentness.get("status") == "current",
+        "source_tree_fingerprint": payload.get("source_tree_fingerprint")
+        == current_source_tree_fingerprint,
+        "input_fingerprints": payload.get("input_fingerprints")
+        == current_input_fingerprints,
+    }
+    reasons = [f"{name}_mismatch" for name, passed in checks.items() if not passed]
+    current = not reasons
+    return {
+        "status": "pass" if current else "fail",
+        "current": current,
+        "path": report_path(vault, canonical_path),
+        "reasons": reasons,
+        "source_revision_status": source_revision_status,
+        "checks": checks,
+        "expected": expected,
+        "observed": {
+            "artifact_kind": payload.get("artifact_kind"),
+            "producer": payload.get("producer"),
+            "artifact_status": payload.get("artifact_status"),
+            "currentness_status": (
+                currentness.get("status") if isinstance(currentness, dict) else None
+            ),
+            "source_revision": payload.get("source_revision"),
+            "source_tree_fingerprint": payload.get("source_tree_fingerprint"),
+            "input_fingerprints": payload.get("input_fingerprints"),
+        },
+    }
+
+
 def build_report(
     vault: Path,
     *,
@@ -790,10 +974,6 @@ def build_report(
     ops_current, ops_archive, ops_summary = _ops_reports(vault)
     operator_current, operator_archive, operator_summary = _operator_reports(vault)
     action_matrix_basis = _action_matrix_basis_state(vault)
-    action_matrix_statuses = _action_matrix_statuses(
-        vault,
-        basis_state=action_matrix_basis,
-    )
     external_statuses = _external_report_lifecycle_statuses(
         vault,
         action_matrix_basis=action_matrix_basis,
@@ -819,7 +999,6 @@ def build_report(
         archive_candidates=archive_candidates,
     )
     generated_at = runtime_context.isoformat_z()
-    task_observation_reports = _task_improvement_observation_reports(vault)
     return {
         **build_canonical_report_envelope(
             vault,
@@ -829,35 +1008,10 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=GENERATED_ARTIFACT_INDEX_SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/core/generated_artifact_index.py",
-                "ops/scripts/release/external_report_inventory_runtime.py",
-                "ops/scripts/release/external_report_lifecycle_runtime.py",
-            ],
-            path_group_inputs={
-                "run_promotion_reports": [
-                    path.relative_to(vault).as_posix()
-                    for path in sorted((vault / "runs").glob("*/promotion-report.json"))
-                ],
-            },
-            text_inputs={
-                "ops_report_inventory": _canonical_inventory_text(_ops_report_inventory(vault)),
-                "operator_report_inventory": _canonical_inventory_text(_operator_report_inventory(vault)),
-                "external_report_inventory": _canonical_inventory_text(
-                    _external_report_inventory(
-                        vault,
-                        status_by_action=external_statuses,
-                        archived_report_basis=archived_external_report_basis,
-                    )
-                ),
-                "external_report_action_matrix_statuses": _canonical_inventory_text(
-                    action_matrix_statuses
-                ),
-                "external_report_action_matrix_basis": _canonical_inventory_text(
-                    action_matrix_basis
-                ),
-                "task_improvement_observation_inventory": _canonical_inventory_text(task_observation_reports),
-            },
+            source_paths=SOURCE_PATHS,
+            file_inputs=_report_file_inputs(),
+            path_group_inputs=_report_path_group_inputs(vault),
+            text_inputs=_report_text_inputs(vault),
         ),
         "vault": report_path(vault, vault),
         "policy": {
@@ -903,12 +1057,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--policy-path")
     parser.add_argument("--out", default=DEFAULT_OUT)
+    parser.add_argument(
+        "--current-check",
+        action="store_true",
+        help="check exact currentness of the canonical index without writing",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
+    if args.current_check:
+        diagnostics = currentness_diagnostics(vault, policy_path=args.policy_path)
+        print(json.dumps(diagnostics, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0 if diagnostics["current"] else 1
     report = build_report(vault, policy_path=args.policy_path)
     destination = write_report(vault, report, args.out)
     print(display_path(vault, destination))

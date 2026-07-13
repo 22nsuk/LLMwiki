@@ -154,7 +154,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
                 if mode == "revision"
             },
             {
-                "auto-improve-readiness-report-body",
+                "auto-improve-readiness-report-body-current-or-refresh",
                 "release-closeout-summary-report",
                 "release-evidence-cohort",
                 "release-closeout-batch-manifest-promote",
@@ -175,8 +175,8 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
             for target in (
                 "artifact-freshness",
                 "external-report-action-matrix",
-                "generated-artifact-index-body",
-                "auto-improve-readiness-report-body",
+                "generated-artifact-index-body-current-or-refresh",
+                "auto-improve-readiness-report-body-current-or-refresh",
             )
         }
         self.assertLess(
@@ -185,15 +185,15 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         )
         self.assertLess(
             positions["external-report-action-matrix"],
-            positions["generated-artifact-index-body"],
+            positions["generated-artifact-index-body-current-or-refresh"],
         )
         self.assertLess(
-            positions["generated-artifact-index-body"],
-            positions["auto-improve-readiness-report-body"],
+            positions["generated-artifact-index-body-current-or-refresh"],
+            positions["auto-improve-readiness-report-body-current-or-refresh"],
         )
         downstream_paths = fixed_point_output_paths_at_or_downstream(
             self.vault,
-            "generated-artifact-index-body",
+            "generated-artifact-index-body-current-or-refresh",
         )
         self.assertIn("ops/reports/generated-artifact-index.json", downstream_paths)
         self.assertIn("ops/reports/release-closeout-summary.json", downstream_paths)
@@ -524,7 +524,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
 
     def test_undeclared_tracked_write_fails_execution(self) -> None:
         outputs = self._writer_outputs()
-        undeclared_path = outputs["generated-artifact-index-body"][0]
+        undeclared_path = outputs["generated-artifact-index-body-current-or-refresh"][0]
 
         def runner(
             argv: Sequence[str],
@@ -580,7 +580,7 @@ class ReleaseCloseoutFixedPointTests(unittest.TestCase):
         self,
     ) -> None:
         outputs = self._writer_outputs()
-        undeclared_path = outputs["generated-artifact-index-body"][0]
+        undeclared_path = outputs["generated-artifact-index-body-current-or-refresh"][0]
         existing_path = self.vault / undeclared_path
         existing_path.parent.mkdir(parents=True, exist_ok=True)
         existing_bytes = b'{"stable": true}\n'

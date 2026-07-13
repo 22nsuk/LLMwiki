@@ -19,7 +19,7 @@ class SelectSubagentRungLadderTests(unittest.TestCase):
         self.assertEqual({entry["model"] for entry in ladder}, {"gpt-5.6-sol"})
         self.assertEqual(
             [entry["reasoning_effort"] for entry in ladder],
-            ["medium", "high", "xhigh"],
+            ["high", "xhigh", "max"],
         )
 
 

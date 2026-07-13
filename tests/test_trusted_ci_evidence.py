@@ -105,6 +105,9 @@ def _seed_evidence(vault: Path, *, subtests_passed: int = 0) -> Path:
     (vault / "tests" / "test_sample.py").write_text(
         "def test_sample():\n    assert True\n", encoding="utf-8"
     )
+    contract = json.loads(
+        (vault / "ops" / "test-lane-registry.json").read_text(encoding="utf-8")
+    )["trusted_ci_evidence"]
     collection_path = (
         vault / "build/release-payloads/test-execution-summary-full.collection.json"
     )
@@ -118,7 +121,8 @@ def _seed_evidence(vault: Path, *, subtests_passed: int = 0) -> Path:
         else ""
     )
     junit_path.write_text(
-        f"<testsuite tests='{junit_total}'><testcase classname='sample' "
+        f"<testsuite tests='{junit_total}' errors='0' failures='0' skipped='0'>"
+        "<testcase classname='tests.test_sample' "
         f"name='test_sample'>{subtest_property}</testcase></testsuite>\n",
         encoding="utf-8",
     )
@@ -142,8 +146,8 @@ def _seed_evidence(vault: Path, *, subtests_passed: int = 0) -> Path:
     }
     collection = build_collection_manifest(
         vault,
-        suite="full-shard-1",
-        semantic_command="-m pytest",
+        suite=contract["collection_suite"],
+        semantic_command=contract["collection_semantic_command"],
         nodeids=["tests/test_sample.py::test_sample"],
         selection_kind="full_suite",
         deselected_tests=[],
@@ -154,8 +158,8 @@ def _seed_evidence(vault: Path, *, subtests_passed: int = 0) -> Path:
     digest = load_collection_manifest_digest(
         vault,
         collection_path,
-        expected_suite="full-shard-1",
-        expected_semantic_command="-m pytest",
+        expected_suite=contract["collection_suite"],
+        expected_semantic_command=contract["collection_semantic_command"],
     )
     junit = junit_artifact_identity(
         vault,
@@ -175,7 +179,7 @@ def _seed_evidence(vault: Path, *, subtests_passed: int = 0) -> Path:
         command=[sys.executable, "-m", "pytest"],
         result=_result(subtests_passed=subtests_passed),
         duration_ms=10,
-        suite="full-shard-1",
+        suite=contract["collection_suite"],
         context=_context(),
         collect_nodeids=True,
         collect_nodeid_digest=digest,
@@ -312,6 +316,71 @@ def _rewrite_bundle(bundle: Path, mutator) -> None:
             write_deterministic_member(archive, name, payload)
 
 
+def _rewrite_bundle_consistently(
+    bundle: Path, *, json_mutator=None, junit_xml: bytes | None = None
+) -> None:
+    members = read_strict_bundle(bundle)
+    decoded = {
+        name: json.loads(payload)
+        for name, payload in members.items()
+        if name.endswith(".json")
+    }
+    if json_mutator is not None:
+        json_mutator(decoded)
+    if junit_xml is not None:
+        members[JUNIT_MEMBER] = junit_xml
+        junit_sha = sha256_bytes(junit_xml)
+        junit_count = trusted_runtime.junit_test_count(junit_xml)
+        artifacts = [
+            item
+            for item in decoded[SUMMARY_MEMBER]["evidence_artifacts"]
+            if item["kind"] == "junit_xml"
+        ]
+        assert len(artifacts) == 1
+        artifacts[0].update(
+            sha256=junit_sha,
+            observed_count=junit_count,
+            consistency_status="pass",
+        )
+        decoded[BUNDLE_MANIFEST_MEMBER]["junit"] = {
+            "sha256": junit_sha,
+            "count": junit_count,
+        }
+    collection = decoded[COLLECTION_MEMBER]
+    collection["semantic_command_sha256"] = trusted_runtime.semantic_digest(
+        collection["semantic_command"]
+    )
+    members[COLLECTION_MEMBER] = (
+        json.dumps(collection, ensure_ascii=False, indent=2) + "\n"
+    ).encode()
+    summary = decoded[SUMMARY_MEMBER]
+    summary["pytest_collect_nodeid_digest"].update(
+        command=collection["semantic_command"],
+        manifest_sha256=sha256_bytes(members[COLLECTION_MEMBER]),
+        manifest_nodeids_sha256=collection["nodeids_sha256"],
+        nodeid_count=collection["nodeid_count"],
+        sha256=collection["nodeids_sha256"],
+    )
+    members[SUMMARY_MEMBER] = (
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n"
+    ).encode()
+    manifest = decoded[BUNDLE_MANIFEST_MEMBER]
+    manifest["collection"] = {
+        "sha256": collection["nodeids_sha256"],
+        "manifest_sha256": sha256_bytes(members[COLLECTION_MEMBER]),
+        "count": collection["nodeid_count"],
+    }
+    for item in manifest["members"]:
+        item["sha256"] = sha256_bytes(members[item["path"]])
+        item["size_bytes"] = len(members[item["path"]])
+    members[BUNDLE_MANIFEST_MEMBER] = (
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+    ).encode()
+    with zipfile.ZipFile(bundle, "w") as archive:
+        for name, payload in members.items():
+            write_deterministic_member(archive, name, payload)
+
+
 def test_bundle_is_deterministic_and_valid_import_is_diagnostic_only(
     tmp_path: Path,
 ) -> None:
@@ -344,11 +413,33 @@ def test_repository_contract_matches_hosted_python_workflow() -> None:
     setup_action = (REPO_ROOT / ".github/actions/setup-python-uv/action.yml").read_text(
         encoding="utf-8"
     )
+    test_makefile = (REPO_ROOT / "mk/test.mk").read_text(encoding="utf-8")
 
     assert "uses: ./.github/actions/setup-python-uv" in workflow
+    assert f"runs-on: {contract['runner']}" in workflow
     assert "python -m pip install -r" in setup_action
     assert ".venv" not in setup_action
     assert contract["environment"]["interpreter_path_class"] == "path_lookup"
+    assert contract["status"] == "additive_non_authoritative"
+    assert contract["authority_effect"] == "diagnostic_only_no_promotion"
+    assert contract["summary_semantic_command"] == (
+        "aggregate test execution summary shards"
+    )
+    assert contract["collection_suite"] == "full-shard-1"
+    assert contract["collection_semantic_command"] == (
+        "-m pytest -p xdist.plugin -n 4 --maxprocesses=4 --dist=loadfile "
+        "-p no:cacheprovider"
+    )
+    for assignment in (
+        "PYTEST_XDIST_WORKERS ?= 4",
+        "PYTEST_XDIST_MAXPROCESSES ?= 4",
+        "PYTEST_LOADFILE_FLAGS ?= -p xdist.plugin -n $(PYTEST_XDIST_WORKERS) "
+        "$(PYTEST_XDIST_MAXPROCESSES_FLAGS) --dist=loadfile",
+        "PYTEST_FLAGS ?= $(PYTEST_PARALLEL_FLAGS) $(PYTEST_CACHE_ISOLATION_FLAGS)",
+        "TEST_EXECUTION_SUMMARY_FULL_SHARD_SUITE ?= full-shard-1",
+        "TEST_EXECUTION_SUMMARY_FULL_PYTEST_FLAGS ?= $(PYTEST_FLAGS)",
+    ):
+        assert assignment in test_makefile
 
 
 def test_bundle_and_import_use_junit_suite_totals_for_subtests(tmp_path: Path) -> None:
@@ -435,6 +526,174 @@ def test_import_rejects_tampered_evidence_binding(
     assert code in {
         item["code"] for item in report["checks"] if item["status"] == "fail"
     }
+
+
+@pytest.mark.parametrize(
+    ("case", "junit_xml", "diagnostic"),
+    [
+        (
+            "same-count-wrong-nodeid",
+            b"<testsuite tests='1' errors='0' failures='0' skipped='0'>"
+            b"<testcase classname='tests.test_wrong' name='test_wrong'/>"
+            b"</testsuite>",
+            "missing=",
+        ),
+        (
+            "missing-nodeid",
+            b"<testsuite tests='0' errors='0' failures='0' skipped='0'/>",
+            "missing=",
+        ),
+        (
+            "extra-nodeid",
+            b"<testsuite tests='2' errors='0' failures='0' skipped='0'>"
+            b"<testcase classname='tests.test_sample' name='test_sample'/>"
+            b"<testcase classname='tests.test_extra' name='test_extra'/>"
+            b"</testsuite>",
+            "unmatched_or_extra=",
+        ),
+        (
+            "duplicate-nodeid",
+            b"<testsuite tests='2' errors='0' failures='0' skipped='0'>"
+            b"<testcase classname='tests.test_sample' name='test_sample'/>"
+            b"<testcase classname='tests.test_sample' name='test_sample'/>"
+            b"</testsuite>",
+            "duplicate=",
+        ),
+    ],
+)
+def test_import_rejects_junit_nodeid_tampering_even_when_rehashed(
+    tmp_path: Path, case: str, junit_xml: bytes, diagnostic: str
+) -> None:
+    vault = tmp_path / case
+    vault.mkdir()
+    bundle = _seed_evidence(vault)
+    _rewrite_bundle_consistently(bundle, junit_xml=junit_xml)
+
+    report = _run_import(vault, bundle)
+
+    assert report["status"] == "fail"
+    assert diagnostic in " ".join(report["diagnostics"])
+
+
+@pytest.mark.parametrize(
+    ("case", "junit_xml"),
+    [
+        (
+            "outcome-drift",
+            b"<testsuite tests='1' errors='0' failures='1' skipped='0'>"
+            b"<testcase classname='tests.test_sample' name='test_sample'>"
+            b"<failure message='tampered'/></testcase></testsuite>",
+        ),
+        (
+            "subtest-drift",
+            b"<testsuite tests='2' errors='0' failures='0' skipped='0'>"
+            b"<testcase classname='tests.test_sample' name='test_sample'>"
+            b"<properties><property name='llmwiki.subtests_passed' value='1'/>"
+            b"</properties></testcase></testsuite>",
+        ),
+    ],
+)
+def test_import_rejects_junit_outcome_and_subtest_drift(
+    tmp_path: Path, case: str, junit_xml: bytes
+) -> None:
+    vault = tmp_path / case
+    vault.mkdir()
+    bundle = _seed_evidence(vault)
+    _rewrite_bundle_consistently(bundle, junit_xml=junit_xml)
+
+    report = _run_import(vault, bundle)
+
+    assert report["status"] == "fail"
+    assert any(
+        item["code"] == "junit" and item["status"] == "fail"
+        for item in report["checks"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("case", "mutator"),
+    [
+        (
+            "wrong-concrete-command",
+            lambda values: (
+                values[COLLECTION_MEMBER].update(
+                    semantic_command="-m pytest -p no:cacheprovider"
+                ),
+                values[SUMMARY_MEMBER]["pytest_collect_nodeid_digest"].update(
+                    command="-m pytest -p no:cacheprovider"
+                ),
+            ),
+        ),
+        (
+            "selector-subset-substitution",
+            lambda values: values[COLLECTION_MEMBER].update(
+                selection_kind="selector_subset"
+            ),
+        ),
+        (
+            "collection-suite-substitution",
+            lambda values: values[COLLECTION_MEMBER].update(
+                suite="report-contract-summary"
+            ),
+        ),
+        (
+            "explicit-deselection-drift",
+            lambda values: values[COLLECTION_MEMBER].update(
+                deselected_tests=[
+                    {
+                        "nodeid": "tests/test_sample.py::test_sample",
+                        "reason": "tampered",
+                        "policy_ref": "",
+                        "risk_owner": "",
+                        "expires_at": "",
+                        "release_blocking": False,
+                        "expected_to_pass_after_refresh": False,
+                    }
+                ]
+            ),
+        ),
+        (
+            "collection-lifecycle-drift",
+            lambda values: values[COLLECTION_MEMBER][
+                "deselection_lifecycle"
+            ].update(status="fail"),
+        ),
+        (
+            "summary-lifecycle-drift",
+            lambda values: values[SUMMARY_MEMBER]["deselection_lifecycle"].update(
+                status="fail"
+            ),
+        ),
+        (
+            "summary-shard-suite-drift",
+            lambda values: values[SUMMARY_MEMBER]["shards"][0].update(
+                suite="selector-subset"
+            ),
+        ),
+        (
+            "summary-shard-count-drift",
+            lambda values: values[SUMMARY_MEMBER]["shards"][0]["counts"].update(
+                passed=2
+            ),
+        ),
+    ],
+)
+def test_import_rejects_collection_selection_and_deselection_drift(
+    tmp_path: Path, case: str, mutator
+) -> None:
+    vault = tmp_path / case
+    vault.mkdir()
+    bundle = _seed_evidence(vault)
+    _rewrite_bundle_consistently(bundle, json_mutator=mutator)
+
+    report = _run_import(vault, bundle)
+
+    assert report["status"] == "fail"
+    assert any(
+        item["code"] in {"collection_contract", "summary_collection_metadata"}
+        and item["status"] == "fail"
+        for item in report["checks"]
+    )
 
 
 def test_import_rejects_forged_verification_json_and_wrong_subject(

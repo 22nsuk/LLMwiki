@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "cost_trend": {
     "retained_run_count": 10,
     "thresholds": {
@@ -40,7 +40,7 @@
     },
     {
       "name": "generated-artifact-index",
-      "target": "generated-artifact-index-body",
+      "target": "generated-artifact-index-body-current-or-refresh",
       "binding_mode": "content",
       "produces": ["ops/reports/generated-artifact-index.json"],
       "depends_on": ["external-report-action-matrix"],
@@ -52,13 +52,13 @@
     },
     {
       "name": "auto-improve-readiness",
-      "target": "auto-improve-readiness-report-body",
+      "target": "auto-improve-readiness-report-body-current-or-refresh",
       "binding_mode": "revision",
       "produces": ["ops/reports/auto-improve-readiness.json"],
       "depends_on": [
         "auto-improve-readiness-worktree-guard",
         "artifact-freshness",
-        "generated-artifact-index-body"
+        "generated-artifact-index-body-current-or-refresh"
       ],
       "expensive_prerequisites": []
     },
@@ -68,9 +68,9 @@
       "binding_mode": "revision",
       "produces": ["ops/reports/release-closeout-summary.json"],
       "depends_on": [
-        "generated-artifact-index-body",
+        "generated-artifact-index-body-current-or-refresh",
         "artifact-freshness",
-        "auto-improve-readiness-report-body"
+        "auto-improve-readiness-report-body-current-or-refresh"
       ],
       "expensive_prerequisites": []
     },
@@ -138,7 +138,7 @@
       "binding_mode": "revision",
       "produces": ["ops/reports/release-closeout-batch-manifest.json"],
       "depends_on": [
-        "generated-artifact-index-body",
+        "generated-artifact-index-body-current-or-refresh",
         "artifact-freshness",
         "release-closeout-summary-report",
         "learning-readiness-signoff-revalidation",

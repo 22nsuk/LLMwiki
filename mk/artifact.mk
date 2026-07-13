@@ -52,7 +52,7 @@ RELEASE_RISK_TAXONOMY_MATRIX_MD_OUT ?= ops/reports/release-risk-taxonomy-matrix.
 
 -include $(DERIVED_SURFACES_MK_OUT)
 
-.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean derived-surfaces-sync derived-surfaces-sync-check sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output command-log-summary-backfill generated-artifact-retention-clean generated-artifact-runs-compress clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan changed-path-minimum-test release-workflow-order-guard release-workflow-order-guard-check release-workflow-order-guard-spec-sync release-workflow-order-guard-spec-sync-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
+.PHONY: artifact-freshness artifact-freshness-check artifact-freshness-refresh-check artifact-freshness-stable-contract-debt-refresh artifact-relocation-audit tmp-json-clean tmp-clean derived-surfaces-sync derived-surfaces-sync-check sync-derived sync-derived-check refresh-generated-core refresh-generated-observability refresh-generated generated-artifact-converge generated-artifact-script-output command-log-summary-backfill generated-artifact-retention-clean generated-artifact-runs-compress clean-fixture-regeneration-guard script-output-surfaces script-output-surfaces-check script-module-surfaces script-module-surfaces-check script-lifecycle-policy script-lifecycle-policy-check script-output-surfaces-clean-regenerate workflow-action-pins-sync workflow-action-pins-sync-check manual-mutate-defect-registry closure-registry-envelope make-target-inventory make-target-inventory-check workflow-dependency-planner workflow-dependency-planner-check changed-path-minimum-plan changed-path-minimum-test release-workflow-order-guard release-workflow-order-guard-check release-workflow-order-guard-spec-sync release-workflow-order-guard-spec-sync-check release-risk-taxonomy-matrix generated-artifact-index generated-artifact-index-check generated-artifact-index-body generated-artifact-index-body-current-check generated-artifact-index-body-current-or-refresh archive-execution-manifest archive-execution-manifest-report archive-execution-manifest-check archive-execution-manifest-apply archive-execution-manifest-defer archive-execution-manifest-rollback
 
 artifact-freshness:
 	$(PYTHON) -m ops.scripts.artifact_freshness_runtime --vault "$(VAULT)" --out "$(ARTIFACT_FRESHNESS_CANDIDATE_OUT)" --mtime-source "$(ARTIFACT_FRESHNESS_MTIME_SOURCE)" --progress "$(ARTIFACT_FRESHNESS_PROGRESS)" $(if $(ARTIFACT_FRESHNESS_ZIP_METADATA),--zip-metadata "$(ARTIFACT_FRESHNESS_ZIP_METADATA)",)
@@ -203,6 +203,15 @@ generated-artifact-index-check:
 generated-artifact-index-body:
 	$(PYTHON) -m ops.scripts.generated_artifact_index --vault "$(VAULT)" --out "$(GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT)"
 	$(PYTHON) -m ops.scripts.canonical_artifact_promote --vault "$(VAULT)" --candidate "$(GENERATED_ARTIFACT_INDEX_CANDIDATE_OUT)" --out "$(GENERATED_ARTIFACT_INDEX_OUT)" --schema ops/schemas/generated-artifact-index.schema.json --expected-artifact-kind generated_artifact_index_report --expected-producer ops.scripts.generated_artifact_index
+
+generated-artifact-index-body-current-check:
+	$(PYTHON) -m ops.scripts.generated_artifact_index --vault "$(VAULT)" --current-check
+
+generated-artifact-index-body-current-or-refresh:
+	@if $(MAKE) generated-artifact-index-body-current-check; then :; else \
+		$(MAKE) generated-artifact-index-body && \
+		$(MAKE) generated-artifact-index-body-current-check; \
+	fi
 
 archive-execution-manifest: generated-artifact-index archive-execution-manifest-report
 
