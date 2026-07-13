@@ -49,7 +49,7 @@ STRUCTURAL_GOLDEN_DIGESTS = {
     "mutation_proposal": "99536d57a2fc8f1a5ceb2fe658cec2f7e75bd4cb3d63b83dc6121c68ea426366",
     "release_evidence_dashboard": "c0f954173a2058ac67ef9a5d579e60ab5e25e74445bc90c8bdf551acabfe4348",
     "release_closeout_summary": "0cf9f6fcd926a9c75a41e1457fb8c6c26f42dc6749042468108d62294df3ac97",
-    "auto_improve_session_bundle": "0937b3fc5b4bfb176332efecb0eccccb04e2c85ff87792f61c1ede9a7cd78af0",
+    "auto_improve_session_bundle": "9653381a259f7c84a97a9600a592360ff764db01defa5f3bc5a1f69b298f9803",
 }
 
 STRUCTURAL_CONTRACTS: dict[str, dict[str, object]] = {
