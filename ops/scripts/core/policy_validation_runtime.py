@@ -13,9 +13,9 @@ from .promotion_decision_registry_runtime import promotion_decision_values
 SUPPORTED_COMPLEXITY_FORMULA = "complexity_score = round(sum(weight_i * dimension_i) / 5)"
 SUPPORTED_COMPLEXITY_OUTPUT_RANGE = "0-100"
 SUPPORTED_SUBAGENT_LADDER = {
-    1: ("gpt-5.6-sol", "high"),
-    2: ("gpt-5.6-sol", "xhigh"),
-    3: ("gpt-5.6-sol", "max"),
+    1: ("gpt-5.6-sol", "medium"),
+    2: ("gpt-5.6-sol", "high"),
+    3: ("gpt-5.6-sol", "xhigh"),
 }
 SUPPORTED_SUBAGENT_SANDBOX_MODES = {"read-only", "workspace-write", "danger-full-access"}
 SUPPORTED_WORKSPACE_PREPARATION_MODES = {"full_copy", "sparse_manifest"}

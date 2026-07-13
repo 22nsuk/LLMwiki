@@ -681,6 +681,12 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
 
             updated_report = build_report(vault, context=fixed_context())
 
+            (task_dir / "improvement-observations.json").write_text(
+                '{"observations":[{"status":"planned"}]}',
+                encoding="utf-8",
+            )
+            content_changed_report = build_report(vault, context=fixed_context())
+
             self.assertIn(
                 "task_improvement_observation_inventory",
                 baseline_report["input_fingerprints"],
@@ -696,6 +702,14 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                     "task_improvement_observation_inventory"
                 ],
                 updated_report["input_fingerprints"][
+                    "task_improvement_observation_inventory"
+                ],
+            )
+            self.assertNotEqual(
+                updated_report["input_fingerprints"][
+                    "task_improvement_observation_inventory"
+                ],
+                content_changed_report["input_fingerprints"][
                     "task_improvement_observation_inventory"
                 ],
             )
@@ -910,6 +924,69 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 diagnostics["observed"]["input_fingerprints"][
                     "external_report_action_matrix"
                 ],
+            )
+
+    def test_current_check_tracks_action_matrix_basis_input_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            evidence_path = vault / "ops" / "script-output-surfaces.json"
+            evidence_path.parent.mkdir(parents=True, exist_ok=True)
+            evidence_path.write_text('{"status":"first"}', encoding="utf-8")
+            matrix_path = (
+                vault / "ops" / "reports" / "external-report-action-matrix.json"
+            )
+            matrix_path.parent.mkdir(parents=True, exist_ok=True)
+            matrix_path.write_text(
+                json.dumps(build_action_matrix_report(vault, context=fixed_context())),
+                encoding="utf-8",
+            )
+            self._write_canonical_index(vault)
+
+            evidence_path.write_text('{"status":"second"}', encoding="utf-8")
+            diagnostics = currentness_diagnostics(vault)
+
+            self.assertFalse(diagnostics["current"])
+            self.assertIn("input_fingerprints_mismatch", diagnostics["reasons"])
+            key = "action_matrix_input_fingerprints"
+            self.assertNotEqual(
+                diagnostics["expected"]["input_fingerprints"][key],
+                diagnostics["observed"]["input_fingerprints"][key],
+            )
+
+    def test_current_check_rejects_task_observation_content_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            observation_path = (
+                vault
+                / "ops"
+                / "reports"
+                / "task-improvement-observations"
+                / "task-demo"
+                / "improvement-observations.json"
+            )
+            observation_path.parent.mkdir(parents=True, exist_ok=True)
+            observation_path.write_text(
+                '{"observations":[{"status":"planned"}]}',
+                encoding="utf-8",
+            )
+            self._write_canonical_index(vault)
+
+            observation_path.write_text(
+                '{"observations":[{"status":"automated"}]}',
+                encoding="utf-8",
+            )
+            diagnostics = currentness_diagnostics(vault)
+
+            self.assertFalse(diagnostics["current"])
+            self.assertIn("input_fingerprints_mismatch", diagnostics["reasons"])
+            key = "task_improvement_observation_inventory"
+            self.assertNotEqual(
+                diagnostics["expected"]["input_fingerprints"][key],
+                diagnostics["observed"]["input_fingerprints"][key],
             )
 
     def test_current_check_rejects_canonical_contract_metadata_drift(self) -> None:

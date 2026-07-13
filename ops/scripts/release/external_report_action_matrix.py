@@ -30,6 +30,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SPRINT_PRIORITIES,
     )
     from ops.scripts.release.external_report_inventory_runtime import (
+        LOCAL_REPORT_LINE_DIGESTS,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
@@ -69,6 +70,7 @@ else:
 
     from .external_report_action_catalog import ACTION_CATALOG, SPRINT_PRIORITIES
     from .external_report_inventory_runtime import (
+        LOCAL_REPORT_LINE_DIGESTS,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
@@ -575,8 +577,10 @@ def _action_matrix_envelope_inputs(
         "source_paths": SOURCE_PATHS,
         "file_inputs": {
             "external_report_reference_manifest": REFERENCE_MANIFEST,
+            "external_report_line_digests": LOCAL_REPORT_LINE_DIGESTS,
         },
         "path_group_inputs": {
+            "action_evidence_files": _action_evidence_paths(vault),
             "active_external_reports": [report_path(vault, path) for path in active_paths],
             "archived_external_reports": [
                 report_path(vault, path) for path in archived_paths
@@ -598,6 +602,31 @@ def _action_matrix_envelope_inputs(
             ),
         },
     }
+
+
+def _action_evidence_paths(vault: Path) -> list[str]:
+    from ops.scripts.release.release_closeout_fixed_point import (
+        fixed_point_output_paths_at_or_downstream,
+        fixed_point_writer_specs_from_policy,
+    )
+
+    matrix_target = next(
+        str(writer["target"])
+        for writer in fixed_point_writer_specs_from_policy(vault)
+        if writer.get("name") == "external-report-action-matrix"
+    )
+    excluded_paths = fixed_point_output_paths_at_or_downstream(
+        vault,
+        matrix_target,
+    )
+    return sorted(
+        {
+            str(path).strip()
+            for action in ACTION_CATALOG
+            for path in action.get("evidence_paths", [])
+            if str(path).strip() and str(path).strip() not in excluded_paths
+        }
+    )
 
 
 def action_matrix_input_fingerprints(

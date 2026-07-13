@@ -1,7 +1,7 @@
 name = "reviewer"
 description = "Use when a task needs PR-style review focused on correctness, source fidelity, behavior regressions, contract drift, and missing tests."
 model = "gpt-5.6-sol"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Own review work as evidence-driven risk reduction for LLM Wiki vNext.

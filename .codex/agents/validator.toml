@@ -1,7 +1,7 @@
 name = "validator"
 description = "Default read-only validation profile for bounded code paths, wiki contracts, and executable regression risk in this repository."
 model = "gpt-5.6-sol"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Act as the default validator for LLM Wiki vNext. The runtime may give this role

@@ -24,6 +24,9 @@ from ops.scripts.mechanism.auto_improve_readiness_constants_runtime import (
 from ops.scripts.mechanism.auto_improve_readiness_learning_runtime import (
     learning_claim_blocker_payloads,
 )
+from ops.scripts.mechanism.auto_improve_readiness_queue_telemetry_runtime import (
+    readiness_run_telemetry_paths,
+)
 from ops.scripts.mechanism.auto_improve_readiness_remediation_runtime import (
     remediation_backlog_summary,
 )
@@ -76,6 +79,7 @@ class AutoImproveReadinessRuntimeTests(
                 "ops/scripts/core/payload_field_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
+                "ops/scripts/mechanism/auto_improve_readiness_queue_telemetry_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_next_run_repair_runtime.py",
                 "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
                 "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",
@@ -187,6 +191,53 @@ class AutoImproveReadinessRuntimeTests(
         self.assertIn("input_fingerprints_mismatch", diagnostics["reasons"])
         self.assertTrue(diagnostics["checks"]["source_revision"])
         self.assertTrue(diagnostics["checks"]["source_tree_fingerprint"])
+
+    def test_currentness_diagnostics_track_dynamic_readiness_inputs(self) -> None:
+        cases = {
+            "auto_improve_session_reports": (
+                "ops/reports/auto-improve-sessions/session.json"
+            ),
+            "routing_provenance_aggregate_reports": (
+                "ops/reports/routing-provenance-aggregates/session.json"
+            ),
+            "run_telemetry_reports": "runs/run-demo/run-telemetry.json",
+        }
+        for fingerprint_key, rel_path in cases.items():
+            with self.subTest(fingerprint_key=fingerprint_key):
+                input_path = self.vault / rel_path
+                input_path.parent.mkdir(parents=True, exist_ok=True)
+                input_path.write_text("{}", encoding="utf-8")
+                self._write_canonical_readiness_report()
+
+                input_path.write_text("{}\n", encoding="utf-8")
+                diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+                self.assertFalse(diagnostics["current"])
+                self.assertIn(
+                    "input_fingerprints_mismatch", diagnostics["reasons"]
+                )
+                self.assertNotEqual(
+                    diagnostics["expected"]["input_fingerprints"][fingerprint_key],
+                    diagnostics["observed"]["input_fingerprints"][fingerprint_key],
+                )
+
+    def test_readiness_telemetry_fingerprints_reject_traversal_run_ids(self) -> None:
+        outside_path = self.vault.parent / "outside" / "run-telemetry.json"
+        outside_path.parent.mkdir(parents=True, exist_ok=True)
+        outside_path.write_text('{"finalized":true}', encoding="utf-8")
+        proposal_report = {
+            "proposals": [
+                {
+                    "blocked_by": [],
+                    "failure_mode": "repeated_same_eval_or_discard",
+                    "run_ids": ["../../outside", "..\\outside"],
+                }
+            ]
+        }
+
+        paths = readiness_run_telemetry_paths(self.vault, proposal_report)
+
+        self.assertFalse(any("outside" in path for path in paths))
 
     def test_cli_current_check_is_structured_and_does_not_write(self) -> None:
         canonical_path = self._write_canonical_readiness_report()
@@ -387,7 +438,7 @@ class AutoImproveReadinessRuntimeTests(
         self.assertEqual(runnable_proposal_ids, ["proposal-ready"])
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "eaa2f51b1dd4b18c6cfb1d54d91b6c81e097cb0693f4de79105bf438100f3776",
+            "d48b95d0371fce7aa005db7e5bc6fb548f07da9bd90548c1e14e4fb01542fd17",
         )
 
     def test_open_remediation_backlog_blocks_promotion_not_trial(self) -> None:

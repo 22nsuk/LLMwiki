@@ -844,6 +844,9 @@ def _report_path_group_inputs(vault: Path) -> dict[str, list[str]]:
     return {
         "external_report_files": _external_report_direct_inputs(vault),
         "run_state_files": _run_direct_inputs(vault),
+        "task_improvement_observation_inventory": (
+            _task_improvement_observation_reports(vault)
+        ),
     }
 
 
@@ -856,8 +859,8 @@ def _report_text_inputs(vault: Path) -> dict[str, str]:
         "run_directory_inventory": _canonical_inventory_text(
             _run_directory_inventory(vault)
         ),
-        "task_improvement_observation_inventory": _canonical_inventory_text(
-            _task_improvement_observation_reports(vault)
+        "action_matrix_input_fingerprints": _canonical_inventory_text(
+            action_matrix_input_fingerprints(vault)
         ),
     }
 

@@ -35,15 +35,27 @@ def matching_fallback_seed_runs(vault: Path) -> list[str]:
     return matched
 
 
+def _safe_run_id(value: object) -> str | None:
+    run_id = str(value).strip() if isinstance(value, str) else ""
+    if not run_id or run_id in {".", ".."} or "/" in run_id or "\\" in run_id:
+        return None
+    return run_id
+
+
 def _telemetry_path_for_run(vault: Path, run_id: str) -> Path | None:
+    safe_run_id = _safe_run_id(run_id)
+    if safe_run_id is None:
+        return None
     candidates = [
-        vault / "runs" / run_id / "run-telemetry.json",
-        vault / "runs" / "archive" / run_id / "run-telemetry.json",
+        vault / "runs" / safe_run_id / "run-telemetry.json",
+        vault / "runs" / "archive" / safe_run_id / "run-telemetry.json",
     ]
     for path in candidates:
         if path.is_file():
             return path
-    matches = sorted((vault / "runs").glob(f"**/{run_id}/run-telemetry.json"))
+    matches = sorted(
+        (vault / "runs").glob(f"**/{safe_run_id}/run-telemetry.json")
+    )
     return matches[0] if matches else None
 
 
@@ -61,10 +73,33 @@ def _same_eval_proposal_run_ids(mutation_proposal_report: dict[str, Any]) -> lis
         ):
             continue
         for run_id in proposal.get("run_ids", []):
-            value = str(run_id).strip()
+            value = _safe_run_id(run_id)
             if value and value not in run_ids:
                 run_ids.append(value)
     return run_ids
+
+
+def readiness_run_telemetry_paths(
+    vault: Path,
+    mutation_proposal_report: dict[str, Any],
+) -> list[str]:
+    runs_dir = vault / "runs"
+    paths = {
+        report_path(vault, path)
+        for path in runs_dir.glob("*/run-telemetry.json")
+        if path.is_file()
+    }
+    for run_id in _same_eval_proposal_run_ids(mutation_proposal_report):
+        paths.update(
+            {
+                f"runs/{run_id}/run-telemetry.json",
+                f"runs/archive/{run_id}/run-telemetry.json",
+            }
+        )
+        telemetry_path = _telemetry_path_for_run(vault, run_id)
+        if telemetry_path is not None:
+            paths.add(report_path(vault, telemetry_path))
+    return sorted(paths)
 
 
 def _coverage_ratio(numerator: int, denominator: int) -> float:
