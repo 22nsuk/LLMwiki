@@ -37,7 +37,11 @@ def matching_fallback_seed_runs(vault: Path) -> list[str]:
 
 def _safe_run_id(value: object) -> str | None:
     run_id = str(value).strip() if isinstance(value, str) else ""
-    if not run_id or run_id in {".", ".."} or "/" in run_id or "\\" in run_id:
+    if (
+        not run_id
+        or run_id in {".", ".."}
+        or any(character in run_id for character in "/\\*?[]")
+    ):
         return None
     return run_id
 

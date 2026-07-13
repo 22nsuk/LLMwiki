@@ -260,6 +260,29 @@ class AutoImproveReadinessRuntimeTests(
                     diagnostics["observed"]["input_fingerprints"][fingerprint_key],
                 )
 
+    def test_currentness_ignores_rejected_mutation_proposal_telemetry(self) -> None:
+        self._write_ready_queue_reports()
+        self._write_report(
+            "ops/reports/mutation-proposals.json",
+            {
+                "proposals": [
+                    {
+                        "blocked_by": [],
+                        "failure_mode": "repeated_same_eval_or_discard",
+                        "run_ids": ["run-rejected"],
+                    }
+                ]
+            },
+            enveloped=False,
+        )
+        report = build_readiness_report(self.vault, context=fixed_context())
+        write_readiness_report(self.vault, report)
+
+        diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+        self.assertTrue(diagnostics["current"])
+        self.assertEqual(diagnostics["reasons"], [])
+
     def test_readiness_telemetry_fingerprints_reject_traversal_run_ids(self) -> None:
         outside_path = self.vault.parent / "outside" / "run-telemetry.json"
         outside_path.parent.mkdir(parents=True, exist_ok=True)
@@ -277,6 +300,28 @@ class AutoImproveReadinessRuntimeTests(
         paths = readiness_run_telemetry_paths(self.vault, proposal_report)
 
         self.assertFalse(any("outside" in path for path in paths))
+
+    def test_readiness_telemetry_fingerprints_reject_glob_run_ids(self) -> None:
+        telemetry_path = self.vault / "runs/archive/run-target/run-telemetry.json"
+        telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+        telemetry_path.write_text('{"finalized":true}', encoding="utf-8")
+
+        for run_id in ("run-*", "run-?", "run-[target]"):
+            with self.subTest(run_id=run_id):
+                paths = readiness_run_telemetry_paths(
+                    self.vault,
+                    {
+                        "proposals": [
+                            {
+                                "blocked_by": [],
+                                "failure_mode": "repeated_same_eval_or_discard",
+                                "run_ids": [run_id],
+                            }
+                        ]
+                    },
+                )
+
+                self.assertEqual(paths, [])
 
     def test_cli_current_check_is_structured_and_does_not_write(self) -> None:
         canonical_path = self._write_canonical_readiness_report()

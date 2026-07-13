@@ -9,7 +9,6 @@ from ops.scripts.core.artifact_envelope_runtime import artifact_input_fingerprin
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
-    load_optional_json_object,
     write_schema_backed_report,
 )
 from ops.scripts.core.gate_effect_vocabulary import GATE_EFFECT_OPERATOR_REVIEW_REQUIRED
@@ -35,7 +34,6 @@ from ops.scripts.learning.learning_readiness_vocabulary import (
 
 from .auto_improve_readiness_constants_runtime import (
     AUTO_IMPROVE_SESSIONS_DIR,
-    MUTATION_PROPOSAL_REPORT_REL_PATH,
     READINESS_REPORT_PRODUCER,
     READINESS_REPORT_REL_PATH,
     READINESS_REPORT_SOURCE_COMMAND,
@@ -49,7 +47,10 @@ from .auto_improve_readiness_learning_runtime import (
     _learning_readiness_assessment,
     learning_claim_blocker_payloads,
 )
-from .auto_improve_readiness_loader_runtime import load_readiness_report_payloads
+from .auto_improve_readiness_loader_runtime import (
+    load_current_mutation_proposal_report,
+    load_readiness_report_payloads,
+)
 from .auto_improve_readiness_payload_runtime import (
     readiness_diagnostics_payload,
     readiness_file_inputs,
@@ -371,9 +372,7 @@ def _readiness_path_group_inputs(
 ) -> dict[str, list[str]]:
     proposal_report = mutation_proposal_report
     if proposal_report is None:
-        proposal_report = load_optional_json_object(
-            vault / MUTATION_PROPOSAL_REPORT_REL_PATH
-        )
+        proposal_report = load_current_mutation_proposal_report(vault)
     return {
         "auto_improve_session_reports": _json_report_paths(
             vault, AUTO_IMPROVE_SESSIONS_DIR
