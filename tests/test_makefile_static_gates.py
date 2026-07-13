@@ -782,7 +782,7 @@ class MakefileStaticGateTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "LOCAL_TOOL_STATE_CLEAN_PATHS ?= .agents .obsidian .serena .vscode .ouroboros .ouroboros_eval_artifact.md",
+            "LOCAL_TOOL_STATE_CLEAN_PATHS ?= .obsidian .serena .vscode .ouroboros .ouroboros_eval_artifact.md",
             text,
         )
         self.assertIn("LOCAL_CACHE_CLEAN_FIND_ROOTS ?= ops tests tools", text)
@@ -805,6 +805,7 @@ class MakefileStaticGateTests(unittest.TestCase):
 
         self.assertIn("local-tool-state-clean", _target_block(text, ".PHONY"))
         self.assertIn("rm -rf $(LOCAL_TOOL_STATE_CLEAN_PATHS)", block)
+        self.assertNotIn(".agents", block)
         self.assertNotIn(".kiro", block)
         self.assertNotIn(".venv", block)
         self.assertNotIn("ops/reports", block)

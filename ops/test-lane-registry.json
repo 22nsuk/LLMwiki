@@ -39,6 +39,8 @@
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_source_revision_runtime.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_derived_surfaces.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_repo_skill_contract.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_subagent_profile_schema.py": 30,
       "make makefile-static-gates": 210,
       "make test-execution-summary-current-or-refresh": 180,
       "make workflow-dependency-planner-check": 60,
@@ -302,6 +304,34 @@
         "coverage_class": "orchestration",
         "static_required": true,
         "duration_seconds": 120
+      },
+      {
+        "rule_id": "subagent_profile_contract",
+        "path_patterns": [
+          ".codex/agents/**"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_subagent_profile_schema.py"
+        ],
+        "reason": "Subagent role and orientation changes should validate policy alignment and thin wrapper contracts without falling through to the conservative full test lane.",
+        "coverage_class": "subagent_profile_contract",
+        "static_required": true,
+        "duration_seconds": 90
+      },
+      {
+        "rule_id": "repo_skill_contract",
+        "path_patterns": [
+          ".agents/skills/**"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_repo_skill_contract.py"
+        ],
+        "reason": "Repository-owned workflow skill changes use one auto-discovered contract for package completeness, public membership, relative-link integrity, and local-path hygiene; the established public prefix does not require a derived-surface replay for each skill edit.",
+        "coverage_class": "repo_skill_contract",
+        "static_required": true,
+        "duration_seconds": 90
       },
       {
         "rule_id": "public_docs_boundary",

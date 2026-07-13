@@ -364,6 +364,9 @@ def _archive_self_description(vault: Path, manifest: dict, *, profile: str, arch
         "surfaces": {
             "included_top_level_surfaces": _top_level_surfaces(manifest),
             "excluded_prefixes": list(policy.get("excluded_prefixes", [])),
+            "excluded_prefix_exceptions": list(
+                policy.get("excluded_prefix_exceptions", [])
+            ),
             "excluded_files": list(policy.get("excluded_files", [])),
             "excluded_cache_dirs": list(policy.get("excluded_cache_dirs", [])),
             "excluded_suffixes": list(policy.get("excluded_suffixes", [])),

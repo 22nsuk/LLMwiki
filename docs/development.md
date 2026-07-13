@@ -66,6 +66,16 @@ When a request says "full pytest", choose the lane by intent:
 The registry-backed test lane inventory is recorded in
 `ops/test-lane-registry.json`, reconciled against `mk/test.mk` and sibling
 Makefiles, and summarized for operators by `make help`.
+Repository maintenance of that contract is guided by
+`.agents/skills/llmwiki-test-lane-maintenance/SKILL.md`. The skill discovers
+selectors from the registry instead of freezing a duplicate selector list. Its
+changed-path minimum runs through `make changed-path-minimum-test`; changes to
+derived projections or public prefixes are completed with `make sync-derived`.
+All packages under `.agents/skills/<skill-name>/` are auto-discovered by one
+repository contract and each `SKILL.md` is a documentation-graph entrypoint.
+Adding another package under the established prefix must not require a new
+public-policy rule, per-skill fixture path, or documentation index link. A thin
+role profile may point to a repo skill, but the workflow stays in the skill.
 The same registry owns the expected trusted-CI repository, signer workflow,
 runner, aggregate command, concrete collection suite and pytest command, and
 Python/pytest environment. Import also requires an exact collection-to-JUnit
@@ -88,10 +98,10 @@ and surfaced through `make help`. High-signal targets include `make check`,
 `make system-log-split`.
 Implementation-only Make recipes use the `_internal-*` prefix and are excluded
 from the operator inventory; public wrappers such as `make runtime-hotspot-goldens-check`
-delegate to them. `docs/REVIEW_SCOPE.md` is the tracked canonical reviewer inventory; the
+delegate to them. The [review scope manifest](REVIEW_SCOPE.md) is the tracked canonical reviewer inventory; the
 companion JSON under `tmp/review-surface-manifest.json` is intentionally
-ephemeral. Anti-slop admission rules for new gates and reports
-live in `docs/anti-slop-admission.md`. `ops/script-output-surfaces.json` is
+ephemeral. [Anti-slop admission rules](anti-slop-admission.md) for new gates and reports
+live in that document. `ops/script-output-surfaces.json` is
 narrower: it is an AST-derived material output/fallback registry and should
 track only scripts with `--out`/`*-out`, `resolve_output_path`,
 `resolve_repo_output_path`, or an explicit direct-script fallback marker.
@@ -210,8 +220,11 @@ source `__pycache__` / `*.pyc` / `*.pyo` under `ops`, `tests`, and `tools`.
 The target intentionally leaves `.venv`, global uv caches, `ops/reports`,
 `build/release`, `runs`, and corpus/private surfaces alone.
 Use `make local-tool-state-clean` only when you explicitly want to remove
-ignored local tool/editor state such as `.agents`, `.obsidian`, `.serena`,
-`.vscode`, `.ouroboros`, and `.ouroboros_eval_artifact.md`.
+ignored local tool/editor state such as `.obsidian`, `.serena`, `.vscode`,
+`.ouroboros`, and `.ouroboros_eval_artifact.md`. Repository-owned skills under
+`.agents/skills/` are source and are never removed by this target.
+Release manifests and source-tree fingerprints likewise retain that skill prefix
+while excluding other `.agents/` tool state.
 When the global uv cache itself is too large, use `make uv-cache-prune`; it
 runs `uv cache prune` without `--force`, removing only unreachable uv cache
 objects. Do not use `uv cache clean` as routine hygiene because it clears all uv
@@ -274,7 +287,7 @@ check-only path replaces the write step with `make sync-derived-check`.
 | Python runtime | `make static` | focused `.venv/bin/python -m pytest ...`; finish with `make test` for shared runtime or lane-contract changes |
 | Source-derived projection | `make sync-derived` | focused generator/contract pytest for the projection; use `make sync-derived-check` only in check-only contexts |
 | CLI output/path surface | `make sync-derived` | focused script surface tests such as script output/lifecycle/module-surface contracts, then `make sync-derived-check` before committing |
-| Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | proves planner recommendations and changed-path minimums from the current git diff; set `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST=<manifest>` to override the diff input |
+| Make/CI changed-path minimum proof | `make static` + `make workflow-dependency-planner-check` | uses the current git diff only for a clean, single-task worktree; when unrelated changes already exist, set `WORKFLOW_DEPENDENCY_PLANNER_CHANGED_FILES_MANIFEST=<task-owned-manifest>` so the lane proves the current task instead of replaying every dirty path |
 | Registry/Make/CI lane-contract proof | `make sync-derived` + focused generator/static pytest | `make test-report-contract-core` after lane selector, CI routing, governance, workflow-order, or report-contract semantics changed |
 | Complexity ratchet / touched complexity gate | focused `.venv/bin/python -m pytest tests/test_complexity_ratchet_runtime.py tests/test_structural_complexity_budget_cli.py tests/test_makefile_static_gates.py` | Before and after structural edits, prefer `make function-budget-edit-check STRUCTURAL_COMPLEXITY_BUDGET_TARGETS="path/to/file.py"` (or `CHANGED_FILES_MANIFEST=<manifest>`); it refreshes function-budget proposals and then runs the touched complexity ratchet. Without touched inputs, `complexity-budget-touched-check` skips and the ratchet stays inactive |
 | Dependency input | `make uv-lock-check` | `make static` after any intentional lock refresh |

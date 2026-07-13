@@ -131,12 +131,9 @@ hand-edit their `tmp/` outputs into public source.
 - `goal-runtime-triage-auditor`는 run admission과 failed-run classification을
   다룬다. Release auto-promotion pass 여부는 `release-authority-auditor`나
   parent release closeout이 판단한다.
-- `external-report-action-auditor`는 보고서 권고와 repo evidence의 대응관계를
-  action status, lifecycle, evidence currentness로 나눠 분류한다. 실제 archive,
-  matrix refresh, backlog mutation은 parent가 명시한 Make/script lane으로만
-  진행한다. Archive 가능성은 active/root 위치나 broad implemented count만으로
-  판단하지 않고, 보고서별 matched action, unmatched recommendation count, 또는
-  operator-only rationale가 확인된 뒤에만 제시한다.
+- `external-report-action-auditor`는
+  [canonical reconciliation skill](../../.agents/skills/external-report-reconciliation/SKILL.md)을
+  따르는 read-only role wrapper다. 실제 mutation은 parent가 명시한 lane에서만 진행한다.
 
 ## Routing guidance for this repo
 

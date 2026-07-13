@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -17,6 +18,9 @@ pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.repor
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "ops" / "policies" / "wiki-maintainer-policy.yaml"
+AUDITOR_PROFILE_PATH = REPO_ROOT / ".codex" / "agents" / "external-report-action-auditor.toml"
+AUDITOR_SKILL_PATH = REPO_ROOT / ".agents" / "skills" / "external-report-reconciliation" / "SKILL.md"
+AGENT_README_PATH = REPO_ROOT / ".codex" / "agents" / "README.md"
 
 
 def fixed_context() -> RuntimeContext:
@@ -62,6 +66,49 @@ def replace_profile_line(path: Path, prefix: str, replacement: str) -> None:
 
 
 class SubagentProfileSchemaTests(unittest.TestCase):
+    def test_external_report_auditor_is_a_thin_read_only_skill_wrapper(self) -> None:
+        profile = tomllib.loads(AUDITOR_PROFILE_PATH.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            set(profile),
+            {
+                "name",
+                "description",
+                "model",
+                "model_reasoning_effort",
+                "sandbox_mode",
+                "developer_instructions",
+            },
+        )
+        self.assertEqual(profile["model"], "gpt-5.6-sol")
+        self.assertEqual(profile["model_reasoning_effort"], "high")
+        self.assertEqual(profile["sandbox_mode"], "read-only")
+
+        instructions = profile["developer_instructions"]
+        self.assertIn(".agents/skills/external-report-reconciliation/SKILL.md", instructions)
+        self.assertIn("Return:", instructions)
+        self.assertLessEqual(len([line for line in instructions.splitlines() if line.strip()]), 10)
+        for output_term in (
+            "audited report/action scope",
+            "status, lifecycle, evidence condition, and archive implication",
+            "missing or stale evidence",
+            "minimal next action and residual risk",
+        ):
+            self.assertIn(output_term, instructions)
+        for duplicated_workflow_term in (
+            "active_report_count",
+            "external-report-reference-manifest-settle",
+            "ops/reports/",
+            "action current_status:",
+        ):
+            self.assertNotIn(duplicated_workflow_term, instructions)
+
+        self.assertTrue(AUDITOR_SKILL_PATH.is_file())
+        self.assertIn(
+            "../../.agents/skills/external-report-reconciliation/SKILL.md",
+            AGENT_README_PATH.read_text(encoding="utf-8"),
+        )
+
     def test_profiles_match_policy_roles_and_schema(self) -> None:
         report = build_report(REPO_ROOT, context=fixed_context())
 

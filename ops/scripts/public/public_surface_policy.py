@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
 
@@ -21,6 +22,7 @@ PUBLIC_INCLUDE_FILES = (
 )
 
 PUBLIC_INCLUDE_PREFIXES = (
+    ".agents/skills/",
     ".codex/agents/",
     ".github/",
     "docs/",
@@ -78,6 +80,11 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
     "Thumbs.db",
 )
 
+PUBLIC_LOCAL_ABSOLUTE_PATH_RE = re.compile(
+    r"(?:/(?:home|mnt)/|/var/folders/|(?<![A-Za-z0-9])[A-Za-z]:[\\/]|\\\\(?:wsl\$|wsl\.localhost)\\|\\Users\\)",
+    re.IGNORECASE,
+)
+
 # Without a trailing slash, Git matches both files and directories named like the segment.
 PUBLIC_EXCLUDED_SEGMENT_GITIGNORE_PATTERNS = PUBLIC_EXCLUDED_SEGMENTS
 
@@ -104,6 +111,9 @@ def render_public_gitignore_block() -> str:
         "*",
         "!/.gitattributes",
         "!/.gitignore",
+        "!/.agents/",
+        "!/.agents/skills/",
+        "!/.agents/skills/**",
         "!/.codex/",
         "!/.codex/agents/",
         "!/.codex/agents/**",

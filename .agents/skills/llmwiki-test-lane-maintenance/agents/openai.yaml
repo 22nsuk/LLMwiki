@@ -1,0 +1,7 @@
+interface:
+  display_name: "LLMwiki Test Lane Maintenance"
+  short_description: "Maintain LLMwiki planner and workflow parity."
+  default_prompt: "Use $llmwiki-test-lane-maintenance to update an LLMwiki test lane while keeping registry, Make, CI/release workflows, docs, planner, and validation aligned."
+
+policy:
+  allow_implicit_invocation: true
