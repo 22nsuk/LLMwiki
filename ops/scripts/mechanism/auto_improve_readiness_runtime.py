@@ -18,6 +18,10 @@ from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_constants_runtime import (
     AUTO_IMPROVE_READINESS_REPORT_SCHEMA_PATH,
 )
+from ops.scripts.core.schema_runtime import (
+    load_schema_with_vault_override,
+    validate_with_schema,
+)
 from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
@@ -415,8 +419,10 @@ def readiness_report_currentness_diagnostics(
             "current": False,
             "path": report_path(vault, canonical_path),
             "reasons": ["canonical_artifact_unavailable"],
+            "schema_errors": [],
             "load_error": type(exc).__name__,
             "checks": {
+                "schema_validation": False,
                 "artifact_kind": False,
                 "producer": False,
                 "artifact_status": False,
@@ -435,8 +441,13 @@ def readiness_report_currentness_diagnostics(
 
     if not isinstance(payload, dict):
         payload = {}
+    schema_errors = validate_with_schema(
+        payload,
+        load_schema_with_vault_override(vault, READINESS_REPORT_SCHEMA_PATH),
+    )
     currentness = payload.get("currentness")
     checks = {
+        "schema_validation": not schema_errors,
         "artifact_kind": payload.get("artifact_kind")
         == "auto_improve_readiness_report",
         "producer": payload.get("producer") == READINESS_REPORT_PRODUCER,
@@ -456,6 +467,7 @@ def readiness_report_currentness_diagnostics(
         "current": current,
         "path": report_path(vault, canonical_path),
         "reasons": reasons,
+        "schema_errors": schema_errors,
         "checks": checks,
         "expected": {
             "source_revision": current_source_revision,

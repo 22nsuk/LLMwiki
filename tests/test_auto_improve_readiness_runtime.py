@@ -164,6 +164,45 @@ class AutoImproveReadinessRuntimeTests(
         self.assertEqual(diagnostics["reasons"], [])
         self.assertTrue(all(diagnostics["checks"].values()))
 
+    def test_currentness_diagnostics_reject_schema_invalid_cached_report(self) -> None:
+        canonical_path = self._write_canonical_readiness_report()
+        baseline = json.loads(canonical_path.read_text(encoding="utf-8"))
+
+        cases = {
+            "missing_required_field": (
+                {
+                    key: value
+                    for key, value in baseline.items()
+                    if key != "promotion_readiness"
+                },
+                "$: missing required property 'promotion_readiness'",
+            ),
+            "wrong_schema": (
+                {**baseline, "$schema": "ops/schemas/wrong.schema.json"},
+                (
+                    "$.$schema: expected one of "
+                    "['ops/schemas/auto-improve-readiness-report.schema.json']"
+                ),
+            ),
+        }
+        for name, (payload, expected_error) in cases.items():
+            with self.subTest(name=name):
+                canonical_path.write_text(json.dumps(payload), encoding="utf-8")
+
+                diagnostics = readiness_report_currentness_diagnostics(self.vault)
+
+                self.assertFalse(diagnostics["current"])
+                self.assertFalse(diagnostics["checks"]["schema_validation"])
+                self.assertIn("schema_validation_mismatch", diagnostics["reasons"])
+                self.assertIn(expected_error, diagnostics["schema_errors"])
+                self.assertTrue(
+                    all(
+                        passed
+                        for check, passed in diagnostics["checks"].items()
+                        if check != "schema_validation"
+                    )
+                )
+
     def test_currentness_diagnostics_reject_source_revision_drift(self) -> None:
         self._write_canonical_readiness_report()
 

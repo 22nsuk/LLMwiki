@@ -421,6 +421,7 @@ _AUTO_PROMOTION_SAFE_CLEANUP_CONTRACTS = (
     MakeTargetContract(
         "release-auto-promotion-safe-cleanup-finalize",
         required_tokens=(
+            "RELEASE_AUTO_PROMOTION_MATERIALIZED_DISTRIBUTION_ZIP",
             "$(MAKE) external-report-reference-manifest-release-check",
             "$(MAKE) release-closeout-batch-manifest-promote",
             "$(MAKE) release-closeout-fixed-point",

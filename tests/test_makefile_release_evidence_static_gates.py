@@ -273,6 +273,7 @@ _RELEASE_DISTRIBUTION_ASSIGNMENTS = (
     "RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP ?= $(if $(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_CLOSEOUT_DISTRIBUTION_ZIP),$(RELEASE_DISTRIBUTION_ZIP_OUT))",
     "RELEASE_CLOSEOUT_SEALED_ZIP_METADATA ?=",
     "RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP = $(strip $(RELEASE_CLOSEOUT_SEALED_DISTRIBUTION_ZIP))",
+    "RELEASE_AUTO_PROMOTION_MATERIALIZED_DISTRIBUTION_ZIP = $(strip $(if $(wildcard $(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)),$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP),))",
     "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
     "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_CANONICAL_OUT ?= ops/reports/release-closeout-sealed-rehearsal-check.json",
     "RELEASE_CLOSEOUT_SEALED_REHEARSAL_CHECK_RELEASE_OUT ?= build/release/release-closeout-sealed-rehearsal-check.json",
@@ -350,9 +351,9 @@ _EXTERNAL_REPORT_RELEASE_BASIS_TARGET_CONTRACTS = (
     MakeTargetContract(
         "external-report-reference-manifest-settle",
         required_tokens=(
-            "RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP",
-            'EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
-            'EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"',
+            "RELEASE_AUTO_PROMOTION_MATERIALIZED_DISTRIBUTION_ZIP",
+            'EXTERNAL_REPORT_CURRENT_DISTRIBUTION_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_MATERIALIZED_DISTRIBUTION_ZIP)"',
+            'EXTERNAL_REPORT_REVIEW_BASIS_ZIP_PATH="$(RELEASE_AUTO_PROMOTION_MATERIALIZED_DISTRIBUTION_ZIP)"',
         ),
     ),
     MakeTargetContract(
@@ -699,6 +700,45 @@ def _assert_release_audit_and_post_seal_targets(case: unittest.TestCase, text: s
 
 
 class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
+    def test_external_report_manifest_settle_requires_materialized_release_zip(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            release_zip = Path(temp_dir) / "release.zip"
+            command = [
+                "make",
+                "--no-print-directory",
+                "-n",
+                "external-report-reference-manifest-settle",
+                f"RELEASE_DISTRIBUTION_ZIP_OUT={release_zip.as_posix()}",
+            ]
+
+            missing = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            release_zip.write_bytes(b"materialized")
+            materialized = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(missing.returncode, 0, missing.stderr)
+        self.assertIn("EXTERNAL_REPORT_REFERENCE_MANIFEST_MODE=advisory", missing.stdout)
+        self.assertNotIn("--mode strict_review_release", missing.stdout)
+        self.assertEqual(materialized.returncode, 0, materialized.stderr)
+        self.assertIn("--mode strict_review_release", materialized.stdout)
+        self.assertIn(
+            f'--current-distribution-zip-path "{release_zip.as_posix()}"',
+            materialized.stdout,
+        )
+
     def test_release_closeout_summary_target_aggregates_existing_release_reports(
         self,
     ) -> None:
@@ -1007,6 +1047,7 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         text = _makefile_text()
         block = _target_block(text, "release-evidence-closeout")
         converge_block = _target_block(text, "release-evidence-converge")
+        phase_1_lines = _recipe_lines(text, "release-evidence-converge-phase-1")
         recipe_lines = _release_evidence_converge_expanded_recipe_lines(text)
 
         self.assertIn("release-evidence-closeout", _target_block(text, ".PHONY"))
@@ -1029,6 +1070,10 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertIn("$(MAKE) release-closeout-post-check-finalizer-dry-run", recipe_lines)
         self.assertIn("$(MAKE) release-closeout-fixed-point", recipe_lines)
         self.assertIn("$(MAKE) tmp-json-clean", recipe_lines)
+        self.assertLess(
+            phase_1_lines.index("$(MAKE) release-source-package-check"),
+            phase_1_lines.index("$(MAKE) external-report-reference-manifest-settle"),
+        )
         self.assertEqual(recipe_lines.count("$(MAKE) test-execution-summary-full-refresh"), 1)
         self.assertGreaterEqual(recipe_lines.count("$(MAKE) generated-artifact-converge"), 2)
         self.assertNotIn("$(MAKE) release-closeout-batch-manifest-promote", recipe_lines)
