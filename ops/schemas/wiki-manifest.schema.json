@@ -27,6 +27,7 @@
       "required": [
         "name",
         "excluded_prefixes",
+        "excluded_prefix_exceptions",
         "excluded_files",
         "excluded_cache_dirs",
         "excluded_dev_hidden_dirs",
@@ -39,6 +40,10 @@
           "enum": ["release_manifest_exclusions"]
         },
         "excluded_prefixes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "excluded_prefix_exceptions": {
           "type": "array",
           "items": { "type": "string" }
         },

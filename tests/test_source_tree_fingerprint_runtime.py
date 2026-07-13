@@ -63,6 +63,18 @@ class SourceTreeFingerprintRuntimeTests(unittest.TestCase):
 
         self.assertEqual(release_source_tree_fingerprint(self.vault), baseline)
 
+    def test_release_source_tree_fingerprint_tracks_repo_skills_but_ignores_other_agent_state(
+        self,
+    ) -> None:
+        self._write(".agents/skills/example/SKILL.md", "# one\n")
+        baseline = release_source_tree_fingerprint(self.vault)
+
+        self._write(".agents/session.json", "{}\n")
+        self.assertEqual(release_source_tree_fingerprint(self.vault), baseline)
+
+        self._write(".agents/skills/example/SKILL.md", "# two\n")
+        self.assertNotEqual(release_source_tree_fingerprint(self.vault), baseline)
+
     def test_release_source_tree_fingerprint_ignores_redundant_extra_exclusions(self) -> None:
         self._write("ops/scripts/example.py", "print('one')\n")
         baseline = release_source_tree_fingerprint(self.vault)

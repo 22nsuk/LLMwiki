@@ -40,6 +40,10 @@ class ManifestExportSymlinkSafetyTests(unittest.TestCase):
         self.assertTrue(release_manifest_excludes_path("tmp/release.zip"))
         self.assertTrue(release_manifest_excludes_path(".venv-py312/bin/python"))
         self.assertTrue(release_manifest_excludes_path("wiki/source--fake.md"))
+        self.assertTrue(release_manifest_excludes_path(".agents/session.json"))
+        self.assertFalse(
+            release_manifest_excludes_path(".agents/skills/example/SKILL.md")
+        )
         self.assertFalse(release_manifest_excludes_path("../outside.txt"))
 
     def test_release_manifest_path_classification_distinguishes_valid_and_invalid_inputs(self) -> None:
@@ -68,6 +72,18 @@ class ManifestExportSymlinkSafetyTests(unittest.TestCase):
                 RELEASE_MANIFEST_PATH_EXCLUDED,
                 "manifest-excluded",
                 "ops/reports/generated.json",
+            ),
+            (
+                ".agents/session.json",
+                RELEASE_MANIFEST_PATH_EXCLUDED,
+                "manifest-excluded",
+                ".agents/session.json",
+            ),
+            (
+                ".agents/skills/example/SKILL.md",
+                RELEASE_MANIFEST_PATH_INCLUDED,
+                "manifest-included",
+                ".agents/skills/example/SKILL.md",
             ),
             (None, RELEASE_MANIFEST_PATH_INVALID, "empty", ""),
             ("", RELEASE_MANIFEST_PATH_INVALID, "empty", ""),
@@ -107,6 +123,8 @@ class ManifestExportSymlinkSafetyTests(unittest.TestCase):
             "AGENTS.local.md",
             "runs/run-1/evidence.json",
             "ops/reports/generated.json",
+            ".agents/session.json",
+            ".agents/skills/example/SKILL.md",
         ]
 
         for rel_path in valid_cases:

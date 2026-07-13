@@ -223,6 +223,8 @@ Use `make local-tool-state-clean` only when you explicitly want to remove
 ignored local tool/editor state such as `.obsidian`, `.serena`, `.vscode`,
 `.ouroboros`, and `.ouroboros_eval_artifact.md`. Repository-owned skills under
 `.agents/skills/` are source and are never removed by this target.
+Release manifests and source-tree fingerprints likewise retain that skill prefix
+while excluding other `.agents/` tool state.
 When the global uv cache itself is too large, use `make uv-cache-prune`; it
 runs `uv cache prune` without `--force`, removing only unreachable uv cache
 objects. Do not use `uv cache clean` as routine hygiene because it clears all uv

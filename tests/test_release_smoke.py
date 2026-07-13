@@ -89,6 +89,7 @@ def sample_archive_class() -> dict:
         "manifest_exclusion_policy": {
             "name": "release_manifest_exclusions",
             "excluded_prefixes": [],
+            "excluded_prefix_exceptions": [],
             "excluded_files": [],
             "excluded_cache_dirs": ["__pycache__", ".cache"],
             "excluded_dev_hidden_dirs": [".venv"],
@@ -334,6 +335,11 @@ class ReleaseSmokeTest(unittest.TestCase):
             (vault / "external-reports" / "report.docx").write_text("docx", encoding="utf-8")
             (vault / "external-reports" / "review.md").write_text("review\n", encoding="utf-8")
             (vault / "AGENTS.local.md").write_text("local operator notes\n", encoding="utf-8")
+            (vault / ".agents").mkdir(exist_ok=True)
+            (vault / ".agents" / "session.json").write_text("{}\n", encoding="utf-8")
+            skill_path = vault / ".agents" / "skills" / "example" / "SKILL.md"
+            skill_path.parent.mkdir(parents=True)
+            skill_path.write_text("# Example skill\n", encoding="utf-8")
             (vault / "raw").mkdir(exist_ok=True)
             (vault / "raw" / "secret.txt").write_text("raw secret", encoding="utf-8")
             (vault / "wiki").mkdir(exist_ok=True)
@@ -369,12 +375,23 @@ class ReleaseSmokeTest(unittest.TestCase):
             self.assertNotIn("LLMwiki/external-reports/report.docx", names)
             self.assertNotIn("LLMwiki/external-reports/review.md", names)
             self.assertNotIn("LLMwiki/AGENTS.local.md", names)
+            self.assertNotIn("LLMwiki/.agents/session.json", names)
+            self.assertIn("LLMwiki/.agents/skills/example/SKILL.md", names)
             self.assertNotIn("LLMwiki/raw/secret.txt", names)
             self.assertNotIn("LLMwiki/wiki/private.md", names)
             self.assertNotIn("LLMwiki/system/system-log.md", names)
             self.assertNotIn("LLMwiki/tmp/kept.txt", names)
             self.assertTrue(any(entry["path"] == "README.md" for entry in source_manifest["files"]))
             self.assertFalse(any(entry["path"] == "AGENTS.local.md" for entry in source_manifest["files"]))
+            self.assertFalse(
+                any(entry["path"] == ".agents/session.json" for entry in source_manifest["files"])
+            )
+            self.assertTrue(
+                any(
+                    entry["path"] == ".agents/skills/example/SKILL.md"
+                    for entry in source_manifest["files"]
+                )
+            )
             self.assertFalse(any(entry["path"].startswith("external-reports/") for entry in source_manifest["files"]))
             self.assertFalse(any(entry["path"].startswith("raw/") for entry in source_manifest["files"]))
             self.assertFalse(any(entry["path"].startswith("wiki/") for entry in source_manifest["files"]))
@@ -420,6 +437,11 @@ class ReleaseSmokeTest(unittest.TestCase):
             self.assertIn("wiki/", source_manifest["exclusion_policy"]["excluded_prefixes"])
             self.assertIn("system/", source_manifest["exclusion_policy"]["excluded_prefixes"])
             self.assertIn(".venv-", source_manifest["exclusion_policy"]["excluded_prefixes"])
+            self.assertIn(".agents/", source_manifest["exclusion_policy"]["excluded_prefixes"])
+            self.assertIn(
+                ".agents/skills/",
+                source_manifest["exclusion_policy"]["excluded_prefix_exceptions"],
+            )
             self.assertIn(".pyc", source_manifest["exclusion_policy"]["excluded_suffixes"])
             self.assertIn(".tox", source_manifest["exclusion_policy"]["excluded_dev_hidden_dirs"])
             self.assertIn("__pycache__", source_manifest["exclusion_policy"]["excluded_cache_dirs"])

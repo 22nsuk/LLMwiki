@@ -345,6 +345,7 @@ def _release_smoke_payload(
             "manifest_exclusion_policy": {
                 "name": "public-fixture",
                 "excluded_prefixes": [],
+                "excluded_prefix_exceptions": [],
                 "excluded_files": [],
                 "excluded_cache_dirs": [],
                 "excluded_dev_hidden_dirs": [],

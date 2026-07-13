@@ -328,7 +328,7 @@
           "make static",
           "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_repo_skill_contract.py"
         ],
-        "reason": "Repository-owned workflow skill changes use auto-discovered package and public-membership checks; the established public prefix does not require a derived-surface replay for each skill edit.",
+        "reason": "Repository-owned workflow skill changes use one auto-discovered contract for package completeness, public membership, relative-link integrity, and local-path hygiene; the established public prefix does not require a derived-surface replay for each skill edit.",
         "coverage_class": "repo_skill_contract",
         "static_required": true,
         "duration_seconds": 90

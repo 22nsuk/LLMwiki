@@ -26,7 +26,12 @@ Treat these as generated evidence when present, not source or release authority:
 - `ops/reports/remediation-backlog.json`
 - `ops/reports/task-improvement-observations/**/improvement-observations.json`
 
-Read current schemas, runtime producers, focused tests, and owning targets in `mk/release.mk` and `mk/artifact.mk` before using enum values or recommending a lane. Release and promotion authority remains in staged `build/release/*manifest.json` evidence and official release gates.
+Read current schemas, runtime producers, and focused tests before using enum values or
+recommending a lane. Read external-report lifecycle and action targets in
+`mk/release-evidence.mk`, remediation-backlog targets in `mk/release-learning.mk`,
+and artifact orchestration in `mk/artifact.mk`; treat `mk/release.mk` as their umbrella
+variable and include surface. Release and promotion authority remains in staged
+`build/release/*manifest.json` evidence and official release gates.
 
 ## Reconcile
 

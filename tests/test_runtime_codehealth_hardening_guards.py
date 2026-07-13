@@ -16,6 +16,7 @@ from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.eval.lint_uplift_plan import build_report as build_lint_uplift_report
 from ops.scripts.eval.type_uplift_plan import build_report as build_type_uplift_report
+from ops.scripts.public.public_surface_policy import PUBLIC_LOCAL_ABSOLUTE_PATH_RE
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract]
@@ -78,7 +79,6 @@ DIRECT_WALL_CLOCK_RE = re.compile(
     r"|\b(?:date|dt\.date)\.today\s*\("
     r"|\btime\.time\s*\("
 )
-LOCAL_PATH_RE = re.compile(r"(/home/|/mnt/|/var/folders/|C:\\|\\Users\\)")
 
 
 def _seed_uplift_vault(vault: Path) -> None:
@@ -296,7 +296,7 @@ def test_runtime_codehealth_public_text_does_not_leak_local_absolute_paths() -> 
         scanned_paths.append(path)
         text = path.read_text(encoding="utf-8")
         for line_number, line in enumerate(text.splitlines(), start=1):
-            if LOCAL_PATH_RE.search(line):
+            if PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(line):
                 offenders.append(
                     f"{path.relative_to(REPO_ROOT)}:{line_number}: {line.strip()}"
                 )

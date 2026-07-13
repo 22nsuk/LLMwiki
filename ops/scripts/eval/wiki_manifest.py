@@ -31,6 +31,7 @@ else:
     from ops.scripts.core.schema_constants_runtime import WIKI_MANIFEST_SCHEMA_PATH
 
 DEFAULT_EXCLUDED_PREFIXES = (
+    ".agents/",
     "ops/reports/",
     "ops/operator/",
     "external-reports/",
@@ -45,6 +46,9 @@ DEFAULT_EXCLUDED_PREFIXES = (
     ".venv/",
     ".venv-",
     ".coverage",
+)
+DEFAULT_EXCLUDED_PREFIX_EXCEPTIONS = (
+    ".agents/skills/",
 )
 DEFAULT_EXCLUDED_CACHE_DIRS = {
     "__pycache__",
@@ -117,6 +121,7 @@ def exclusion_policy() -> dict:
     return {
         "name": "release_manifest_exclusions",
         "excluded_prefixes": list(DEFAULT_EXCLUDED_PREFIXES),
+        "excluded_prefix_exceptions": list(DEFAULT_EXCLUDED_PREFIX_EXCEPTIONS),
         "excluded_files": sorted(DEFAULT_EXCLUDED_FILES),
         "excluded_cache_dirs": sorted(DEFAULT_EXCLUDED_CACHE_DIRS),
         "excluded_dev_hidden_dirs": sorted(DEFAULT_EXCLUDED_DEV_HIDDEN_DIRS),
@@ -125,10 +130,29 @@ def exclusion_policy() -> dict:
     }
 
 
+def _matches_excluded_prefix_exception(rel_path: str) -> bool:
+    rel_path_prefix = f"{rel_path.rstrip('/')}/"
+    return any(
+        rel_path_prefix.startswith(prefix)
+        for prefix in DEFAULT_EXCLUDED_PREFIX_EXCEPTIONS
+    )
+
+
+def _may_contain_excluded_prefix_exception(rel_dir: str) -> bool:
+    rel_dir_prefix = f"{rel_dir.rstrip('/')}/"
+    return _matches_excluded_prefix_exception(rel_dir) or any(
+        prefix.startswith(rel_dir_prefix)
+        for prefix in DEFAULT_EXCLUDED_PREFIX_EXCEPTIONS
+    )
+
+
 def should_include(rel_path: str, excluded_files: set[str], excluded_prefixes: tuple[str, ...]) -> bool:
     if rel_path in excluded_files:
         return False
-    if any(rel_path.startswith(prefix) for prefix in excluded_prefixes):
+    if (
+        any(rel_path.startswith(prefix) for prefix in excluded_prefixes)
+        and not _matches_excluded_prefix_exception(rel_path)
+    ):
         return False
     if rel_path.endswith(DEFAULT_EXCLUDED_SUFFIXES):
         return False
@@ -140,7 +164,10 @@ def should_include(rel_path: str, excluded_files: set[str], excluded_prefixes: t
 
 def should_descend(rel_dir: str, excluded_prefixes: tuple[str, ...]) -> bool:
     rel_dir_prefix = f"{rel_dir}/"
-    if any(rel_dir_prefix.startswith(prefix) for prefix in excluded_prefixes):
+    if (
+        any(rel_dir_prefix.startswith(prefix) for prefix in excluded_prefixes)
+        and not _may_contain_excluded_prefix_exception(rel_dir)
+    ):
         return False
     return not any(
         part in DEFAULT_EXCLUDED_SEGMENTS or part.endswith(".egg-info")
