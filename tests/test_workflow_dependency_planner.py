@@ -60,6 +60,14 @@ FOCUSED_COMPATIBILITY_ALIAS_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_compatibility_alias_deprecation.py",
 )
+FOCUSED_REPO_SKILL_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_repo_skill_contract.py",
+)
+FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_subagent_profile_schema.py",
+)
 DELETED_LEGACY_REPORT_SCHEMA_SAMPLES_PATH = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_SEEDS_PATH = "tests/fixtures/report_schema_sample_seeds.json"
 RUNTIME_HOTSPOT_SMOKE_COMMAND = "make runtime-hotspot-smoke"
@@ -1158,6 +1166,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertIn(FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_DERIVED_SURFACES_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_COMPATIBILITY_ALIAS_TEST_COMMAND, pytest_commands)
+        self.assertIn(FOCUSED_REPO_SKILL_TEST_COMMAND, pytest_commands)
+        self.assertIn(FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND, pytest_commands)
         for command in pytest_commands:
             with self.subTest(command=command):
                 self.assertNotIn("uv run python -m pytest", command)
@@ -1520,6 +1530,59 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(plan["status"], "pass")
                 self.assertEqual(plan["coverage_class"], "public_boundary")
                 self.assertEqual(plan["selected_commands"], ["make static", "make public-check"])
+
+    def test_changed_path_minimum_plan_matches_repo_skill(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[".agents/skills/example-skill/SKILL.md"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "repo_skill_contract")
+        self.assertEqual(
+            plan["selected_commands"],
+            [
+                "make static",
+                FOCUSED_REPO_SKILL_TEST_COMMAND,
+            ],
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 90)
+        self.assertEqual(
+            validate_with_schema(
+                report,
+                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+            ),
+            [],
+        )
+
+    def test_changed_path_minimum_plan_matches_subagent_profile(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=[".codex/agents/external-report-action-auditor.toml"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["coverage_class"], "subagent_profile_contract")
+        self.assertEqual(
+            plan["selected_commands"],
+            ["make static", FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND],
+        )
+        self.assertEqual(plan["estimated_duration_seconds"], 90)
+        self.assertEqual(
+            validate_with_schema(
+                report,
+                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+            ),
+            [],
+        )
 
     def test_registry_covered_paths_are_not_workflow_unknown(self) -> None:
         report = build_report(

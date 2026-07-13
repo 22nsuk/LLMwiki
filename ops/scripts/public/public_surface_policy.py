@@ -21,6 +21,7 @@ PUBLIC_INCLUDE_FILES = (
 )
 
 PUBLIC_INCLUDE_PREFIXES = (
+    ".agents/skills/",
     ".codex/agents/",
     ".github/",
     "docs/",
@@ -104,6 +105,9 @@ def render_public_gitignore_block() -> str:
         "*",
         "!/.gitattributes",
         "!/.gitignore",
+        "!/.agents/",
+        "!/.agents/skills/",
+        "!/.agents/skills/**",
         "!/.codex/",
         "!/.codex/agents/",
         "!/.codex/agents/**",

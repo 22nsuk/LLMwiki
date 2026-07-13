@@ -19,6 +19,7 @@ Root documents stay short; detailed procedures live here.
 - Release evidence and package sealing: [release.md](release.md)
 - Public helper tools: [tools.md](tools.md)
 - Ops subsystem index: [../ops/README.md](../ops/README.md)
+- Repository workflow skills: `.agents/skills/<skill-name>/SKILL.md`
 - Agent role surface: [../.codex/agents/README.md](../.codex/agents/README.md)
 
 ## Source Of Truth Rules

@@ -4,7 +4,7 @@
 `code/ops` mirror다.
 
 중요:
-- public mirror에서는 `docs/`, `ops/`, `tests/`, `tools/`, `mk/`, `.codex/agents/`, `.github/`, 루트 문서를 기본 작업 surface로 본다.
+- public mirror에서는 `docs/`, `ops/`, `tests/`, `tools/`, `mk/`, `.agents/skills/`, `.codex/agents/`, `.github/`, 루트 문서를 기본 작업 surface로 본다.
 - 같은 루트에 `AGENTS.local.md`가 있으면, full local vault 세션은 이 문서와 `AGENTS.local.md`를 함께 읽는다.
 - public mirror에서는 `raw/`, `wiki/`, `system/`, `runs/`, `external-reports/`가 없거나 비공개일 수 있음을 기본 가정으로 둔다.
 
@@ -19,6 +19,7 @@ public mirror 기준 기본 작업 범위:
 - `tools/`
 - `mk/`
 - `docs/`
+- `.agents/skills/`
 - `.codex/agents/`
 - `.github/`
 - 루트 문서/설정 파일
@@ -147,7 +148,7 @@ full local vault가 있을 때만 추가로:
 우선순위:
 1. `ops/` runtime contract
 2. `tests/` coverage and determinism
-3. `.codex/agents/` role surface
+3. `.agents/skills/` workflow skill과 `.codex/agents/` role surface
 4. public export / CI / packaging hygiene
 5. public-safe documentation
 

@@ -24,9 +24,17 @@ DEFAULT_ALLOWLIST = "ops/doc-graph-orphan-allowlist.json"
 PRODUCER = "ops.scripts.doc_graph_integrity"
 SCHEMA_PATH = "ops/schemas/doc-graph-integrity.schema.json"
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\((?P<target>[^)]+)\)")
-DOC_ROOTS = ("docs", ".codex/agents", ".github", "ops/evals", "ops/templates")
+DOC_ROOTS = (
+    "docs",
+    ".agents/skills",
+    ".codex/agents",
+    ".github",
+    "ops/evals",
+    "ops/templates",
+)
 ROOT_DOCS = ("README.md", "ARCHITECTURE.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md")
 ENTRYPOINTS = {"README.md", "docs/README.md"}
+SKILL_ENTRYPOINT_RE = re.compile(r"^\.agents/skills/[^/]+/SKILL\.md$")
 
 
 def _read_text(path: Path) -> str:
@@ -62,6 +70,10 @@ def _allowlisted_orphans(allowlist: dict[str, Any]) -> set[str]:
         for item in entries
         if isinstance(item, dict) and str(item.get("path", "")).strip()
     }
+
+
+def _is_entrypoint(path: str) -> bool:
+    return path in ENTRYPOINTS or SKILL_ENTRYPOINT_RE.fullmatch(path) is not None
 
 
 def _normalize_link_target(source: Path, target: str) -> str:
@@ -102,7 +114,7 @@ def build_report(
     missing_links, inbound = _links(resolved_vault, docs)
     allowlist = _read_json(resolved_vault / allowlist_path)
     allowed_orphans = _allowlisted_orphans(allowlist)
-    orphan_docs = sorted(doc_paths - inbound - ENTRYPOINTS)
+    orphan_docs = sorted(path for path in doc_paths - inbound if not _is_entrypoint(path))
     unallowed_orphans = [path for path in orphan_docs if path not in allowed_orphans]
     stale_allowlist = sorted(allowed_orphans - doc_paths)
     status = "pass" if not missing_links and not unallowed_orphans and not stale_allowlist else "fail"

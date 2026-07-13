@@ -95,6 +95,12 @@ class ExportPublicRepoTests(unittest.TestCase):
             (vault / ".codex" / "agents" / "worker.toml").write_text(
                 "name = 'worker'\n", encoding="utf-8"
             )
+            skill_dir = vault / ".agents" / "skills" / "example-skill"
+            (skill_dir / "agents").mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text("# Skill\n", encoding="utf-8")
+            (skill_dir / "agents" / "openai.yaml").write_text(
+                "interface: {}\n", encoding="utf-8"
+            )
             (vault / "raw").mkdir()
             (vault / "raw" / "source.pdf").write_text("pdf", encoding="utf-8")
             (vault / "wiki").mkdir()
@@ -149,6 +155,14 @@ class ExportPublicRepoTests(unittest.TestCase):
             self.assertIn(".github/dependabot.yml", manifest["files"])
             self.assertIn(".github/pull_request_template.md", manifest["files"])
             self.assertIn(".github/workflows/ci.yml", manifest["files"])
+            self.assertIn(
+                ".agents/skills/example-skill/SKILL.md",
+                manifest["files"],
+            )
+            self.assertIn(
+                ".agents/skills/example-skill/agents/openai.yaml",
+                manifest["files"],
+            )
             self.assertIn(".codex/agents/worker.toml", manifest["files"])
             self.assertIn("ops/scripts/example.py", manifest["files"])
             self.assertIn("tests/test_example.py", manifest["files"])

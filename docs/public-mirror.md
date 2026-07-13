@@ -27,6 +27,7 @@ The public mirror includes:
 - `tests/`
 - `tools/`
 - `mk/`
+- `.agents/skills/`
 - `.codex/agents/`
 - `.github/`
 - root public documents and development configuration

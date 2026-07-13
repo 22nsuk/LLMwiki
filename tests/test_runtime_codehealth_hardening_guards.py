@@ -61,7 +61,6 @@ RUNTIME_CODEHEALTH_PUBLIC_TEXT_PATHS = (
     *RUNTIME_CODEHEALTH_TIME_GUARD_PATHS,
 )
 LOCAL_ONLY_PUBLIC_TEXT_PREFIXES = (
-    ".agents/",
     ".kiro/",
     ".obsidian/",
     ".ouroboros/",

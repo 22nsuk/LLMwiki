@@ -28,6 +28,7 @@ LOCAL_SOURCE_CONTRACT_FILES = {
     "AGENTS.local.md",
 }
 PUBLIC_SOURCE_PREFIXES = (
+    ".agents/skills/",
     ".codex/agents/",
     ".github/",
     "docs/",

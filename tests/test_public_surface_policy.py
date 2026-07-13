@@ -110,6 +110,7 @@ class PublicSurfacePolicyTests(unittest.TestCase):
             "tests/test_example.py",
             "tools/helper.py",
             "mk/public.mk",
+            ".agents/skills/example-skill/SKILL.md",
             ".codex/agents/worker.toml",
             ".github/workflows/ci.yml",
         )
@@ -177,6 +178,8 @@ class PublicSurfacePolicyTests(unittest.TestCase):
                 ".github/dependabot.yml": "version: 2\nupdates: []\n",
                 ".github/pull_request_template.md": "## Summary\n",
                 ".github/workflows/ci.yml": "name: CI\n",
+                ".agents/skills/example-skill/SKILL.md": "# Skill\n",
+                ".agents/skills/example-skill/agents/openai.yaml": "interface: {}\n",
                 ".codex/agents/worker.toml": "name = 'worker'\n",
                 "mk/core.mk": "all:\n\t@true\n",
                 "ops/scripts/example.py": "print('ok')\n",
@@ -216,6 +219,10 @@ class PublicSurfacePolicyTests(unittest.TestCase):
             self.assertEqual(PUBLIC_INCLUDED_REPORT_FILES, ())
             self.assertIn("docs/README.md", exported)
             self.assertIn("docs/development.md", exported)
+            self.assertIn(
+                ".agents/skills/example-skill/SKILL.md",
+                exported,
+            )
             self.assertNotIn("requirements.txt", exported)
             self.assertNotIn("requirements-dev.txt", exported)
             self.assertNotIn("ops/operator/operator-release-summary.json", exported)

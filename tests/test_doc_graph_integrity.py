@@ -29,6 +29,10 @@ class DocGraphIntegrityTests(unittest.TestCase):
             (vault / "docs").mkdir()
             (vault / "ops").mkdir()
             (vault / "README.md").write_text("[Docs](docs/README.md)\n", encoding="utf-8")
+            for name in ("alpha", "beta"):
+                skill_path = vault / ".agents" / "skills" / name / "SKILL.md"
+                skill_path.parent.mkdir(parents=True)
+                skill_path.write_text(f"# {name.title()} Skill\n", encoding="utf-8")
             (vault / "docs" / "README.md").write_text("[Topic](topic.md)\n", encoding="utf-8")
             (vault / "docs" / "topic.md").write_text("topic\n", encoding="utf-8")
             (vault / "docs" / "orphan.md").write_text("orphan\n", encoding="utf-8")
@@ -53,6 +57,10 @@ class DocGraphIntegrityTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["summary"]["missing_link_count"], 0)
         self.assertEqual(report["summary"]["unallowed_orphan_count"], 0)
+        self.assertIn(".agents/skills/alpha/SKILL.md", report["docs"])
+        self.assertIn(".agents/skills/beta/SKILL.md", report["docs"])
+        self.assertNotIn(".agents/skills/alpha/SKILL.md", report["orphan_docs"])
+        self.assertNotIn(".agents/skills/beta/SKILL.md", report["orphan_docs"])
         self.assertEqual(validate_with_schema(report, schema), [])
 
 

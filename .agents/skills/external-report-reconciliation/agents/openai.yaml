@@ -1,0 +1,7 @@
+interface:
+  display_name: "External Report Reconciliation"
+  short_description: "Reconcile reports with current repository evidence."
+  default_prompt: "Use $external-report-reconciliation to reconcile external report actions against current repository evidence."
+
+policy:
+  allow_implicit_invocation: true
