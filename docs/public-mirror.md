@@ -44,6 +44,11 @@ The public mirror excludes:
 - `tmp/`
 - private inventory files such as `ops/manifest.json` and `ops/raw-registry.json`
 
+The full-vault root `.gitignore` applies the same ownership boundary within
+`.agents/`: operator-local siblings are ignored while `.agents/skills/**`
+remains trackable. This keeps local agent state out of dirty-worktree planning
+without deleting repository-owned workflow skills.
+
 `external-reports/` is excluded as a whole. In the full local vault, root
 external reports are active local-only intake, while
 `external-reports/report-reference-manifest.json` and

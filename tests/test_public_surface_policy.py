@@ -147,6 +147,32 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         self.assertIn("raw/", gitignore_text)
         self.assertIn("external-reports/", gitignore_text)
 
+    def test_root_gitignore_ignores_agent_state_but_tracks_repo_skills(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for root .gitignore probes")
+
+        ignored_paths = (
+            ".agents/session.json",
+            ".agents/private/state.json",
+        )
+        repo_skill_paths = (
+            ".agents/skills/example-skill/SKILL.md",
+            ".agents/skills/example-skill/agents/openai.yaml",
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            (repo / ".gitignore").write_text(
+                Path(".gitignore").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                _git_check_ignored(repo, ignored_paths), set(ignored_paths)
+            )
+            self.assertEqual(_git_check_ignored(repo, repo_skill_paths), set())
+
     def test_public_export_uses_policy_and_generated_gitignore_for_sample_vault(
         self,
     ) -> None:
