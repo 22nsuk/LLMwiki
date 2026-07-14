@@ -22,8 +22,9 @@ from ops.scripts.public.public_surface_policy import (
     PUBLIC_INCLUDE_FILES,
     PUBLIC_INCLUDE_PREFIXES,
     PUBLIC_INCLUDED_REPORT_FILES,
-    PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES,
+    PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS,
     PUBLIC_LOCAL_ABSOLUTE_PATH_RE,
+    redact_intentional_local_path_literals,
     render_public_gitignore_block,
 )
 
@@ -304,6 +305,8 @@ def test_public_local_path_guard_recognizes_common_local_roots(marker: str) -> N
         "https://example.com/private/var/folders/ab/tmp/repo",
         "GET /users/{id}",
         "/users/me",
+        r"    if a:\n",
+        r"        if b:\n",
     ],
 )
 def test_public_local_path_guard_does_not_treat_routes_or_urls_as_local_paths(
@@ -312,10 +315,10 @@ def test_public_local_path_guard_does_not_treat_routes_or_urls_as_local_paths(
     assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text) is None
 
 
-def test_intentional_local_path_literal_files_are_exact_public_sources() -> None:
+def test_intentional_local_path_literals_are_exact_public_source_exemptions() -> None:
     missing_or_private = [
         path
-        for path in sorted(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES)
+        for path in sorted(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS)
         if not (REPO_ROOT / path).is_file() or not should_export_public(path)
     ]
 
@@ -342,8 +345,17 @@ def test_intentional_local_path_literal_files_are_exact_public_sources() -> None
             continue
         if PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text):
             observed_literal_files.add(rel_path)
+        redacted = redact_intentional_local_path_literals(rel_path, text)
+        assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(redacted) is None, rel_path
 
-    assert observed_literal_files == set(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES)
+    assert observed_literal_files == set(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS)
+    for rel_path, exemptions in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS.items():
+        text = (REPO_ROOT / rel_path).read_text(encoding="utf-8")
+        for exemption in exemptions:
+            assert text.count(exemption.text) >= exemption.occurrences, (
+                rel_path,
+                exemption.text,
+            )
 
 
 if __name__ == "__main__":  # pragma: no cover

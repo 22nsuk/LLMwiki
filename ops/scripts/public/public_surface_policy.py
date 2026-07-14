@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
 
@@ -80,36 +81,194 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
     "Thumbs.db",
 )
 
-PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES = frozenset(
-    {
-        "ops/scripts/core/output_runtime.py",
-        "ops/scripts/core/sanitize_run_artifacts.py",
-        "ops/scripts/mechanism/run_mechanism_experiment_runtime.py",
-        "ops/scripts/public/public_surface_policy.py",
-        "tests/test_backfill_historical_bootstrap_reports.py",
-        "tests/test_output_runtime.py",
-        "tests/test_public_check_summary.py",
-        "tests/test_public_surface_policy.py",
-        "tests/test_python_function_budget_runtime.py",
-        "tests/test_run_mechanism_experiment_steps.py",
-        "tests/test_runtime_hotspot_facade_golden_outputs.py",
-        "tests/test_sanitize_run_artifacts.py",
-        "tests/test_trusted_candidate_runner.py",
-        "tests/test_wiki_lint_runtime.py",
-    }
-)
-
 PUBLIC_LOCAL_ABSOLUTE_PATH_RE = re.compile(
     r"(?:"
     r"(?<![A-Za-z0-9])/(?:home|mnt|workspace|var/folders|private/var/folders)/"
     r"|(?<![A-Za-z0-9])/Users/"
-    r"|(?i:"
-    r"(?<![A-Za-z0-9])[A-Z]:[\\/]"
-    r"|\\\\(?:wsl\$|wsl\.localhost)\\"
+    r"|(?<![A-Za-z0-9])[A-Z]:[\\/]"
+    r"|(?i:\\\\(?:wsl\$|wsl\.localhost)\\"
     r"|\\Users\\"
     r")"
     r")"
 )
+
+
+@dataclass(frozen=True)
+class PublicLocalPathLiteralExemption:
+    text: str
+    occurrences: int = 1
+
+
+def _posix_local_path(root: str, suffix: str = "") -> str:
+    return f"/{root}/{suffix}"
+
+
+def _windows_root_path(root: str, suffix: str = "") -> str:
+    return f"\\{root}\\{suffix}"
+
+
+def _windows_drive_path(drive: str, suffix: str = "") -> str:
+    return f"{drive}:\\{suffix}"
+
+
+def _windows_unc_path(server: str, suffix: str) -> str:
+    return f"\\\\{server}\\{suffix}"
+
+
+PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
+    str, tuple[PublicLocalPathLiteralExemption, ...]
+] = {
+    "ops/scripts/core/output_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("home", r"""[^/\s\"']+""")),
+    ),
+    "ops/scripts/core/sanitize_run_artifacts.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt", r"c/Users/[^/\s]+/AppData/Local/Temp/[^/\s]+/vault/"
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt", r"c/Users/[^/\s]+/AppData/Local/Temp/[^/\s]+/vault\b"
+            )
+        ),
+    ),
+    "ops/scripts/mechanism/run_mechanism_experiment_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("mnt")),
+    ),
+    "ops/scripts/public/public_surface_policy.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("Users")),
+        PublicLocalPathLiteralExemption(_windows_root_path("Users")),
+    ),
+    "tests/test_backfill_historical_bootstrap_reports.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "data/build_llm_wiki_package/LLM Wiki vNext/wiki/source--sample.md",
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("mnt", "data/build_llm_wiki_package/LLM Wiki vNext"),
+            occurrences=2,
+        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("mnt", "data/")),
+    ),
+    "tests/test_output_runtime.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("home", "example/code/LLMwiki-worktrees/goal-runtime")
+        ),
+    ),
+    "tests/test_public_check_summary.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("workspace", ".venv/bin/python"), occurrences=2
+        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("workspace", "LLMwiki/repo")),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("Users", "alice/work/repo"), occurrences=2
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("private", "var/folders/ab/tmp/repo")
+        ),
+        PublicLocalPathLiteralExemption(
+            f"workspace:{_posix_local_path('home', 'alice/work/repo')}"
+        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("workspace", "example")),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("home", "alice/.venv/bin/python"), occurrences=4
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("home", "bob/.venv/bin/python")
+        ),
+    ),
+    "tests/test_public_surface_policy.py": (
+        PublicLocalPathLiteralExemption(
+            f"workspace:{_posix_local_path('home', 'alice/work/repo')}"
+        ),
+        PublicLocalPathLiteralExemption(
+            f"source:{_posix_local_path('Users', 'alice/work/repo')}"
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("private", "var/folders/ab/tmp/repo")
+        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("home", "alice/work/repo")),
+        PublicLocalPathLiteralExemption(_posix_local_path("mnt", "c/Users/alice/repo")),
+        PublicLocalPathLiteralExemption(_posix_local_path("workspace", "LLMwiki/repo")),
+        PublicLocalPathLiteralExemption(_posix_local_path("Users", "alice/work/repo")),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("var", "folders/ab/tmp/repo")
+        ),
+        PublicLocalPathLiteralExemption(_windows_drive_path("C", r"Users\alice\repo")),
+        PublicLocalPathLiteralExemption(_windows_drive_path("C", r"USERS\alice\repo")),
+        PublicLocalPathLiteralExemption(
+            _windows_unc_path("WSL$", r"Ubuntu\home\alice\repo")
+        ),
+        PublicLocalPathLiteralExemption(_windows_root_path("USERS", r"alice\repo")),
+    ),
+    "tests/test_run_mechanism_experiment_steps.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("mnt", "c/Users/ADMINI~1/AppData/Local/Temp")
+        ),
+    ),
+    "tests/test_runtime_hotspot_facade_golden_outputs.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("var", "folders/")),
+        PublicLocalPathLiteralExemption(_posix_local_path("mnt")),
+        PublicLocalPathLiteralExemption(_posix_local_path("home")),
+        PublicLocalPathLiteralExemption(_windows_root_path("Users")),
+        PublicLocalPathLiteralExemption(_windows_drive_path("C")),
+    ),
+    "tests/test_sanitize_run_artifacts.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "c/Users/Administrator/Desktop/작업/LLM Wiki vNext/.venv/bin/python",
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt", "c/Users/Administrator/Desktop/작업/LLM Wiki vNext"
+            ),
+            occurrences=3,
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "c/Users/ADMINI~1/AppData/Local/Temp/"
+                "run-123-workspace-abcd/vault/wiki/page.md",
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "c/Users/ADMINI~1/AppData/Local/Temp/run-123-workspace-abcd/vault",
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "c/Users/ADMINI~1/AppData/Local/Temp/"
+                "run-1-workspace-a/vault/wiki/page.md",
+            )
+        ),
+    ),
+    "tests/test_trusted_candidate_runner.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("home", "tester")),
+    ),
+}
+
+
+def redact_intentional_local_path_literals(rel_path: str, text: str) -> str:
+    exemptions = sorted(
+        PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS.get(rel_path, ()),
+        key=lambda exemption: len(exemption.text),
+        reverse=True,
+    )
+    redacted = text
+    for exemption in exemptions:
+        replacement = " " * len(exemption.text)
+        for _ in range(exemption.occurrences):
+            redacted = redacted.replace(exemption.text, replacement, 1)
+    return redacted
+
 
 # Without a trailing slash, Git matches both files and directories named like the segment.
 PUBLIC_EXCLUDED_SEGMENT_GITIGNORE_PATTERNS = PUBLIC_EXCLUDED_SEGMENTS

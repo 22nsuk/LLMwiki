@@ -20,6 +20,7 @@ from ops.scripts.public.public_check_summary import (
     PublicCheckRequest,
     _default_command_runner,
     _public_check_config_fingerprint,
+    _public_export_negative_assertions,
     _public_pytest_summary_cache_path,
     _resolve_public_python,
     build_report,
@@ -425,19 +426,47 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 [],
             )
 
-    def test_public_check_summary_allows_registered_current_vault_fixture(self) -> None:
+    def test_public_check_summary_allows_registered_fixture_containing_current_vault(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            source_vault = (Path(temp_dir) / "vault").resolve()
+            source_vault = Path("/", "workspace", "LLMwiki")
+            public_out = Path(temp_dir) / "public"
+            fixture_path = public_out / "tests" / "test_public_check_summary.py"
+            fixture_path.parent.mkdir(parents=True)
+            fixture_path.write_text(
+                f'FIXTURE_ROOT = "{source_vault}/repo"\n',
+                encoding="utf-8",
+            )
+            assertions = _public_export_negative_assertions(
+                public_out,
+                {},
+                [{"path": "tests/test_public_check_summary.py"}],
+                source_vault=source_vault,
+            )
+
+            self.assertEqual(
+                assertions["local_path_absence"]["violations"],
+                [],
+            )
+
+    def test_public_check_summary_rejects_unregistered_path_beside_allowed_fixture(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            allowed_fixture = "/" + "workspace/example"
+            unexpected_path = "/" + "Users/real-user/private-repo"
             report = self._build_report_with_exported_text(
                 temp_dir,
                 "tests/test_public_check_summary.py",
-                f'FIXTURE_ROOT = "{source_vault}/repo"\n',
+                f'FIXTURE_ROOT = "{allowed_fixture}"\n'
+                f'DEV_ROOT = "{unexpected_path}"\n',
             )
 
-            self.assertEqual(report["status"], "pass")
+            self.assertEqual(report["status"], "fail")
             self.assertEqual(
                 report["public_export_negative_assertions"]["local_path_absence"]["violations"],
-                [],
+                ["tests/test_public_check_summary.py"],
             )
 
     def test_public_check_summary_rejects_current_vault_in_unregistered_source_file(

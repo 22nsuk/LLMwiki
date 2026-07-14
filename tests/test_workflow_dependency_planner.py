@@ -68,6 +68,10 @@ FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_subagent_profile_schema.py",
 )
+FOCUSED_EXPORT_PUBLIC_REPO_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_export_public_repo.py",
+)
 FOCUSED_PUBLIC_SURFACE_POLICY_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_public_surface_policy.py",
@@ -1176,6 +1180,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertIn(FOCUSED_COMPATIBILITY_ALIAS_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_REPO_SKILL_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND, pytest_commands)
+        self.assertIn(FOCUSED_EXPORT_PUBLIC_REPO_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_PUBLIC_SURFACE_POLICY_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_PUBLIC_CHECK_SUMMARY_TEST_COMMAND, pytest_commands)
         for command in pytest_commands:
@@ -1543,6 +1548,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
     def test_changed_path_minimum_plan_matches_public_check_sources(self) -> None:
         for changed_path in (
+            "ops/scripts/public/export_public_repo.py",
             "ops/scripts/public/public_surface_policy.py",
             "ops/scripts/public/public_check_summary.py",
         ):
@@ -1560,12 +1566,13 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                     plan["selected_commands"],
                     [
                         "make static",
+                        FOCUSED_EXPORT_PUBLIC_REPO_TEST_COMMAND,
                         FOCUSED_PUBLIC_SURFACE_POLICY_TEST_COMMAND,
                         FOCUSED_PUBLIC_CHECK_SUMMARY_TEST_COMMAND,
                         "make sync-derived-check",
                     ],
                 )
-                self.assertEqual(plan["estimated_duration_seconds"], 240)
+                self.assertEqual(plan["estimated_duration_seconds"], 270)
                 self.assertEqual(
                     plan["path_recommendations"][0]["matched_rule_id"],
                     "public_check_source+derived_surface_currentness",

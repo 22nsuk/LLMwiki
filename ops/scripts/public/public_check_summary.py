@@ -36,8 +36,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.public.public_surface_policy import (
         PUBLIC_INCLUDED_REPORT_FILES,
-        PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES,
         PUBLIC_LOCAL_ABSOLUTE_PATH_RE,
+        redact_intentional_local_path_literals,
     )
     from ops.scripts.test.test_execution_summary import parse_pytest_counts
 else:
@@ -60,8 +60,8 @@ else:
     from .export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
     from .public_surface_policy import (
         PUBLIC_INCLUDED_REPORT_FILES,
-        PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES,
         PUBLIC_LOCAL_ABSOLUTE_PATH_RE,
+        redact_intentional_local_path_literals,
     )
 
 
@@ -399,9 +399,10 @@ def _public_export_negative_assertions(
     source_vault_marker = source_vault.resolve().as_posix()
     local_path_violations: list[str] = []
     for path in exported_paths:
-        if path in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES:
-            continue
-        text = _read_public_text(public_out / path)
+        text = redact_intentional_local_path_literals(
+            path,
+            _read_public_text(public_out / path),
+        )
         current_vault_leaked = bool(source_vault_marker and source_vault_marker in text)
         common_local_path_leaked = PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text)
         if current_vault_leaked or common_local_path_leaked:
