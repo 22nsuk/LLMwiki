@@ -694,7 +694,13 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   as `resolved`, `historically_true`, `superseded`, or `currently_valid`.
   It also summarizes currently valid actions by source-action availability,
   artifact-freshness backlog, and release/operator authority needs so the next
-  lane is visible without reading every action row. Open or planned observations
+  lane is visible without reading every action row.
+  The matrix fingerprints and evaluates only evidence observable before its
+  fixed-point graph position. Later index, readiness, closeout, and release
+  authority inputs are listed in each action's `deferred_evidence_paths` and
+  represented as `readback_pending`; their later verification must not rewrite
+  matrix semantics or its input fingerprints.
+  Open or planned observations
   are not generated-only backlog: register them in
   `ops/observation-closeout-registry.json` before invoking the finality
   controller. Observations created after finality are only appropriate for

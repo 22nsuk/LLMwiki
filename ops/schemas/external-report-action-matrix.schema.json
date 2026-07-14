@@ -469,7 +469,8 @@
         "is_active",
         "source_report_paths",
         "recommended_target",
-        "evidence"
+        "evidence",
+        "deferred_evidence_paths"
       ],
       "properties": {
         "action_id": { "type": "string", "minLength": 1 },
@@ -541,6 +542,11 @@
         "evidence": {
           "type": "array",
           "items": { "$ref": "#/$defs/action_evidence" }
+        },
+        "deferred_evidence_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
         }
       }
     },
