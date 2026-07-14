@@ -82,12 +82,14 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
 
 PUBLIC_LOCAL_ABSOLUTE_PATH_RE = re.compile(
     r"(?:"
-    r"(?<![A-Za-z0-9:])/(?:home|mnt|workspace|Users|var/folders)/"
-    r"|(?<![A-Za-z0-9])[A-Za-z]:[\\/]"
+    r"(?<![A-Za-z0-9:])/(?:home|mnt|workspace|var/folders)/"
+    r"|(?<![A-Za-z0-9:])/Users/"
+    r"|(?i:"
+    r"(?<![A-Za-z0-9])[A-Z]:[\\/]"
     r"|\\\\(?:wsl\$|wsl\.localhost)\\"
     r"|\\Users\\"
-    r")",
-    re.IGNORECASE,
+    r")"
+    r")"
 )
 
 # Without a trailing slash, Git matches both files and directories named like the segment.

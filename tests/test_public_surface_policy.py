@@ -279,7 +279,9 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         "/Users/alice/work/repo",
         "/var/folders/ab/tmp/repo",
         r"C:\Users\alice\repo",
-        r"\\wsl$\Ubuntu\home\alice\repo",
+        r"C:\USERS\alice\repo",
+        r"\\WSL$\Ubuntu\home\alice\repo",
+        r"\USERS\alice\repo",
     ],
 )
 def test_public_local_path_guard_recognizes_common_local_roots(marker: str) -> None:
@@ -287,16 +289,20 @@ def test_public_local_path_guard_recognizes_common_local_roots(marker: str) -> N
 
 
 @pytest.mark.parametrize(
-    "url",
+    "text",
     [
         "https://example.com/docs",
         "https://example.com/home/alice",
         "https://example.com/workspace/LLMwiki",
         "https://example.com/Users/alice",
+        "GET /users/{id}",
+        "/users/me",
     ],
 )
-def test_public_local_path_guard_does_not_treat_urls_as_local_paths(url: str) -> None:
-    assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(url) is None
+def test_public_local_path_guard_does_not_treat_routes_or_urls_as_local_paths(
+    text: str,
+) -> None:
+    assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text) is None
 
 
 if __name__ == "__main__":  # pragma: no cover
