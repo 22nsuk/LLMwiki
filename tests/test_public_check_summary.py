@@ -9,6 +9,7 @@ import unittest
 from collections.abc import Mapping, Sequence
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import ops.scripts.public.public_check_summary as public_check_summary_module
@@ -124,6 +125,30 @@ def timeout_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) 
 
 
 class PublicCheckSummaryTests(unittest.TestCase):
+    def _build_report_with_exported_text(
+        self,
+        temp_dir: str,
+        rel_path: str,
+        text: str,
+    ) -> dict[str, Any]:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        seed_public_policy_file(vault)
+        target = vault / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+        return build_report(
+            vault,
+            PublicCheckRequest(
+                public_out=str(Path(temp_dir) / "public"),
+                public_python="python",
+                pytest_flags="-q",
+            ),
+            context=fixed_context(),
+            command_runner=fake_runner,
+        )
+
     def test_default_runner_exports_public_python_for_nested_make_entrypoints(self) -> None:
         captured_env: dict[str, str] = {}
 
@@ -330,6 +355,53 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 ["negative_assertion:local_path_absence"],
             )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_public_check_summary_fails_on_exported_foreign_local_path_leak(self) -> None:
+        for leaked_path in (
+            "/workspace/LLMwiki/repo",
+            "/Users/alice/work/repo",
+            "workspace:/home/alice/work/repo",
+        ):
+            with self.subTest(leaked_path=leaked_path), tempfile.TemporaryDirectory() as temp_dir:
+                report = self._build_report_with_exported_text(
+                    temp_dir,
+                    "README.md",
+                    f"Do not export local path {leaked_path}.\n",
+                )
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(
+                    report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                    ["README.md"],
+                )
+
+    def test_public_check_summary_allows_exported_api_route(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "README.md",
+                "GET /users/{id}\n",
+            )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                [],
+            )
+
+    def test_public_check_summary_allows_exported_source_path_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "tests/test_fixture.py",
+                'FIXTURE_ROOT = "/workspace/example"\n',
+            )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                [],
+            )
 
     def test_generated_report_files_are_excluded_without_private_export_violations(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
