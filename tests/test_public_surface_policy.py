@@ -20,12 +20,15 @@ from ops.scripts.public.public_surface_policy import (
     PUBLIC_GITIGNORE_START,
     PUBLIC_GITIGNORE_TEMPLATE,
     PUBLIC_INCLUDE_FILES,
+    PUBLIC_INCLUDE_PREFIXES,
     PUBLIC_INCLUDED_REPORT_FILES,
+    PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES,
     PUBLIC_LOCAL_ABSOLUTE_PATH_RE,
     render_public_gitignore_block,
 )
 
 pytestmark = pytest.mark.public
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _git_check_ignored(repo: Path, paths: tuple[str, ...]) -> set[str]:
@@ -278,6 +281,7 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         "/workspace/LLMwiki/repo",
         "/Users/alice/work/repo",
         "/var/folders/ab/tmp/repo",
+        "/private/var/folders/ab/tmp/repo",
         "workspace:/home/alice/work/repo",
         "source:/Users/alice/work/repo",
         r"C:\Users\alice\repo",
@@ -297,6 +301,7 @@ def test_public_local_path_guard_recognizes_common_local_roots(marker: str) -> N
         "https://example.com/home/alice",
         "https://example.com/workspace/LLMwiki",
         "https://example.com/Users/alice",
+        "https://example.com/private/var/folders/ab/tmp/repo",
         "GET /users/{id}",
         "/users/me",
     ],
@@ -305,6 +310,40 @@ def test_public_local_path_guard_does_not_treat_routes_or_urls_as_local_paths(
     text: str,
 ) -> None:
     assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text) is None
+
+
+def test_intentional_local_path_literal_files_are_exact_public_sources() -> None:
+    missing_or_private = [
+        path
+        for path in sorted(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES)
+        if not (REPO_ROOT / path).is_file() or not should_export_public(path)
+    ]
+
+    assert missing_or_private == []
+
+    candidate_paths = {
+        REPO_ROOT / path
+        for path in PUBLIC_INCLUDE_FILES
+        if (REPO_ROOT / path).is_file()
+    }
+    for prefix in PUBLIC_INCLUDE_PREFIXES:
+        root = REPO_ROOT / prefix
+        if root.is_dir():
+            candidate_paths.update(path for path in root.rglob("*") if path.is_file())
+
+    observed_literal_files: set[str] = set()
+    for path in candidate_paths:
+        rel_path = path.relative_to(REPO_ROOT).as_posix()
+        if not should_export_public(rel_path):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text):
+            observed_literal_files.add(rel_path)
+
+    assert observed_literal_files == set(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES)
 
 
 if __name__ == "__main__":  # pragma: no cover

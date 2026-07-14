@@ -64,6 +64,15 @@
       "next_action": "Collect parity evidence for revision-, source-tree-, input-, and artifact-bound reuse, then remove only the duplicate preseal writers and public marker replay proven equivalent to stronger current evidence.",
       "exit_condition": "Close when release preseal and checkpoint planning skip the measured duplicate executions without weakening local or unattended release authority, with a second-call no-write proof and focused workflow tests.",
       "owner_or_lane": "test-evidence-cost-governance"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260714-pr75-public-check-cost/improvement-observations.json",
+      "observation_id": "public_check_cost_estimate_drift",
+      "status": "open",
+      "retained_reason": "PR 75 boundary validation passed, but the changed-path run took 808 seconds because public pytest alone took 576222 ms while the registry still estimates make public-check at 120 seconds.",
+      "next_action": "Add a fast export-and-negative-assertion boundary target for changed-path feedback, keep the full public pytest lane checkpoint-grade, and recalibrate the registry estimate from representative generated timing evidence.",
+      "exit_condition": "Close when public-boundary source edits receive a fast authoritative minimum without replaying full public pytest and planner cost estimates reflect representative generated evidence.",
+      "owner_or_lane": "test-evidence-cost-governance"
     }
   ]
 }

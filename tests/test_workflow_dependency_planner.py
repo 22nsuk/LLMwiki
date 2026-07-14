@@ -68,6 +68,14 @@ FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_subagent_profile_schema.py",
 )
+FOCUSED_PUBLIC_SURFACE_POLICY_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_public_surface_policy.py",
+)
+FOCUSED_PUBLIC_CHECK_SUMMARY_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
+    "{path}",
+    "tests/test_public_check_summary.py",
+)
 DELETED_LEGACY_REPORT_SCHEMA_SAMPLES_PATH = "tests/fixtures/report_schema_samples.json"
 REPORT_SCHEMA_SAMPLE_SEEDS_PATH = "tests/fixtures/report_schema_sample_seeds.json"
 RUNTIME_HOTSPOT_SMOKE_COMMAND = "make runtime-hotspot-smoke"
@@ -1168,6 +1176,8 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
         self.assertIn(FOCUSED_COMPATIBILITY_ALIAS_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_REPO_SKILL_TEST_COMMAND, pytest_commands)
         self.assertIn(FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND, pytest_commands)
+        self.assertIn(FOCUSED_PUBLIC_SURFACE_POLICY_TEST_COMMAND, pytest_commands)
+        self.assertIn(FOCUSED_PUBLIC_CHECK_SUMMARY_TEST_COMMAND, pytest_commands)
         for command in pytest_commands:
             with self.subTest(command=command):
                 self.assertNotIn("uv run python -m pytest", command)
@@ -1530,6 +1540,36 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(plan["status"], "pass")
                 self.assertEqual(plan["coverage_class"], "public_boundary")
                 self.assertEqual(plan["selected_commands"], ["make static", "make public-check"])
+
+    def test_changed_path_minimum_plan_matches_public_check_sources(self) -> None:
+        for changed_path in (
+            "ops/scripts/public/public_surface_policy.py",
+            "ops/scripts/public/public_check_summary.py",
+        ):
+            with self.subTest(changed_path=changed_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[changed_path],
+                    context=fixed_context(),
+                )
+
+                plan = report["changed_path_minimum_plan"]
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "public_check_source")
+                self.assertEqual(
+                    plan["selected_commands"],
+                    [
+                        "make static",
+                        FOCUSED_PUBLIC_SURFACE_POLICY_TEST_COMMAND,
+                        FOCUSED_PUBLIC_CHECK_SUMMARY_TEST_COMMAND,
+                        "make sync-derived-check",
+                    ],
+                )
+                self.assertEqual(plan["estimated_duration_seconds"], 240)
+                self.assertEqual(
+                    plan["path_recommendations"][0]["matched_rule_id"],
+                    "public_check_source+derived_surface_currentness",
+                )
 
     def test_changed_path_minimum_plan_matches_repo_skill(self) -> None:
         for changed_path in (

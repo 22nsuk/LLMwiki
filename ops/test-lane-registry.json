@@ -41,6 +41,8 @@
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_derived_surfaces.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_repo_skill_contract.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_subagent_profile_schema.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_public_surface_policy.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_public_check_summary.py": 30,
       "make makefile-static-gates": 210,
       "make test-execution-summary-current-or-refresh": 180,
       "make workflow-dependency-planner-check": 60,
@@ -196,6 +198,22 @@
         "coverage_class": "executor_runtime",
         "static_required": true,
         "duration_seconds": 180
+      },
+      {
+        "rule_id": "public_check_source",
+        "path_patterns": [
+          "ops/scripts/public/public_surface_policy.py",
+          "ops/scripts/public/public_check_summary.py"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_public_surface_policy.py",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_public_check_summary.py"
+        ],
+        "reason": "Public-check implementation changes use the focused policy and summary contract tests as the registry-owned minimum; make public-check remains the public-boundary closeout rather than a tight-loop duplicate.",
+        "coverage_class": "public_check_source",
+        "static_required": true,
+        "duration_seconds": 120
       },
       {
         "rule_id": "python_runtime_source",

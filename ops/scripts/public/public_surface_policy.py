@@ -80,9 +80,28 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
     "Thumbs.db",
 )
 
+PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES = frozenset(
+    {
+        "ops/scripts/core/output_runtime.py",
+        "ops/scripts/core/sanitize_run_artifacts.py",
+        "ops/scripts/mechanism/run_mechanism_experiment_runtime.py",
+        "ops/scripts/public/public_surface_policy.py",
+        "tests/test_backfill_historical_bootstrap_reports.py",
+        "tests/test_output_runtime.py",
+        "tests/test_public_check_summary.py",
+        "tests/test_public_surface_policy.py",
+        "tests/test_python_function_budget_runtime.py",
+        "tests/test_run_mechanism_experiment_steps.py",
+        "tests/test_runtime_hotspot_facade_golden_outputs.py",
+        "tests/test_sanitize_run_artifacts.py",
+        "tests/test_trusted_candidate_runner.py",
+        "tests/test_wiki_lint_runtime.py",
+    }
+)
+
 PUBLIC_LOCAL_ABSOLUTE_PATH_RE = re.compile(
     r"(?:"
-    r"(?<![A-Za-z0-9])/(?:home|mnt|workspace|var/folders)/"
+    r"(?<![A-Za-z0-9])/(?:home|mnt|workspace|var/folders|private/var/folders)/"
     r"|(?<![A-Za-z0-9])/Users/"
     r"|(?i:"
     r"(?<![A-Za-z0-9])[A-Z]:[\\/]"

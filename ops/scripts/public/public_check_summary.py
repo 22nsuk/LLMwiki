@@ -36,6 +36,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.public.public_surface_policy import (
         PUBLIC_INCLUDED_REPORT_FILES,
+        PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES,
         PUBLIC_LOCAL_ABSOLUTE_PATH_RE,
     )
     from ops.scripts.test.test_execution_summary import parse_pytest_counts
@@ -59,6 +60,7 @@ else:
     from .export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
     from .public_surface_policy import (
         PUBLIC_INCLUDED_REPORT_FILES,
+        PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES,
         PUBLIC_LOCAL_ABSOLUTE_PATH_RE,
     )
 
@@ -87,13 +89,6 @@ PRIVATE_EXPORT_PATTERNS = (
     "ops/raw-registry.json",
     "ops/reports/",
 )
-COMMON_LOCAL_PATH_SCAN_EXCLUDED_PREFIXES = (
-    "ops/scripts/",
-    "tests/",
-    "tools/",
-)
-
-
 @dataclass(frozen=True)
 class PublicCheckRequest:
     mode: str = "default"
@@ -406,9 +401,10 @@ def _public_export_negative_assertions(
     for path in exported_paths:
         text = _read_public_text(public_out / path)
         current_vault_leaked = bool(source_vault_marker and source_vault_marker in text)
-        common_local_path_leaked = not path.startswith(
-            COMMON_LOCAL_PATH_SCAN_EXCLUDED_PREFIXES
-        ) and PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text)
+        common_local_path_leaked = (
+            path not in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES
+            and PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text)
+        )
         if current_vault_leaked or common_local_path_leaked:
             local_path_violations.append(path)
     local_path_violations.sort()

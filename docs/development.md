@@ -149,6 +149,9 @@ changes. `make test` chains the fast unit lane with `make test-boundary-contract
 curated public/report_contract slice that catches script bootstrap, lifecycle
 inventory, and selector-registry drift before the full `make public-check` lane. `make test-all` is the non-release full regression lane and should be
 treated as checkpoint-grade work.
+Public-check implementation sources use a registry-owned focused owner-test
+minimum; the full `make public-check` remains the public-boundary closeout and
+is not duplicated into the tight feedback loop.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.
 Changed-path handoff plans use

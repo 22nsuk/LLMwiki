@@ -360,6 +360,7 @@ class PublicCheckSummaryTests(unittest.TestCase):
         for leaked_path in (
             "/workspace/LLMwiki/repo",
             "/Users/alice/work/repo",
+            "/private/var/folders/ab/tmp/repo",
             "workspace:/home/alice/work/repo",
         ):
             with self.subTest(leaked_path=leaked_path), tempfile.TemporaryDirectory() as temp_dir:
@@ -389,11 +390,32 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 [],
             )
 
-    def test_public_check_summary_allows_exported_source_path_fixture(self) -> None:
+    def test_public_check_summary_rejects_foreign_paths_in_unregistered_source_files(
+        self,
+    ) -> None:
+        for rel_path in (
+            "ops/scripts/leak.py",
+            "tests/leak.py",
+            "tools/leak.py",
+        ):
+            with self.subTest(rel_path=rel_path), tempfile.TemporaryDirectory() as temp_dir:
+                report = self._build_report_with_exported_text(
+                    temp_dir,
+                    rel_path,
+                    'DEV_ROOT = "/Users/alice/work/repo"\n',
+                )
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(
+                    report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                    [rel_path],
+                )
+
+    def test_public_check_summary_allows_registered_source_path_fixture(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             report = self._build_report_with_exported_text(
                 temp_dir,
-                "tests/test_fixture.py",
+                "tests/test_public_check_summary.py",
                 'FIXTURE_ROOT = "/workspace/example"\n',
             )
 
