@@ -278,6 +278,8 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         "/workspace/LLMwiki/repo",
         "/Users/alice/work/repo",
         "/var/folders/ab/tmp/repo",
+        "workspace:/home/alice/work/repo",
+        "source:/Users/alice/work/repo",
         r"C:\Users\alice\repo",
         r"C:\USERS\alice\repo",
         r"\\WSL$\Ubuntu\home\alice\repo",

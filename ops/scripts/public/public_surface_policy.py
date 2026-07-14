@@ -82,8 +82,8 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
 
 PUBLIC_LOCAL_ABSOLUTE_PATH_RE = re.compile(
     r"(?:"
-    r"(?<![A-Za-z0-9:])/(?:home|mnt|workspace|var/folders)/"
-    r"|(?<![A-Za-z0-9:])/Users/"
+    r"(?<![A-Za-z0-9])/(?:home|mnt|workspace|var/folders)/"
+    r"|(?<![A-Za-z0-9])/Users/"
     r"|(?i:"
     r"(?<![A-Za-z0-9])[A-Z]:[\\/]"
     r"|\\\\(?:wsl\$|wsl\.localhost)\\"
