@@ -362,7 +362,12 @@ class PublicCheckSummaryTests(unittest.TestCase):
             "/workspace/LLMwiki/repo",
             "/Users/alice/work/repo",
             "/private/var/folders/ab/tmp/repo",
+            "/" + "tmp/run-123-workspace/vault/wiki/page.md",
+            "/" + "var/tmp/run-123/vault",
+            "/" + "private/tmp/run-123/vault",
             "workspace:/home/alice/work/repo",
+            "file:///" + "home/alice/work/repo",
+            "vscode://file/" + "home/alice/work/repo",
             "c" + r":\temp\repo",
             "d" + ":/a/project",
         ):

@@ -82,12 +82,15 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
 )
 
 _POSIX_LOCAL_ROOTS = (
+    "private/tmp",
     "private/var/folders",
     "var/folders",
+    "var/tmp",
     "workspace",
     "Users",
     "home",
     "mnt",
+    "tmp",
 )
 _WINDOWS_LOCAL_ROOTS = ("Users",)
 _WINDOWS_UNC_SERVERS = ("wsl$", "wsl.localhost")
@@ -99,7 +102,7 @@ _WINDOWS_UNC_SERVER_PATTERN = "|".join(
     re.escape(server) for server in _WINDOWS_UNC_SERVERS
 )
 _PUBLIC_LOCAL_PATH_CANDIDATE_RE = re.compile(
-    rf"(?P<posix>(?<![A-Za-z0-9])/(?:{_POSIX_LOCAL_ROOT_PATTERN})/)"
+    rf"(?P<posix>/(?:{_POSIX_LOCAL_ROOT_PATTERN})/)"
     rf"|(?P<drive>(?<![A-Za-z0-9])[A-Za-z]:[\\/])"
     rf"|(?P<windows>(?<![A-Za-z0-9])(?i:"
     rf"{_DOUBLE_BACKSLASH_PATTERN}(?:{_WINDOWS_UNC_SERVER_PATTERN})"
@@ -108,7 +111,7 @@ _PUBLIC_LOCAL_PATH_CANDIDATE_RE = re.compile(
     rf"{_BACKSLASH_PATTERN}"
     rf"))"
 )
-_URI_SCHEME_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://")
+_URI_SCHEME_RE = re.compile(r"(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://")
 _ESCAPED_CONTROL_CHARACTER_RE = re.compile(
     r"""^[abfnrtv](?=$|[\s"'`,;\)\]\}])""",
     flags=re.IGNORECASE,
@@ -155,6 +158,15 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
 ] = {
     "ops/scripts/core/output_runtime.py": (
         PublicLocalPathLiteralExemption(_posix_local_path("home", r"""[^/\s\"']+""")),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", r"tmp[A-Za-z0-9_.-]+")
+        ),
+    ),
+    "ops/scripts/core/backfill_archived_run_artifacts.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp")),
+    ),
+    "ops/scripts/core/run_artifact_envelope_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp")),
     ),
     "ops/scripts/core/sanitize_run_artifacts.py": (
         PublicLocalPathLiteralExemption(
@@ -187,6 +199,25 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
         PublicLocalPathLiteralExemption(
             _posix_local_path("home", "example/code/LLMwiki-worktrees/goal-runtime")
         ),
+    ),
+    "tests/test_auto_improve_iteration_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "vault")),
+    ),
+    "tests/test_derived_surfaces.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "private-source.py")
+        ),
+    ),
+    "tests/test_goal_run_status.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "llmwiki-goal-status-audit.jsonl")
+        ),
+    ),
+    "tests/test_manifest_export_symlink_safety.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "outside.txt")),
+    ),
+    "tests/test_mechanism_assess.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", r"cache\n")),
     ),
     "tests/test_public_check_summary.py": (
         PublicLocalPathLiteralExemption(
@@ -241,10 +272,29 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
             _posix_local_path("mnt", "c/Users/ADMINI~1/AppData/Local/Temp")
         ),
     ),
+    "tests/test_release_run_manifest.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "not-in-vault.zip")
+        ),
+    ),
+    "tests/test_release_run_ready.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "not-in-vault.zip")
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "not-in-vault-smoke.json")
+        ),
+    ),
+    "tests/test_release_smoke.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "release-vault")
+        ),
+    ),
     "tests/test_runtime_hotspot_facade_golden_outputs.py": (
         PublicLocalPathLiteralExemption(_posix_local_path("var", "folders/")),
         PublicLocalPathLiteralExemption(_posix_local_path("mnt")),
         PublicLocalPathLiteralExemption(_posix_local_path("home")),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp")),
     ),
     "tests/test_sanitize_run_artifacts.py": (
         PublicLocalPathLiteralExemption(
@@ -281,23 +331,43 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
     ),
     "tests/test_trusted_candidate_runner.py": (
         PublicLocalPathLiteralExemption(_posix_local_path("home", "tester")),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "evil")),
+    ),
+    "tests/test_test_execution_command_runtime.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "venv/bin/python")
+        ),
     ),
 }
 
 
-def _is_uri_path_context(text: str, start: int) -> bool:
+def _classify_uri_path_context(text: str, start: int) -> str | None:
     token_start = start
     while token_start > 0 and not text[token_start - 1].isspace():
         if text[token_start - 1] in "\"'`":
             break
         token_start -= 1
-    return _URI_SCHEME_RE.search(text[token_start:start]) is not None
+    uri_matches = tuple(_URI_SCHEME_RE.finditer(text[token_start:start]))
+    if not uri_matches:
+        return None
+
+    uri_match = uri_matches[-1]
+    if uri_match.group("scheme").casefold() == "file":
+        return "local_file"
+
+    uri_path_prefix = text[token_start + uri_match.end() : start]
+    if uri_path_prefix.rstrip("/").casefold() == "file":
+        return "local_file"
+    return "remote"
 
 
 def _has_local_path_start_context(text: str, start: int) -> bool:
-    if start > 0 and text[start - 1].isalnum():
+    uri_context = _classify_uri_path_context(text, start)
+    if uri_context == "local_file":
+        return True
+    if uri_context == "remote":
         return False
-    return not _is_uri_path_context(text, start)
+    return start == 0 or not text[start - 1].isalnum()
 
 
 def _is_ambiguous_control_character_escape(
