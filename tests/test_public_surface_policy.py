@@ -23,8 +23,7 @@ from ops.scripts.public.public_surface_policy import (
     PUBLIC_INCLUDE_PREFIXES,
     PUBLIC_INCLUDED_REPORT_FILES,
     PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS,
-    PUBLIC_LOCAL_ABSOLUTE_PATH_RE,
-    redact_intentional_local_path_literals,
+    find_public_local_path_leaks,
     render_public_gitignore_block,
 )
 
@@ -287,12 +286,15 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         "source:/Users/alice/work/repo",
         r"C:\Users\alice\repo",
         r"C:\USERS\alice\repo",
+        r"c:\temp\repo",
+        "d:/a/project",
+        "d" + ":/n",
         r"\\WSL$\Ubuntu\home\alice\repo",
         r"\USERS\alice\repo",
     ],
 )
 def test_public_local_path_guard_recognizes_common_local_roots(marker: str) -> None:
-    assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(marker)
+    assert find_public_local_path_leaks(marker)
 
 
 @pytest.mark.parametrize(
@@ -312,7 +314,40 @@ def test_public_local_path_guard_recognizes_common_local_roots(marker: str) -> N
 def test_public_local_path_guard_does_not_treat_routes_or_urls_as_local_paths(
     text: str,
 ) -> None:
-    assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text) is None
+    assert find_public_local_path_leaks(text) == ()
+
+
+def test_public_local_path_guard_applies_url_context_to_current_source_root() -> None:
+    source_root = "/" + "workspace/LLMwiki"
+
+    assert (
+        find_public_local_path_leaks(
+            "https://example.com" + source_root,
+            source_root=source_root,
+        )
+        == ()
+    )
+    assert find_public_local_path_leaks(
+        "source:" + source_root + "/private",
+        source_root=source_root,
+    )
+
+
+def test_intentional_local_path_literal_does_not_exempt_longer_prefix() -> None:
+    rel_path = "tests/test_public_check_summary.py"
+    allowed_path = "/" + "workspace/example"
+
+    assert (
+        find_public_local_path_leaks(
+            f'FIXTURE_ROOT = "{allowed_path}"\n',
+            rel_path=rel_path,
+        )
+        == ()
+    )
+    assert find_public_local_path_leaks(
+        f'DEV_ROOT = "{allowed_path}-secret/private"\n',
+        rel_path=rel_path,
+    )
 
 
 def test_intentional_local_path_literals_are_exact_public_source_exemptions() -> None:
@@ -343,16 +378,15 @@ def test_intentional_local_path_literals_are_exact_public_source_exemptions() ->
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        if PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text):
+        if find_public_local_path_leaks(text):
             observed_literal_files.add(rel_path)
-        redacted = redact_intentional_local_path_literals(rel_path, text)
-        assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(redacted) is None, rel_path
+        assert find_public_local_path_leaks(text, rel_path=rel_path) == (), rel_path
 
     assert observed_literal_files == set(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS)
     for rel_path, exemptions in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS.items():
         text = (REPO_ROOT / rel_path).read_text(encoding="utf-8")
         for exemption in exemptions:
-            assert text.count(exemption.text) >= exemption.occurrences, (
+            assert exemption.text in text, (
                 rel_path,
                 exemption.text,
             )

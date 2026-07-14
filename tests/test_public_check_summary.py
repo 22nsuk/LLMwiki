@@ -363,6 +363,8 @@ class PublicCheckSummaryTests(unittest.TestCase):
             "/Users/alice/work/repo",
             "/private/var/folders/ab/tmp/repo",
             "workspace:/home/alice/work/repo",
+            "c" + r":\temp\repo",
+            "d" + ":/a/project",
         ):
             with self.subTest(leaked_path=leaked_path), tempfile.TemporaryDirectory() as temp_dir:
                 report = self._build_report_with_exported_text(
@@ -388,6 +390,29 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["status"], "pass")
             self.assertEqual(
                 report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                [],
+            )
+
+    def test_public_check_summary_allows_url_containing_current_vault_text(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            public_out = Path(temp_dir) / "public"
+            rel_path = "tests/test_public_surface_policy.py"
+            exported_file = public_out / rel_path
+            exported_file.parent.mkdir(parents=True)
+            exported_file.write_text(
+                'URL = "https://example.com/workspace/LLMwiki"\n',
+                encoding="utf-8",
+            )
+
+            assertions = _public_export_negative_assertions(
+                public_out,
+                {},
+                [{"path": rel_path}],
+                source_vault=Path("/", "workspace", "LLMwiki"),
+            )
+
+            self.assertEqual(
+                assertions["local_path_absence"]["violations"],
                 [],
             )
 
@@ -424,6 +449,21 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(
                 report["public_export_negative_assertions"]["local_path_absence"]["violations"],
                 [],
+            )
+
+    def test_public_check_summary_rejects_longer_path_with_allowed_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            longer_path = "/" + "workspace/example-secret/private"
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "tests/test_public_check_summary.py",
+                f'DEV_ROOT = "{longer_path}"\n',
+            )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                ["tests/test_public_check_summary.py"],
             )
 
     def test_public_check_summary_allows_registered_fixture_containing_current_vault(

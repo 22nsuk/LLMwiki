@@ -76,13 +76,14 @@ def _assert_schema_valid(payload: dict[str, object], schema_path: Path) -> None:
 
 
 def _assert_no_local_path_leak(payload: object) -> None:
+    windows_separator = "\\"
     forbidden_fragments = (
         "/tmp/",
         "/var/folders/",
         "/mnt/",
         "/home/",
-        "\\Users\\",
-        "C:\\",
+        f"{windows_separator}Users{windows_separator}",
+        f"C:{windows_separator}",
     )
 
     def strings(value: object) -> Iterator[str]:

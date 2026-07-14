@@ -9,7 +9,7 @@ import yaml
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.eval.doc_graph_integrity import build_report as build_doc_graph_report
 from ops.scripts.public.export_public_repo import should_export_public
-from ops.scripts.public.public_surface_policy import PUBLIC_LOCAL_ABSOLUTE_PATH_RE
+from ops.scripts.public.public_surface_policy import find_public_local_path_leaks
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
 
@@ -41,10 +41,11 @@ def _local_path_leaks(paths: list[Path]) -> list[str]:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
+        rel_path = path.relative_to(REPO_ROOT).as_posix()
         for line_number, line in enumerate(text.splitlines(), start=1):
-            if PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(line):
+            if find_public_local_path_leaks(line, rel_path=rel_path):
                 leaks.append(
-                    f"{path.relative_to(REPO_ROOT).as_posix()}:{line_number}: {line.strip()}"
+                    f"{rel_path}:{line_number}: {line.strip()}"
                 )
     return leaks
 

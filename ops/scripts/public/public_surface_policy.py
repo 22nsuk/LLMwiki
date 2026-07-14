@@ -81,22 +81,52 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
     "Thumbs.db",
 )
 
-PUBLIC_LOCAL_ABSOLUTE_PATH_RE = re.compile(
-    r"(?:"
-    r"(?<![A-Za-z0-9])/(?:home|mnt|workspace|var/folders|private/var/folders)/"
-    r"|(?<![A-Za-z0-9])/Users/"
-    r"|(?<![A-Za-z0-9])[A-Z]:[\\/]"
-    r"|(?i:\\\\(?:wsl\$|wsl\.localhost)\\"
-    r"|\\Users\\"
-    r")"
-    r")"
+_POSIX_LOCAL_ROOTS = (
+    "private/var/folders",
+    "var/folders",
+    "workspace",
+    "Users",
+    "home",
+    "mnt",
 )
+_WINDOWS_LOCAL_ROOTS = ("Users",)
+_WINDOWS_UNC_SERVERS = ("wsl$", "wsl.localhost")
+_BACKSLASH_PATTERN = re.escape("\\")
+_DOUBLE_BACKSLASH_PATTERN = re.escape("\\\\")
+_POSIX_LOCAL_ROOT_PATTERN = "|".join(re.escape(root) for root in _POSIX_LOCAL_ROOTS)
+_WINDOWS_LOCAL_ROOT_PATTERN = "|".join(re.escape(root) for root in _WINDOWS_LOCAL_ROOTS)
+_WINDOWS_UNC_SERVER_PATTERN = "|".join(
+    re.escape(server) for server in _WINDOWS_UNC_SERVERS
+)
+_PUBLIC_LOCAL_PATH_CANDIDATE_RE = re.compile(
+    rf"(?P<posix>(?<![A-Za-z0-9])/(?:{_POSIX_LOCAL_ROOT_PATTERN})/)"
+    rf"|(?P<drive>(?<![A-Za-z0-9])[A-Za-z]:[\\/])"
+    rf"|(?P<windows>(?<![A-Za-z0-9])(?i:"
+    rf"{_DOUBLE_BACKSLASH_PATTERN}(?:{_WINDOWS_UNC_SERVER_PATTERN})"
+    rf"{_BACKSLASH_PATTERN}"
+    rf"|{_BACKSLASH_PATTERN}(?:{_WINDOWS_LOCAL_ROOT_PATTERN})"
+    rf"{_BACKSLASH_PATTERN}"
+    rf"))"
+)
+_URI_SCHEME_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://")
+_ESCAPED_CONTROL_CHARACTER_RE = re.compile(
+    r"""^[abfnrtv](?=$|[\s"'`,;\)\]\}])""",
+    flags=re.IGNORECASE,
+)
+_COMPLETE_LITERAL_TERMINATORS = frozenset("\t\r\n\"'`,;)]}")
 
 
 @dataclass(frozen=True)
 class PublicLocalPathLiteralExemption:
     text: str
-    occurrences: int = 1
+
+
+@dataclass(frozen=True)
+class PublicLocalPathLeak:
+    kind: str
+    text: str
+    start: int
+    end: int
 
 
 def _posix_local_path(root: str, suffix: str = "") -> str:
@@ -107,8 +137,13 @@ def _windows_root_path(root: str, suffix: str = "") -> str:
     return f"\\{root}\\{suffix}"
 
 
-def _windows_drive_path(drive: str, suffix: str = "") -> str:
-    return f"{drive}:\\{suffix}"
+def _windows_drive_path(
+    drive: str,
+    suffix: str = "",
+    *,
+    separator: str = "\\",
+) -> str:
+    return f"{drive}:{separator}{suffix}"
 
 
 def _windows_unc_path(server: str, suffix: str) -> str:
@@ -136,10 +171,6 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
     "ops/scripts/mechanism/run_mechanism_experiment_runtime.py": (
         PublicLocalPathLiteralExemption(_posix_local_path("mnt")),
     ),
-    "ops/scripts/public/public_surface_policy.py": (
-        PublicLocalPathLiteralExemption(_posix_local_path("Users")),
-        PublicLocalPathLiteralExemption(_windows_root_path("Users")),
-    ),
     "tests/test_backfill_historical_bootstrap_reports.py": (
         PublicLocalPathLiteralExemption(
             _posix_local_path(
@@ -148,8 +179,7 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
             )
         ),
         PublicLocalPathLiteralExemption(
-            _posix_local_path("mnt", "data/build_llm_wiki_package/LLM Wiki vNext"),
-            occurrences=2,
+            _posix_local_path("mnt", "data/build_llm_wiki_package/LLM Wiki vNext")
         ),
         PublicLocalPathLiteralExemption(_posix_local_path("mnt", "data/")),
     ),
@@ -160,12 +190,10 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
     ),
     "tests/test_public_check_summary.py": (
         PublicLocalPathLiteralExemption(
-            _posix_local_path("workspace", ".venv/bin/python"), occurrences=2
+            _posix_local_path("workspace", ".venv/bin/python")
         ),
         PublicLocalPathLiteralExemption(_posix_local_path("workspace", "LLMwiki/repo")),
-        PublicLocalPathLiteralExemption(
-            _posix_local_path("Users", "alice/work/repo"), occurrences=2
-        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("Users", "alice/work/repo")),
         PublicLocalPathLiteralExemption(
             _posix_local_path("private", "var/folders/ab/tmp/repo")
         ),
@@ -174,7 +202,7 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
         ),
         PublicLocalPathLiteralExemption(_posix_local_path("workspace", "example")),
         PublicLocalPathLiteralExemption(
-            _posix_local_path("home", "alice/.venv/bin/python"), occurrences=4
+            _posix_local_path("home", "alice/.venv/bin/python")
         ),
         PublicLocalPathLiteralExemption(
             _posix_local_path("home", "bob/.venv/bin/python")
@@ -199,6 +227,10 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
         ),
         PublicLocalPathLiteralExemption(_windows_drive_path("C", r"Users\alice\repo")),
         PublicLocalPathLiteralExemption(_windows_drive_path("C", r"USERS\alice\repo")),
+        PublicLocalPathLiteralExemption(_windows_drive_path("c", r"temp\repo")),
+        PublicLocalPathLiteralExemption(
+            _windows_drive_path("d", "a/project", separator="/")
+        ),
         PublicLocalPathLiteralExemption(
             _windows_unc_path("WSL$", r"Ubuntu\home\alice\repo")
         ),
@@ -213,8 +245,6 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
         PublicLocalPathLiteralExemption(_posix_local_path("var", "folders/")),
         PublicLocalPathLiteralExemption(_posix_local_path("mnt")),
         PublicLocalPathLiteralExemption(_posix_local_path("home")),
-        PublicLocalPathLiteralExemption(_windows_root_path("Users")),
-        PublicLocalPathLiteralExemption(_windows_drive_path("C")),
     ),
     "tests/test_sanitize_run_artifacts.py": (
         PublicLocalPathLiteralExemption(
@@ -226,8 +256,7 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
         PublicLocalPathLiteralExemption(
             _posix_local_path(
                 "mnt", "c/Users/Administrator/Desktop/작업/LLM Wiki vNext"
-            ),
-            occurrences=3,
+            )
         ),
         PublicLocalPathLiteralExemption(
             _posix_local_path(
@@ -256,18 +285,149 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
 }
 
 
-def redact_intentional_local_path_literals(rel_path: str, text: str) -> str:
-    exemptions = sorted(
-        PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS.get(rel_path, ()),
-        key=lambda exemption: len(exemption.text),
-        reverse=True,
+def _is_uri_path_context(text: str, start: int) -> bool:
+    token_start = start
+    while token_start > 0 and not text[token_start - 1].isspace():
+        if text[token_start - 1] in "\"'`":
+            break
+        token_start -= 1
+    return _URI_SCHEME_RE.search(text[token_start:start]) is not None
+
+
+def _has_local_path_start_context(text: str, start: int) -> bool:
+    if start > 0 and text[start - 1].isalnum():
+        return False
+    return not _is_uri_path_context(text, start)
+
+
+def _is_ambiguous_control_character_escape(
+    text: str,
+    candidate: re.Match[str],
+) -> bool:
+    return (
+        candidate.lastgroup == "drive"
+        and candidate.group(0).endswith("\\")
+        and bool(_ESCAPED_CONTROL_CHARACTER_RE.match(text[candidate.end() :]))
     )
-    redacted = text
-    for exemption in exemptions:
-        replacement = " " * len(exemption.text)
-        for _ in range(exemption.occurrences):
-            redacted = redacted.replace(exemption.text, replacement, 1)
-    return redacted
+
+
+def _source_root_markers(source_root: str | None) -> tuple[str, ...]:
+    if not source_root:
+        return ()
+    raw_marker = str(source_root).rstrip("/\\")
+    if not raw_marker:
+        return ()
+    return tuple(
+        sorted(
+            {
+                raw_marker,
+                raw_marker.replace("\\", "/"),
+                raw_marker.replace("/", "\\"),
+            },
+            key=len,
+            reverse=True,
+        )
+    )
+
+
+def _has_source_root_end_context(text: str, end: int) -> bool:
+    if end >= len(text):
+        return True
+    next_character = text[end]
+    if next_character in "/\\":
+        return True
+    if next_character == ".":
+        after_period = end + 1
+        return after_period >= len(text) or text[after_period].isspace()
+    return not (next_character.isalnum() or next_character in "._~-")
+
+
+def _candidate_local_path_leaks(
+    text: str,
+    *,
+    source_root: str | None,
+) -> list[PublicLocalPathLeak]:
+    candidates: list[PublicLocalPathLeak] = []
+    for match in _PUBLIC_LOCAL_PATH_CANDIDATE_RE.finditer(text):
+        if not _has_local_path_start_context(text, match.start()):
+            continue
+        if _is_ambiguous_control_character_escape(text, match):
+            continue
+        kind = match.lastgroup
+        assert kind is not None
+        candidates.append(
+            PublicLocalPathLeak(
+                kind=kind,
+                text=match.group(0),
+                start=match.start(),
+                end=match.end(),
+            )
+        )
+
+    for marker in _source_root_markers(source_root):
+        search_start = 0
+        while True:
+            start = text.find(marker, search_start)
+            if start < 0:
+                break
+            end = start + len(marker)
+            if _has_local_path_start_context(
+                text, start
+            ) and _has_source_root_end_context(text, end):
+                candidates.append(
+                    PublicLocalPathLeak(
+                        kind="source_root",
+                        text=marker,
+                        start=start,
+                        end=end,
+                    )
+                )
+            search_start = start + 1
+
+    candidates.sort(key=lambda item: (item.start, -(item.end - item.start), item.kind))
+    longest_candidate_by_start: dict[int, PublicLocalPathLeak] = {}
+    for leak in candidates:
+        longest_candidate_by_start.setdefault(leak.start, leak)
+    return list(longest_candidate_by_start.values())
+
+
+def _is_complete_literal_occurrence(text: str, end: int) -> bool:
+    return end >= len(text) or text[end] in _COMPLETE_LITERAL_TERMINATORS
+
+
+def _intentional_local_path_literal_spans(
+    rel_path: str,
+    text: str,
+) -> tuple[tuple[int, int], ...]:
+    spans: set[tuple[int, int]] = set()
+    for exemption in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS.get(rel_path, ()):
+        search_start = 0
+        while True:
+            start = text.find(exemption.text, search_start)
+            if start < 0:
+                break
+            end = start + len(exemption.text)
+            if _is_complete_literal_occurrence(text, end):
+                spans.add((start, end))
+            search_start = start + 1
+    return tuple(sorted(spans))
+
+
+def find_public_local_path_leaks(
+    text: str,
+    *,
+    rel_path: str = "",
+    source_root: str | None = None,
+) -> tuple[PublicLocalPathLeak, ...]:
+    exemption_spans = _intentional_local_path_literal_spans(rel_path, text)
+    return tuple(
+        candidate
+        for candidate in _candidate_local_path_leaks(text, source_root=source_root)
+        if not any(
+            start <= candidate.start and candidate.end <= end
+            for start, end in exemption_spans
+        )
+    )
 
 
 # Without a trailing slash, Git matches both files and directories named like the segment.
