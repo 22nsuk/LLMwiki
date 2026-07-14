@@ -1532,57 +1532,68 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 self.assertEqual(plan["selected_commands"], ["make static", "make public-check"])
 
     def test_changed_path_minimum_plan_matches_repo_skill(self) -> None:
-        report = build_report(
-            self.vault,
-            changed_paths=[".agents/skills/example-skill/SKILL.md"],
-            context=fixed_context(),
-        )
+        for changed_path in (
+            ".agents/skills/example-skill/SKILL.md",
+            ".agents/skills/example-skill/notes.md",
+        ):
+            with self.subTest(changed_path=changed_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[changed_path],
+                    context=fixed_context(),
+                )
 
-        plan = report["changed_path_minimum_plan"]
-        self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
-        self.assertEqual(plan["status"], "pass")
-        self.assertEqual(plan["coverage_class"], "repo_skill_contract")
-        self.assertEqual(
-            plan["selected_commands"],
-            [
-                "make static",
-                FOCUSED_REPO_SKILL_TEST_COMMAND,
-            ],
-        )
-        self.assertEqual(plan["estimated_duration_seconds"], 90)
-        self.assertEqual(
-            validate_with_schema(
-                report,
-                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
-            ),
-            [],
-        )
+                plan = report["changed_path_minimum_plan"]
+                self.assertEqual(report["status"], "pass")
+                self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "repo_skill_contract")
+                self.assertEqual(
+                    plan["selected_commands"],
+                    [
+                        "make static",
+                        FOCUSED_REPO_SKILL_TEST_COMMAND,
+                    ],
+                )
+                self.assertEqual(plan["estimated_duration_seconds"], 90)
+                self.assertEqual(
+                    validate_with_schema(
+                        report,
+                        load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+                    ),
+                    [],
+                )
 
     def test_changed_path_minimum_plan_matches_subagent_profile(self) -> None:
-        report = build_report(
-            self.vault,
-            changed_paths=[".codex/agents/external-report-action-auditor.toml"],
-            context=fixed_context(),
-        )
+        for changed_path in (
+            ".codex/agents/external-report-action-auditor.toml",
+            ".codex/agents/README.md",
+            ".codex/agents/notes.md",
+        ):
+            with self.subTest(changed_path=changed_path):
+                report = build_report(
+                    self.vault,
+                    changed_paths=[changed_path],
+                    context=fixed_context(),
+                )
 
-        plan = report["changed_path_minimum_plan"]
-        self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
-        self.assertEqual(plan["status"], "pass")
-        self.assertEqual(plan["coverage_class"], "subagent_profile_contract")
-        self.assertEqual(
-            plan["selected_commands"],
-            ["make static", FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND],
-        )
-        self.assertEqual(plan["estimated_duration_seconds"], 90)
-        self.assertEqual(
-            validate_with_schema(
-                report,
-                load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
-            ),
-            [],
-        )
+                plan = report["changed_path_minimum_plan"]
+                self.assertEqual(report["status"], "pass")
+                self.assertEqual(report["diagnostics"]["unknown_change_paths"], [])
+                self.assertEqual(plan["status"], "pass")
+                self.assertEqual(plan["coverage_class"], "subagent_profile_contract")
+                self.assertEqual(
+                    plan["selected_commands"],
+                    ["make static", FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND],
+                )
+                self.assertEqual(plan["estimated_duration_seconds"], 90)
+                self.assertEqual(
+                    validate_with_schema(
+                        report,
+                        load_schema(WORKFLOW_DEPENDENCY_PLANNER_SCHEMA_PATH),
+                    ),
+                    [],
+                )
 
     def test_registry_covered_paths_are_not_workflow_unknown(self) -> None:
         report = build_report(

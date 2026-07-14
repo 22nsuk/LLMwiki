@@ -98,39 +98,19 @@ def test_skill_root_discovery_includes_incomplete_package_directories(
     assert _skill_roots(tmp_path) == [incomplete_root]
 
 
-def test_repo_skill_markdown_links_resolve() -> None:
+def test_repo_skill_markdown_doc_graph_is_current() -> None:
     context = RuntimeContext(
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 7, 14, tzinfo=dt.UTC),
     )
     report = build_doc_graph_report(REPO_ROOT, context=context)
-    missing_skill_links = [
-        item
-        for item in report["missing_links"]
-        if str(item.get("source", "")).startswith(".agents/skills/")
-    ]
+    failures = {
+        key: report[key]
+        for key in ("missing_links", "unallowed_orphans", "stale_allowlist")
+        if report[key]
+    }
 
-    assert missing_skill_links == []
-
-
-@pytest.mark.parametrize(
-    "marker",
-    [
-        "/home/alice/work/repo",
-        "/mnt/c/Users/alice/repo",
-        "/var/folders/ab/tmp/repo",
-        r"C:\Users\alice\repo",
-        r"\\wsl$\Ubuntu\home\alice\repo",
-    ],
-)
-def test_repo_skill_local_path_guard_recognizes_common_local_roots(
-    marker: str,
-) -> None:
-    assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(marker)
-
-
-def test_repo_skill_local_path_guard_does_not_treat_urls_as_drive_paths() -> None:
-    assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search("https://example.com/docs") is None
+    assert report["status"] == "pass", failures
 
 
 def test_test_lane_skill_is_registry_backed() -> None:

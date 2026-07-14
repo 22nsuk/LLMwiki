@@ -21,6 +21,7 @@ from ops.scripts.public.public_surface_policy import (
     PUBLIC_GITIGNORE_TEMPLATE,
     PUBLIC_INCLUDE_FILES,
     PUBLIC_INCLUDED_REPORT_FILES,
+    PUBLIC_LOCAL_ABSOLUTE_PATH_RE,
     render_public_gitignore_block,
 )
 
@@ -267,6 +268,35 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         self.assertIn(".codebase-memory", PUBLIC_EXCLUDED_SEGMENTS)
         self.assertFalse(should_export_public(".codebase-memory/graph.db.zst"))
         self.assertFalse(should_export_public("ops/.codebase-memory/graph.db.zst"))
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "/home/alice/work/repo",
+        "/mnt/c/Users/alice/repo",
+        "/workspace/LLMwiki/repo",
+        "/Users/alice/work/repo",
+        "/var/folders/ab/tmp/repo",
+        r"C:\Users\alice\repo",
+        r"\\wsl$\Ubuntu\home\alice\repo",
+    ],
+)
+def test_public_local_path_guard_recognizes_common_local_roots(marker: str) -> None:
+    assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(marker)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com/docs",
+        "https://example.com/home/alice",
+        "https://example.com/workspace/LLMwiki",
+        "https://example.com/Users/alice",
+    ],
+)
+def test_public_local_path_guard_does_not_treat_urls_as_local_paths(url: str) -> None:
+    assert PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(url) is None
 
 
 if __name__ == "__main__":  # pragma: no cover

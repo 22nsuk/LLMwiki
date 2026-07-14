@@ -76,6 +76,9 @@ repository contract and each `SKILL.md` is a documentation-graph entrypoint.
 Adding another package under the established prefix must not require a new
 public-policy rule, per-skill fixture path, or documentation index link. A thin
 role profile may point to a repo skill, but the workflow stays in the skill.
+The focused repository-skill and subagent-profile contracts also validate the
+shared documentation graph in-process, so nested Markdown cannot bypass
+missing-link or orphan checks without adding another Make lane.
 The same registry owns the expected trusted-CI repository, signer workflow,
 runner, aggregate command, concrete collection suite and pytest command, and
 Python/pytest environment. Import also requires an exact collection-to-JUnit

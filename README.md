@@ -107,7 +107,7 @@ Use `make help` for the compact, current command index. The main families are:
 | Supply-chain artifact change | `make supply-chain-check` | The owning SBOM/provenance target plus relevant release checks |
 
 Full-vault work that reads or mutates `raw/`, `wiki/`, `system/`, `runs/`, or
-`external-reports/` also needs [AGENTS.local.md](./AGENTS.local.md). Public docs,
+`external-reports/` also needs `AGENTS.local.md`. Public docs,
 tests, and fixtures must not assume those private surfaces exist.
 
 ## Repository Layout

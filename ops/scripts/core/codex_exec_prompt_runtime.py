@@ -27,9 +27,10 @@ EXECUTOR_REPORT_SCHEMA = EXECUTOR_REPORT_SCHEMA_PATH
 PROJECT_FULL_REGRESSION_LANE = "make test-all"
 PROJECT_RELEASE_EVIDENCE_LANE = "make test-execution-summary-full-current-or-refresh"
 REPOSITORY_SKILL_GUIDANCE = """Repository-required skills:
-- If the role profile, `AGENTS.md`, or `AGENTS.local.md` names a required skill that is absent from the system-provided available skills list, resolve its body before continuing.
-- Check `.agents/skills/<skill>/SKILL.md` in the workspace first. Only when it is absent, check `$CODEX_HOME/skills/<skill>/SKILL.md` and `~/.codex/skills/<skill>/SKILL.md` as personal fallbacks.
-- Read and apply the first readable skill body; do not fail solely because the system available-skills list omitted it.
+- For every skill required by the role profile, `AGENTS.md`, or `AGENTS.local.md`, resolve the workspace body before continuing, even when the system-provided available skills list already contains the same skill name.
+- Check `.agents/skills/<skill>/SKILL.md` in the workspace first. When it is readable, treat it as the canonical workflow body.
+- Only when the repository body is absent or unreadable, use the system-provided skill body, then check `$CODEX_HOME/skills/<skill>/SKILL.md` and `~/.codex/skills/<skill>/SKILL.md` as personal fallbacks.
+- Read and apply the first readable fallback body; do not fail solely because the system available-skills list omitted the skill.
 - If every candidate is absent or unreadable, report the checked skill path surfaces as a blocker.
 """
 

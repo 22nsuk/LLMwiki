@@ -12,6 +12,7 @@ from ops.scripts.core.policy_runtime import load_policy, subagent_ladder_model_e
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.core.subagent_profile_schema import build_report
+from ops.scripts.eval.doc_graph_integrity import build_report as build_doc_graph_report
 
 pytestmark = [pytest.mark.public, pytest.mark.report_contract, pytest.mark.report_contract_core]
 
@@ -108,6 +109,16 @@ class SubagentProfileSchemaTests(unittest.TestCase):
             "../../.agents/skills/external-report-reconciliation/SKILL.md",
             AGENT_README_PATH.read_text(encoding="utf-8"),
         )
+
+    def test_subagent_markdown_doc_graph_is_current(self) -> None:
+        report = build_doc_graph_report(REPO_ROOT, context=fixed_context())
+        failures = {
+            key: report[key]
+            for key in ("missing_links", "unallowed_orphans", "stale_allowlist")
+            if report[key]
+        }
+
+        self.assertEqual(report["status"], "pass", msg=failures)
 
     def test_profiles_match_policy_roles_and_schema(self) -> None:
         report = build_report(REPO_ROOT, context=fixed_context())
