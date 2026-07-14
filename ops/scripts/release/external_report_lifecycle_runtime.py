@@ -131,6 +131,9 @@ from .external_report_release_verification_runtime import (
     archive_reconciliation_observation_paths,
     archive_reconciliation_observation_reason_ids,
     full_suite_evidence_currentness_verified,
+    matrix_deferred_release_verified_action_paths,
+    matrix_deferred_release_verified_paths,
+    matrix_observable_release_verified_action_reason_ids,
     promotion_truth_ladder_verified,
     release_evidence_bundle_and_attestation_verified,
     release_run_verified,
@@ -205,6 +208,9 @@ _RELEASE_VERIFICATION_COMPAT_EXPORTS = (
     archive_reconciliation_observation_paths,
     archive_reconciliation_observation_reason_ids,
     full_suite_evidence_currentness_verified,
+    matrix_deferred_release_verified_action_paths,
+    matrix_deferred_release_verified_paths,
+    matrix_observable_release_verified_action_reason_ids,
     promotion_truth_ladder_verified,
     release_evidence_bundle_and_attestation_verified,
     release_run_verified,
@@ -273,7 +279,7 @@ def external_report_current_release_manifest_pass(
     return current_release_manifest_pass(vault, rel_path, artifact_kind)
 
 
-def _collect_action_evidence(
+def collect_action_evidence(
     vault: Path, action: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], int, int]:
     evidence = []
@@ -349,7 +355,7 @@ def _resolve_action_status(
 def status_from_evidence(
     vault: Path, action: dict[str, Any]
 ) -> tuple[str, list[dict[str, Any]]]:
-    evidence, existing_count, expected_count = _collect_action_evidence(vault, action)
+    evidence, existing_count, expected_count = collect_action_evidence(vault, action)
     action_id = str(action["action_id"])
     status = _resolve_action_status(
         vault,
