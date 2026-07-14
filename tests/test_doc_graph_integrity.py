@@ -63,6 +63,33 @@ class DocGraphIntegrityTests(unittest.TestCase):
         self.assertNotIn(".agents/skills/beta/SKILL.md", report["orphan_docs"])
         self.assertEqual(validate_with_schema(report, schema), [])
 
+    def test_doc_graph_rejects_unlinked_nested_agent_markdown(self) -> None:
+        scenarios = (
+            ("repo-skill", ".agents/skills/example/SKILL.md"),
+            ("subagent", ".codex/agents/README.md"),
+        )
+        for label, entrypoint_rel in scenarios:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                vault = Path(temp_dir)
+                entrypoint = vault / entrypoint_rel
+                entrypoint.parent.mkdir(parents=True)
+                entrypoint.write_text(f"# {label}\n", encoding="utf-8")
+                notes = entrypoint.parent / "notes.md"
+                notes.write_text("# Unlinked notes\n", encoding="utf-8")
+                if label == "subagent":
+                    (vault / "README.md").write_text(
+                        "[Agents](.codex/agents/README.md)\n",
+                        encoding="utf-8",
+                    )
+
+                report = build_report(vault, context=fixed_context())
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(
+                    report["unallowed_orphans"],
+                    [notes.relative_to(vault).as_posix()],
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

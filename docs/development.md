@@ -76,6 +76,9 @@ repository contract and each `SKILL.md` is a documentation-graph entrypoint.
 Adding another package under the established prefix must not require a new
 public-policy rule, per-skill fixture path, or documentation index link. A thin
 role profile may point to a repo skill, but the workflow stays in the skill.
+The focused repository-skill and subagent-profile contracts also validate the
+shared documentation graph in-process, so nested Markdown cannot bypass
+missing-link or orphan checks without adding another Make lane.
 The same registry owns the expected trusted-CI repository, signer workflow,
 runner, aggregate command, concrete collection suite and pytest command, and
 Python/pytest environment. Import also requires an exact collection-to-JUnit
@@ -146,6 +149,9 @@ changes. `make test` chains the fast unit lane with `make test-boundary-contract
 curated public/report_contract slice that catches script bootstrap, lifecycle
 inventory, and selector-registry drift before the full `make public-check` lane. `make test-all` is the non-release full regression lane and should be
 treated as checkpoint-grade work.
+The public exporter, public-surface policy, and public-check summary share a
+registry-owned focused owner-test minimum; the full `make public-check` remains
+the public-boundary closeout and is not duplicated into the tight feedback loop.
 `make test-report-contract-core` is the preferred tight-loop report-contract
 proof for schema, Make/CI, and generated artifact contract edits.
 Changed-path handoff plans use

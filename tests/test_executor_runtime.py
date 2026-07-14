@@ -525,6 +525,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("Repository-required skills", prompt)
             self.assertIn(".agents/skills/<skill>/SKILL.md", prompt)
             self.assertIn("$CODEX_HOME/skills/<skill>/SKILL.md", prompt)
+            self.assertIn(
+                "even when the system-provided available skills list already contains the same skill name",
+                prompt,
+            )
+            self.assertIn(
+                "Only when the repository body is absent or unreadable",
+                prompt,
+            )
             self.assertIn("do not fail solely because the system available-skills list omitted", prompt)
             self.assertLess(
                 prompt.index(".agents/skills/<skill>/SKILL.md"),
@@ -719,7 +727,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(
                 hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "90a812645cf454e3f5a2438ff64185b38a17e40dbde646101582dc6039f3e269",
+                "cf5493110ce78081f7428cf4c730717462d6f9ab8eb4b3e03d761a90e03d7f3e",
             )
             section_positions = [
                 prompt.index(section)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
 
@@ -80,10 +81,424 @@ PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
     "Thumbs.db",
 )
 
-PUBLIC_LOCAL_ABSOLUTE_PATH_RE = re.compile(
-    r"(?:/(?:home|mnt)/|/var/folders/|(?<![A-Za-z0-9])[A-Za-z]:[\\/]|\\\\(?:wsl\$|wsl\.localhost)\\|\\Users\\)",
-    re.IGNORECASE,
+_POSIX_LOCAL_ROOTS = (
+    "private/tmp",
+    "private/var/folders",
+    "var/folders",
+    "var/tmp",
+    "workspace",
+    "Users",
+    "home",
+    "mnt",
+    "tmp",
 )
+_WINDOWS_LOCAL_ROOTS = ("Users",)
+_WINDOWS_UNC_SERVERS = ("wsl$", "wsl.localhost")
+_BACKSLASH_PATTERN = re.escape("\\")
+_DOUBLE_BACKSLASH_PATTERN = re.escape("\\\\")
+_POSIX_LOCAL_ROOT_PATTERN = "|".join(re.escape(root) for root in _POSIX_LOCAL_ROOTS)
+_WINDOWS_LOCAL_ROOT_PATTERN = "|".join(re.escape(root) for root in _WINDOWS_LOCAL_ROOTS)
+_WINDOWS_UNC_SERVER_PATTERN = "|".join(
+    re.escape(server) for server in _WINDOWS_UNC_SERVERS
+)
+_PUBLIC_LOCAL_PATH_CANDIDATE_RE = re.compile(
+    rf"(?P<posix>/(?:{_POSIX_LOCAL_ROOT_PATTERN})/)"
+    rf"|(?P<drive>(?<![A-Za-z0-9])[A-Za-z]:[\\/])"
+    rf"|(?P<windows>(?<![A-Za-z0-9])(?i:"
+    rf"{_DOUBLE_BACKSLASH_PATTERN}(?:{_WINDOWS_UNC_SERVER_PATTERN})"
+    rf"{_BACKSLASH_PATTERN}"
+    rf"|{_BACKSLASH_PATTERN}(?:{_WINDOWS_LOCAL_ROOT_PATTERN})"
+    rf"{_BACKSLASH_PATTERN}"
+    rf"))"
+)
+_URI_SCHEME_RE = re.compile(r"(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://")
+_ESCAPED_CONTROL_CHARACTER_RE = re.compile(
+    r"""^[abfnrtv](?=$|[\s"'`,;\)\]\}])""",
+    flags=re.IGNORECASE,
+)
+_COMPLETE_LITERAL_TERMINATORS = frozenset("\t\r\n\"'`,;)]}")
+
+
+@dataclass(frozen=True)
+class PublicLocalPathLiteralExemption:
+    text: str
+
+
+@dataclass(frozen=True)
+class PublicLocalPathLeak:
+    kind: str
+    text: str
+    start: int
+    end: int
+
+
+def _posix_local_path(root: str, suffix: str = "") -> str:
+    return f"/{root}/{suffix}"
+
+
+def _windows_root_path(root: str, suffix: str = "") -> str:
+    return f"\\{root}\\{suffix}"
+
+
+def _windows_drive_path(
+    drive: str,
+    suffix: str = "",
+    *,
+    separator: str = "\\",
+) -> str:
+    return f"{drive}:{separator}{suffix}"
+
+
+def _windows_unc_path(server: str, suffix: str) -> str:
+    return f"\\\\{server}\\{suffix}"
+
+
+PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
+    str, tuple[PublicLocalPathLiteralExemption, ...]
+] = {
+    "ops/scripts/core/output_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("home", r"""[^/\s\"']+""")),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", r"tmp[A-Za-z0-9_.-]+")
+        ),
+    ),
+    "ops/scripts/core/backfill_archived_run_artifacts.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp")),
+    ),
+    "ops/scripts/core/run_artifact_envelope_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp")),
+    ),
+    "ops/scripts/core/sanitize_run_artifacts.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt", r"c/Users/[^/\s]+/AppData/Local/Temp/[^/\s]+/vault/"
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt", r"c/Users/[^/\s]+/AppData/Local/Temp/[^/\s]+/vault\b"
+            )
+        ),
+    ),
+    "ops/scripts/mechanism/run_mechanism_experiment_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("mnt")),
+    ),
+    "tests/test_backfill_historical_bootstrap_reports.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "data/build_llm_wiki_package/LLM Wiki vNext/wiki/source--sample.md",
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("mnt", "data/build_llm_wiki_package/LLM Wiki vNext")
+        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("mnt", "data/")),
+    ),
+    "tests/test_output_runtime.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("home", "example/code/LLMwiki-worktrees/goal-runtime")
+        ),
+    ),
+    "tests/test_auto_improve_iteration_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "vault")),
+    ),
+    "tests/test_derived_surfaces.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "private-source.py")
+        ),
+    ),
+    "tests/test_goal_run_status.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "llmwiki-goal-status-audit.jsonl")
+        ),
+    ),
+    "tests/test_manifest_export_symlink_safety.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "outside.txt")),
+    ),
+    "tests/test_mechanism_assess.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", r"cache\n")),
+    ),
+    "tests/test_public_check_summary.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("workspace", ".venv/bin/python")
+        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("workspace", "LLMwiki/repo")),
+        PublicLocalPathLiteralExemption(_posix_local_path("Users", "alice/work/repo")),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("private", "var/folders/ab/tmp/repo")
+        ),
+        PublicLocalPathLiteralExemption(
+            f"workspace:{_posix_local_path('home', 'alice/work/repo')}"
+        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("workspace", "example")),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("home", "alice/.venv/bin/python")
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("home", "bob/.venv/bin/python")
+        ),
+    ),
+    "tests/test_public_surface_policy.py": (
+        PublicLocalPathLiteralExemption(
+            f"workspace:{_posix_local_path('home', 'alice/work/repo')}"
+        ),
+        PublicLocalPathLiteralExemption(
+            f"source:{_posix_local_path('Users', 'alice/work/repo')}"
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("private", "var/folders/ab/tmp/repo")
+        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("home", "alice/work/repo")),
+        PublicLocalPathLiteralExemption(_posix_local_path("mnt", "c/Users/alice/repo")),
+        PublicLocalPathLiteralExemption(_posix_local_path("workspace", "LLMwiki/repo")),
+        PublicLocalPathLiteralExemption(_posix_local_path("Users", "alice/work/repo")),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("var", "folders/ab/tmp/repo")
+        ),
+        PublicLocalPathLiteralExemption(_windows_drive_path("C", r"Users\alice\repo")),
+        PublicLocalPathLiteralExemption(_windows_drive_path("C", r"USERS\alice\repo")),
+        PublicLocalPathLiteralExemption(_windows_drive_path("c", r"temp\repo")),
+        PublicLocalPathLiteralExemption(
+            _windows_drive_path("d", "a/project", separator="/")
+        ),
+        PublicLocalPathLiteralExemption(
+            _windows_unc_path("WSL$", r"Ubuntu\home\alice\repo")
+        ),
+        PublicLocalPathLiteralExemption(_windows_root_path("USERS", r"alice\repo")),
+    ),
+    "tests/test_run_mechanism_experiment_steps.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("mnt", "c/Users/ADMINI~1/AppData/Local/Temp")
+        ),
+    ),
+    "tests/test_release_run_manifest.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "not-in-vault.zip")
+        ),
+    ),
+    "tests/test_release_run_ready.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "not-in-vault.zip")
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "not-in-vault-smoke.json")
+        ),
+    ),
+    "tests/test_release_smoke.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "release-vault")
+        ),
+    ),
+    "tests/test_runtime_hotspot_facade_golden_outputs.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("var", "folders/")),
+        PublicLocalPathLiteralExemption(_posix_local_path("mnt")),
+        PublicLocalPathLiteralExemption(_posix_local_path("home")),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp")),
+    ),
+    "tests/test_sanitize_run_artifacts.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "c/Users/Administrator/Desktop/작업/LLM Wiki vNext/.venv/bin/python",
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt", "c/Users/Administrator/Desktop/작업/LLM Wiki vNext"
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "c/Users/ADMINI~1/AppData/Local/Temp/"
+                "run-123-workspace-abcd/vault/wiki/page.md",
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "c/Users/ADMINI~1/AppData/Local/Temp/run-123-workspace-abcd/vault",
+            )
+        ),
+        PublicLocalPathLiteralExemption(
+            _posix_local_path(
+                "mnt",
+                "c/Users/ADMINI~1/AppData/Local/Temp/"
+                "run-1-workspace-a/vault/wiki/page.md",
+            )
+        ),
+    ),
+    "tests/test_trusted_candidate_runner.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("home", "tester")),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "evil")),
+    ),
+    "tests/test_test_execution_command_runtime.py": (
+        PublicLocalPathLiteralExemption(
+            _posix_local_path("tmp", "venv/bin/python")
+        ),
+    ),
+}
+
+
+def _classify_uri_path_context(text: str, start: int) -> str | None:
+    token_start = start
+    while token_start > 0 and not text[token_start - 1].isspace():
+        if text[token_start - 1] in "\"'`":
+            break
+        token_start -= 1
+    uri_matches = tuple(_URI_SCHEME_RE.finditer(text[token_start:start]))
+    if not uri_matches:
+        return None
+
+    uri_match = uri_matches[-1]
+    if uri_match.group("scheme").casefold() == "file":
+        return "local_file"
+
+    uri_path_prefix = text[token_start + uri_match.end() : start]
+    if uri_path_prefix.rstrip("/").casefold() == "file":
+        return "local_file"
+    return "remote"
+
+
+def _has_local_path_start_context(text: str, start: int) -> bool:
+    uri_context = _classify_uri_path_context(text, start)
+    if uri_context == "local_file":
+        return True
+    if uri_context == "remote":
+        return False
+    return start == 0 or not text[start - 1].isalnum()
+
+
+def _is_ambiguous_control_character_escape(
+    text: str,
+    candidate: re.Match[str],
+) -> bool:
+    return (
+        candidate.lastgroup == "drive"
+        and candidate.group(0).endswith("\\")
+        and bool(_ESCAPED_CONTROL_CHARACTER_RE.match(text[candidate.end() :]))
+    )
+
+
+def _source_root_markers(source_root: str | None) -> tuple[str, ...]:
+    if not source_root:
+        return ()
+    raw_marker = str(source_root).rstrip("/\\")
+    if not raw_marker:
+        return ()
+    return tuple(
+        sorted(
+            {
+                raw_marker,
+                raw_marker.replace("\\", "/"),
+                raw_marker.replace("/", "\\"),
+            },
+            key=len,
+            reverse=True,
+        )
+    )
+
+
+def _has_source_root_end_context(text: str, end: int) -> bool:
+    if end >= len(text):
+        return True
+    next_character = text[end]
+    if next_character in "/\\":
+        return True
+    if next_character == ".":
+        after_period = end + 1
+        return after_period >= len(text) or text[after_period].isspace()
+    return not (next_character.isalnum() or next_character in "._~-")
+
+
+def _candidate_local_path_leaks(
+    text: str,
+    *,
+    source_root: str | None,
+) -> list[PublicLocalPathLeak]:
+    candidates: list[PublicLocalPathLeak] = []
+    for match in _PUBLIC_LOCAL_PATH_CANDIDATE_RE.finditer(text):
+        if not _has_local_path_start_context(text, match.start()):
+            continue
+        if _is_ambiguous_control_character_escape(text, match):
+            continue
+        kind = match.lastgroup
+        assert kind is not None
+        candidates.append(
+            PublicLocalPathLeak(
+                kind=kind,
+                text=match.group(0),
+                start=match.start(),
+                end=match.end(),
+            )
+        )
+
+    for marker in _source_root_markers(source_root):
+        search_start = 0
+        while True:
+            start = text.find(marker, search_start)
+            if start < 0:
+                break
+            end = start + len(marker)
+            if _has_local_path_start_context(
+                text, start
+            ) and _has_source_root_end_context(text, end):
+                candidates.append(
+                    PublicLocalPathLeak(
+                        kind="source_root",
+                        text=marker,
+                        start=start,
+                        end=end,
+                    )
+                )
+            search_start = start + 1
+
+    candidates.sort(key=lambda item: (item.start, -(item.end - item.start), item.kind))
+    longest_candidate_by_start: dict[int, PublicLocalPathLeak] = {}
+    for leak in candidates:
+        longest_candidate_by_start.setdefault(leak.start, leak)
+    return list(longest_candidate_by_start.values())
+
+
+def _is_complete_literal_occurrence(text: str, end: int) -> bool:
+    return end >= len(text) or text[end] in _COMPLETE_LITERAL_TERMINATORS
+
+
+def _intentional_local_path_literal_spans(
+    rel_path: str,
+    text: str,
+) -> tuple[tuple[int, int], ...]:
+    spans: set[tuple[int, int]] = set()
+    for exemption in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS.get(rel_path, ()):
+        search_start = 0
+        while True:
+            start = text.find(exemption.text, search_start)
+            if start < 0:
+                break
+            end = start + len(exemption.text)
+            if _is_complete_literal_occurrence(text, end):
+                spans.add((start, end))
+            search_start = start + 1
+    return tuple(sorted(spans))
+
+
+def find_public_local_path_leaks(
+    text: str,
+    *,
+    rel_path: str = "",
+    source_root: str | None = None,
+) -> tuple[PublicLocalPathLeak, ...]:
+    exemption_spans = _intentional_local_path_literal_spans(rel_path, text)
+    return tuple(
+        candidate
+        for candidate in _candidate_local_path_leaks(text, source_root=source_root)
+        if not any(
+            start <= candidate.start and candidate.end <= end
+            for start, end in exemption_spans
+        )
+    )
+
 
 # Without a trailing slash, Git matches both files and directories named like the segment.
 PUBLIC_EXCLUDED_SEGMENT_GITIGNORE_PATTERNS = PUBLIC_EXCLUDED_SEGMENTS

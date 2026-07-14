@@ -20,11 +20,15 @@ from ops.scripts.public.public_surface_policy import (
     PUBLIC_GITIGNORE_START,
     PUBLIC_GITIGNORE_TEMPLATE,
     PUBLIC_INCLUDE_FILES,
+    PUBLIC_INCLUDE_PREFIXES,
     PUBLIC_INCLUDED_REPORT_FILES,
+    PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS,
+    find_public_local_path_leaks,
     render_public_gitignore_block,
 )
 
 pytestmark = pytest.mark.public
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _git_check_ignored(repo: Path, paths: tuple[str, ...]) -> set[str]:
@@ -267,6 +271,138 @@ class PublicSurfacePolicyTests(unittest.TestCase):
         self.assertIn(".codebase-memory", PUBLIC_EXCLUDED_SEGMENTS)
         self.assertFalse(should_export_public(".codebase-memory/graph.db.zst"))
         self.assertFalse(should_export_public("ops/.codebase-memory/graph.db.zst"))
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "/home/alice/work/repo",
+        "/mnt/c/Users/alice/repo",
+        "/workspace/LLMwiki/repo",
+        "/Users/alice/work/repo",
+        "/var/folders/ab/tmp/repo",
+        "/private/var/folders/ab/tmp/repo",
+        "/" + "tmp/run-123-workspace/vault/wiki/page.md",
+        "/" + "var/tmp/run-123/vault",
+        "/" + "private/tmp/run-123/vault",
+        "workspace:/home/alice/work/repo",
+        "source:/Users/alice/work/repo",
+        "file:///" + "home/alice/work/repo",
+        "file://localhost/" + "home/alice/work/repo",
+        "vscode://file/" + "home/alice/work/repo",
+        "file:///" + "C" + ":" + "/" + "Users/alice/repo",
+        "vscode://file/" + "C" + ":" + "/" + "Users/alice/repo",
+        r"C:\Users\alice\repo",
+        r"C:\USERS\alice\repo",
+        r"c:\temp\repo",
+        "d:/a/project",
+        "d" + ":/n",
+        r"\\WSL$\Ubuntu\home\alice\repo",
+        r"\USERS\alice\repo",
+    ],
+)
+def test_public_local_path_guard_recognizes_common_local_roots(marker: str) -> None:
+    assert find_public_local_path_leaks(marker)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "https://example.com/docs",
+        "https://example.com/home/alice",
+        "https://example.com/workspace/LLMwiki",
+        "https://example.com/Users/alice",
+        "https://example.com/private/var/folders/ab/tmp/repo",
+        "https://example.com/tmp/artifact",
+        "https://example.com/var/tmp/artifact",
+        "https://example.com/private/tmp/artifact",
+        "vscode-remote://ssh-remote+example/home/alice/repo",
+        "docs.example/home/alice",
+        "GET /users/{id}",
+        "/users/me",
+        r"    if a:\n",
+        r"        if b:\n",
+    ],
+)
+def test_public_local_path_guard_does_not_treat_routes_or_urls_as_local_paths(
+    text: str,
+) -> None:
+    assert find_public_local_path_leaks(text) == ()
+
+
+def test_public_local_path_guard_applies_url_context_to_current_source_root() -> None:
+    source_root = "/" + "workspace/LLMwiki"
+
+    assert (
+        find_public_local_path_leaks(
+            "https://example.com" + source_root,
+            source_root=source_root,
+        )
+        == ()
+    )
+    assert find_public_local_path_leaks(
+        "source:" + source_root + "/private",
+        source_root=source_root,
+    )
+
+
+def test_intentional_local_path_literal_does_not_exempt_longer_prefix() -> None:
+    rel_path = "tests/test_public_check_summary.py"
+    allowed_path = "/" + "workspace/example"
+
+    assert (
+        find_public_local_path_leaks(
+            f'FIXTURE_ROOT = "{allowed_path}"\n',
+            rel_path=rel_path,
+        )
+        == ()
+    )
+    assert find_public_local_path_leaks(
+        f'DEV_ROOT = "{allowed_path}-secret/private"\n',
+        rel_path=rel_path,
+    )
+
+
+def test_intentional_local_path_literals_are_exact_public_source_exemptions() -> None:
+    missing_or_private = [
+        path
+        for path in sorted(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS)
+        if not (REPO_ROOT / path).is_file() or not should_export_public(path)
+    ]
+
+    assert missing_or_private == []
+
+    candidate_paths = {
+        REPO_ROOT / path
+        for path in PUBLIC_INCLUDE_FILES
+        if (REPO_ROOT / path).is_file()
+    }
+    for prefix in PUBLIC_INCLUDE_PREFIXES:
+        root = REPO_ROOT / prefix
+        if root.is_dir():
+            candidate_paths.update(path for path in root.rglob("*") if path.is_file())
+
+    observed_literal_files: set[str] = set()
+    for path in candidate_paths:
+        rel_path = path.relative_to(REPO_ROOT).as_posix()
+        if not should_export_public(rel_path):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if find_public_local_path_leaks(text):
+            observed_literal_files.add(rel_path)
+        assert find_public_local_path_leaks(text, rel_path=rel_path) == (), rel_path
+
+    assert observed_literal_files == set(PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS)
+    for rel_path, exemptions in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS.items():
+        text = (REPO_ROOT / rel_path).read_text(encoding="utf-8")
+        for exemption in exemptions:
+            assert exemption.text in text, (
+                rel_path,
+                exemption.text,
+            )
 
 
 if __name__ == "__main__":  # pragma: no cover
