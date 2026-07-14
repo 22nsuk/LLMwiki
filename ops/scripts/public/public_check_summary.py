@@ -399,12 +399,11 @@ def _public_export_negative_assertions(
     source_vault_marker = source_vault.resolve().as_posix()
     local_path_violations: list[str] = []
     for path in exported_paths:
+        if path in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES:
+            continue
         text = _read_public_text(public_out / path)
         current_vault_leaked = bool(source_vault_marker and source_vault_marker in text)
-        common_local_path_leaked = (
-            path not in PUBLIC_INTENTIONAL_LOCAL_PATH_LITERAL_FILES
-            and PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text)
-        )
+        common_local_path_leaked = PUBLIC_LOCAL_ABSOLUTE_PATH_RE.search(text)
         if current_vault_leaked or common_local_path_leaked:
             local_path_violations.append(path)
     local_path_violations.sort()

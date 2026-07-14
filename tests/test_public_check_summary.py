@@ -425,6 +425,38 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 [],
             )
 
+    def test_public_check_summary_allows_registered_current_vault_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source_vault = (Path(temp_dir) / "vault").resolve()
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "tests/test_public_check_summary.py",
+                f'FIXTURE_ROOT = "{source_vault}/repo"\n',
+            )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                [],
+            )
+
+    def test_public_check_summary_rejects_current_vault_in_unregistered_source_file(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source_vault = (Path(temp_dir) / "vault").resolve()
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "tests/leak.py",
+                f'DEV_ROOT = "{source_vault}/repo"\n',
+            )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                ["tests/leak.py"],
+            )
+
     def test_generated_report_files_are_excluded_without_private_export_violations(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
