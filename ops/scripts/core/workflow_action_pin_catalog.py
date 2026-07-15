@@ -12,7 +12,7 @@ class WorkflowActionPinRule(TypedDict):
 
 
 CI_CHECKOUT_ACTION_SHA = "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-RELEASE_SECURITY_CHECKOUT_ACTION_SHA = "de0fac2e4500dabe0009e67214ff5f5447ce83dd"
+RELEASE_SECURITY_CHECKOUT_ACTION_SHA = "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
 SETUP_PYTHON_ACTION_SHA = "a309ff8b426b58ec0e2a45f0f869d46889d02405"
 SETUP_UV_ACTION_SHA = "08807647e7069bb48b6ef5acd8ec9567f424441b"
 UPLOAD_ARTIFACT_ACTION_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
@@ -56,7 +56,7 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "checkout-release-security",
         "action": "actions/checkout",
         "sha": RELEASE_SECURITY_CHECKOUT_ACTION_SHA,
-        "version_comment": "v6.0.2",
+        "version_comment": "v7.0.0",
         "paths": (
             ".github/workflows/release.yml",
             ".github/workflows/codeql.yml",
