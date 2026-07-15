@@ -10,9 +10,9 @@ from typing import Any, NamedTuple
 from ops.scripts.eval.wiki_manifest import (
     DEFAULT_EXCLUDED_FILES,
     DEFAULT_EXCLUDED_PREFIXES,
-    DEFAULT_EXCLUDED_SEGMENTS,
-    DEFAULT_EXCLUDED_SUFFIXES,
     exclusion_policy,
+    should_descend as release_manifest_should_descend,
+    should_include as release_manifest_should_include,
 )
 
 DEFAULT_RELEASE_MANIFEST_PATH = "ops/manifest.json"
@@ -277,13 +277,11 @@ def _should_include(
     excluded_files: set[str],
     included_prefixes: tuple[str, ...] = (),
 ) -> bool:
-    if rel_path in excluded_files:
-        return False
-    if any(rel_path.startswith(prefix) for prefix in DEFAULT_EXCLUDED_PREFIXES):
-        return False
-    if rel_path.endswith(DEFAULT_EXCLUDED_SUFFIXES):
-        return False
-    if any(part in DEFAULT_EXCLUDED_SEGMENTS or part.endswith(".egg-info") for part in rel_path.split("/")):
+    if not release_manifest_should_include(
+        rel_path,
+        excluded_files,
+        DEFAULT_EXCLUDED_PREFIXES,
+    ):
         return False
     return _matches_included_prefixes(rel_path, included_prefixes)
 
@@ -303,10 +301,7 @@ def _directory_may_contain_included_paths(
 
 
 def _should_descend(rel_dir: str, included_prefixes: tuple[str, ...] = ()) -> bool:
-    rel_dir_prefix = f"{rel_dir}/"
-    if any(rel_dir_prefix.startswith(prefix) for prefix in DEFAULT_EXCLUDED_PREFIXES):
-        return False
-    if any(part in DEFAULT_EXCLUDED_SEGMENTS or part.endswith(".egg-info") for part in rel_dir.split("/")):
+    if not release_manifest_should_descend(rel_dir, DEFAULT_EXCLUDED_PREFIXES):
         return False
     return _directory_may_contain_included_paths(rel_dir, included_prefixes)
 

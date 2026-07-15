@@ -4,12 +4,15 @@
   "description": "Authoritative registry for persistent pytest lanes, derived execution packs, CI routing, and documentation boundaries validated against Make, CI, and public-safe docs.",
   "trusted_ci_evidence": {
     "status": "additive_non_authoritative",
+    "authority_effect": "diagnostic_only_no_promotion",
     "repository": "22nsuk/LLMwiki",
     "signer_workflow": "22nsuk/LLMwiki/.github/workflows/release.yml",
     "workflow_path": ".github/workflows/release.yml",
     "runner": "ubuntu-latest",
     "summary_suite": "full",
-    "semantic_command": "aggregate test execution summary shards",
+    "summary_semantic_command": "aggregate test execution summary shards",
+    "collection_suite": "full-shard-1",
+    "collection_semantic_command": "-m pytest -p xdist.plugin -n 4 --maxprocesses=4 --dist=loadfile -p no:cacheprovider",
     "environment": {
       "python_major_minor": "3.12",
       "minimum_pytest_major": 8,
@@ -36,6 +39,11 @@
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_source_revision_runtime.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_derived_surfaces.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_repo_skill_contract.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_subagent_profile_schema.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_export_public_repo.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_public_surface_policy.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_public_check_summary.py": 30,
       "make makefile-static-gates": 210,
       "make test-execution-summary-current-or-refresh": 180,
       "make workflow-dependency-planner-check": 60,
@@ -193,6 +201,24 @@
         "duration_seconds": 180
       },
       {
+        "rule_id": "public_check_source",
+        "path_patterns": [
+          "ops/scripts/public/export_public_repo.py",
+          "ops/scripts/public/public_surface_policy.py",
+          "ops/scripts/public/public_check_summary.py"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_export_public_repo.py",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_public_surface_policy.py",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_public_check_summary.py"
+        ],
+        "reason": "Public exporter, policy, and summary changes use their focused contract tests as the registry-owned minimum; make public-check remains the public-boundary closeout rather than a tight-loop duplicate.",
+        "coverage_class": "public_check_source",
+        "static_required": true,
+        "duration_seconds": 150
+      },
+      {
         "rule_id": "python_runtime_source",
         "path_patterns": [
           "ops/scripts/*.py",
@@ -299,6 +325,34 @@
         "coverage_class": "orchestration",
         "static_required": true,
         "duration_seconds": 120
+      },
+      {
+        "rule_id": "subagent_profile_contract",
+        "path_patterns": [
+          ".codex/agents/**"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_subagent_profile_schema.py"
+        ],
+        "reason": "Subagent role and orientation changes should validate policy alignment, thin wrapper contracts, and the shared documentation graph without falling through to the conservative full test lane.",
+        "coverage_class": "subagent_profile_contract",
+        "static_required": true,
+        "duration_seconds": 90
+      },
+      {
+        "rule_id": "repo_skill_contract",
+        "path_patterns": [
+          ".agents/skills/**"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_repo_skill_contract.py"
+        ],
+        "reason": "Repository-owned workflow skill changes use one auto-discovered contract for package completeness, public membership, relative-link integrity, and local-path hygiene; the established public prefix does not require a derived-surface replay for each skill edit.",
+        "coverage_class": "repo_skill_contract",
+        "static_required": true,
+        "duration_seconds": 90
       },
       {
         "rule_id": "public_docs_boundary",

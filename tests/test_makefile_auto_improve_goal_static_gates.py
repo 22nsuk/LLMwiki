@@ -253,6 +253,41 @@ class MakefileAutoImproveGoalStaticGateTests(unittest.TestCase):
             'if [ "$(AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH)" = "1" ]; then $(MAKE) auto-improve-readiness-worktree-guard; fi',
             _target_block(text, "auto-improve-readiness-report-body"),
         )
+        current_check = _target_block(
+            text, "auto-improve-readiness-report-body-current-check"
+        )
+        self.assertIn("ops.scripts.auto_improve_readiness", current_check)
+        self.assertIn("--current-check", current_check)
+        current_or_refresh = _target_block(
+            text, "auto-improve-readiness-report-body-current-or-refresh"
+        )
+        self.assertEqual(
+            current_or_refresh.count(
+                "$(MAKE) auto-improve-readiness-report-body-current-check"
+            ),
+            2,
+        )
+        self.assertEqual(
+            current_or_refresh.count(
+                "$(MAKE) auto-improve-readiness-report-body "
+                "AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0 &&"
+            ),
+            1,
+        )
+        self.assertIn(
+            "if $(MAKE) auto-improve-readiness-report-body-current-check; then :; else",
+            current_or_refresh,
+        )
+        self.assertIn(
+            "$(MAKE) auto-improve-readiness-report-body "
+            "AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=0 &&",
+            current_or_refresh,
+        )
+        self.assertIn(
+            'if [ "$(AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH)" = "1" ]; '
+            "then $(MAKE) auto-improve-readiness-worktree-guard; fi",
+            current_or_refresh,
+        )
         _assert_recipe_contains_tokens(
             self,
             text,

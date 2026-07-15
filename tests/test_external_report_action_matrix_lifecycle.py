@@ -468,13 +468,17 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         self.assertEqual(report["summary"]["reference_manifest_missing_active_report_count"], 0)
         self.assertEqual(report["summary"]["reference_manifest_stale_reference_count"], 0)
         self.assertEqual(actions["external_report_lifecycle"]["current_status"], "implemented")
-        self_evidence = next(
-            item
-            for item in actions["external_report_lifecycle"]["evidence"]
-            if item["path"] == "ops/reports/external-report-action-matrix.json"
+        self.assertNotIn(
+            "ops/reports/external-report-action-matrix.json",
+            {
+                item["path"]
+                for item in actions["external_report_lifecycle"]["evidence"]
+            },
         )
-        self.assertEqual(self_evidence["status"], report["status"])
-        self.assertEqual(self_evidence["producer"], "ops.scripts.external_report_action_matrix")
+        self.assertEqual(
+            actions["external_report_lifecycle"]["deferred_evidence_paths"],
+            ["ops/reports/external-report-action-matrix.json"],
+        )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
     def test_reference_manifest_drift_is_not_masked_by_reused_report_contract_summary(self) -> None:
         (self.external / "release.md").write_text(
@@ -567,6 +571,170 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
             stale_manifest_report["input_fingerprints"]["active_external_reports"],
         )
         self.assertEqual(validate_with_schema(current_manifest_report, load_schema(SCHEMA_PATH)), [])
+
+    def test_matrix_fingerprints_action_evidence_and_line_digest_inputs(self) -> None:
+        baseline = build_report(self.vault, context=fixed_context())
+
+        self._write_json("ops/script-output-surfaces.json", {"status": "pass"})
+        evidence_changed = build_report(self.vault, context=fixed_context())
+
+        self._write_json(
+            "external-reports/report-line-action-digests.json",
+            {"reports": {}},
+        )
+        line_digest_changed = build_report(self.vault, context=fixed_context())
+
+        self.assertNotEqual(
+            baseline["input_fingerprints"]["action_evidence_files"],
+            evidence_changed["input_fingerprints"]["action_evidence_files"],
+        )
+        self.assertNotEqual(
+            evidence_changed["input_fingerprints"]["external_report_line_digests"],
+            line_digest_changed["input_fingerprints"]["external_report_line_digests"],
+        )
+
+    def test_matrix_evidence_boundary_excludes_downstream_outputs_from_semantics(
+        self,
+    ) -> None:
+        self._write_json(
+            "ops/policies/release-closeout-fixed-point.json",
+            {
+                "version": 1,
+                "writers": [
+                    {
+                        "name": "external-report-action-matrix",
+                        "target": "external-report-action-matrix",
+                        "binding_mode": "content",
+                        "produces": [
+                            "ops/reports/external-report-action-matrix.json"
+                        ],
+                        "depends_on": [],
+                        "expensive_prerequisites": [],
+                    },
+                    {
+                        "name": "generated-artifact-index",
+                        "target": "generated-artifact-index-body",
+                        "binding_mode": "content",
+                        "produces": ["ops/reports/generated-artifact-index.json"],
+                        "depends_on": ["external-report-action-matrix"],
+                        "expensive_prerequisites": [],
+                    },
+                    {
+                        "name": "auto-improve-readiness",
+                        "target": "auto-improve-readiness-report-body",
+                        "binding_mode": "revision",
+                        "produces": ["ops/reports/auto-improve-readiness.json"],
+                        "depends_on": ["generated-artifact-index-body"],
+                        "expensive_prerequisites": [],
+                    },
+                    {
+                        "name": "release-closeout-summary",
+                        "target": "release-closeout-summary-report",
+                        "binding_mode": "revision",
+                        "produces": ["ops/reports/release-closeout-summary.json"],
+                        "depends_on": ["auto-improve-readiness-report-body"],
+                        "expensive_prerequisites": [],
+                    },
+                    {
+                        "name": "release-evidence-dashboard",
+                        "target": "release-evidence-dashboard-report",
+                        "binding_mode": "content",
+                        "produces": ["ops/reports/release-evidence-dashboard.json"],
+                        "depends_on": ["release-closeout-summary-report"],
+                        "expensive_prerequisites": [],
+                    },
+                    {
+                        "name": "release-closeout-batch-manifest",
+                        "target": "release-closeout-batch-manifest-promote",
+                        "binding_mode": "revision",
+                        "produces": [
+                            "ops/reports/release-closeout-batch-manifest.json"
+                        ],
+                        "depends_on": ["release-evidence-dashboard-report"],
+                        "expensive_prerequisites": [],
+                    },
+                ],
+            },
+        )
+        for rel_path in (
+            "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
+            "tests/test_auto_improve_readiness_release_authority_runtime.py",
+        ):
+            path = self.vault / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("source\n", encoding="utf-8")
+        self._write_json(
+            "ops/reports/test-execution-summary.json",
+            {"artifact_kind": "test_execution_summary", "status": "pass"},
+        )
+        baseline = build_report(self.vault, context=fixed_context())
+
+        downstream_outputs = {
+            "ops/reports/external-report-action-matrix.json": {
+                "status": "stale",
+                "producer": "previous.writer",
+            },
+            "ops/reports/generated-artifact-index.json": {
+                "artifact_kind": "generated_artifact_index_report",
+                "producer": "ops.scripts.generated_artifact_index",
+                "tracking_policy": {
+                    "policy_id": "generated_artifact_tracking_policy"
+                },
+                "currentness": {"status": "current"},
+            },
+            "ops/reports/auto-improve-readiness.json": {
+                "artifact_kind": "auto_improve_readiness_report",
+                "diagnostics": {
+                    "selected_contract_summary": {
+                        "path": "ops/reports/test-execution-summary.json",
+                        "status": "pass",
+                    },
+                    "artifact_freshness_summary": {"status": "pass"},
+                },
+                "promotion_blockers": [],
+            },
+            "ops/reports/release-closeout-summary.json": {"status": "pass"},
+            "ops/reports/release-evidence-dashboard.json": {"status": "pass"},
+            "ops/reports/release-closeout-fixed-point.json": {"status": "pass"},
+            "ops/reports/release-closeout-batch-manifest.json": {"status": "pass"},
+            "ops/reports/release-closeout-finality-attestation.json": {
+                "status": "pass"
+            },
+            "build/release/release-run-manifest.json": {"status": "pass"},
+            "build/release/release-sealed-run-manifest.json": {"status": "pass"},
+            "build/release/release-auto-promotion-ready-manifest.json": {
+                "status": "pass"
+            },
+        }
+        for rel_path, payload in downstream_outputs.items():
+            self._write_json(rel_path, payload)
+        with_graph_outputs = build_report(self.vault, context=fixed_context())
+
+        self.assertEqual(
+            baseline["input_fingerprints"], with_graph_outputs["input_fingerprints"]
+        )
+        self.assertEqual(
+            baseline["action_items"], with_graph_outputs["action_items"]
+        )
+        actions = self._actions_by_id(with_graph_outputs)
+        self.assertEqual(
+            actions["selected_contract_currentness_gate"]["deferred_evidence_paths"],
+            ["ops/reports/auto-improve-readiness.json"],
+        )
+        self.assertEqual(
+            actions["release_evidence_bundle_and_attestation"][
+                "deferred_evidence_paths"
+            ],
+            [
+                "build/release/release-run-manifest.json",
+                "build/release/release-sealed-run-manifest.json",
+                "ops/reports/release-closeout-batch-manifest.json",
+                "ops/reports/release-closeout-finality-attestation.json",
+                "ops/reports/release-closeout-fixed-point.json",
+                "ops/reports/release-closeout-summary.json",
+                "ops/reports/release-evidence-dashboard.json",
+            ],
+        )
     def test_open_archive_reconciliation_observations_keep_absorption_actions_active(self) -> None:
         self._write_static_github_security_surfaces()
         for rel_path, text in {
@@ -1047,10 +1215,26 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         closed_actions = self._actions_by_id(closed_report)
         self.assertEqual(
             closed_actions["source_package_distribution_binding"]["current_status"],
+            "requires_release_run_verification",
+        )
+        self.assertEqual(
+            closed_actions["source_package_distribution_binding"][
+                "source_action_status"
+            ],
             "implemented",
+        )
+        self.assertEqual(
+            closed_actions["source_package_distribution_binding"][
+                "verification_readiness_status"
+            ],
+            "readback_pending",
         )
         self.assertNotIn(
             "review_bundle_full_vault_hygiene_gap",
+            closed_actions["source_package_distribution_binding"]["status_reason_ids"],
+        )
+        self.assertIn(
+            "matrix_downstream_evidence_deferred",
             closed_actions["source_package_distribution_binding"]["status_reason_ids"],
         )
         self._assert_static_github_actions_ignore_live_gap(closed_actions)

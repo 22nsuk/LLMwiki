@@ -9,6 +9,7 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.artifact_envelope_runtime import artifact_input_fingerprints
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -29,6 +30,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SPRINT_PRIORITIES,
     )
     from ops.scripts.release.external_report_inventory_runtime import (
+        LOCAL_REPORT_LINE_DIGESTS,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
@@ -36,19 +38,26 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         reference_manifest_alignment,
     )
     from ops.scripts.release.external_report_lifecycle_runtime import (
+        RELEASE_VERIFIED_ACTION_RESOLVERS,
         action_status_reason_details,
         action_status_reason_ids,
         archive_reconciliation_observation_inventory,
         archive_reconciliation_observation_paths,
+        archive_reconciliation_observation_reason_ids,
         archived_report_action_basis_records,
         canonical_artifact_freshness_state,
+        collect_action_evidence,
         coverage_with_action_basis,
         external_report_action_lifecycle_record,
         external_report_action_lifecycle_summary,
+        matrix_deferred_release_verified_action_paths,
+        matrix_deferred_release_verified_paths,
+        matrix_observable_release_verified_action_reason_ids,
         report_coverage_item,
         status_from_evidence,
     )
 else:
+    from ops.scripts.core.artifact_envelope_runtime import artifact_input_fingerprints
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -67,6 +76,7 @@ else:
 
     from .external_report_action_catalog import ACTION_CATALOG, SPRINT_PRIORITIES
     from .external_report_inventory_runtime import (
+        LOCAL_REPORT_LINE_DIGESTS,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
@@ -74,15 +84,21 @@ else:
         reference_manifest_alignment,
     )
     from .external_report_lifecycle_runtime import (
+        RELEASE_VERIFIED_ACTION_RESOLVERS,
         action_status_reason_details,
         action_status_reason_ids,
         archive_reconciliation_observation_inventory,
         archive_reconciliation_observation_paths,
+        archive_reconciliation_observation_reason_ids,
         archived_report_action_basis_records,
         canonical_artifact_freshness_state,
+        collect_action_evidence,
         coverage_with_action_basis,
         external_report_action_lifecycle_record,
         external_report_action_lifecycle_summary,
+        matrix_deferred_release_verified_action_paths,
+        matrix_deferred_release_verified_paths,
+        matrix_observable_release_verified_action_reason_ids,
         report_coverage_item,
         status_from_evidence,
     )
@@ -92,6 +108,14 @@ DEFAULT_OUT = "ops/reports/external-report-action-matrix.json"
 PRODUCER = "ops.scripts.external_report_action_matrix"
 SCHEMA_PATH = "ops/schemas/external-report-action-matrix.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.external_report_action_matrix --vault ."
+SOURCE_PATHS = [
+    "ops/scripts/release/external_report_action_matrix.py",
+    "ops/scripts/release/external_report_action_catalog.py",
+    "ops/scripts/release/external_report_inventory_runtime.py",
+    "ops/scripts/release/external_report_lifecycle_runtime.py",
+    "ops/scripts/release/external_report_reference_manifest.py",
+    "ops/scripts/release/external_report_release_verification_runtime.py",
+]
 SOURCE_ACTION_STATUSES = ("implemented", "partially_automated", "planned")
 VERIFICATION_READINESS_STATUSES = (
     "ready",
@@ -111,6 +135,13 @@ AUTHORITY_OR_OPERATOR_READINESS_STATUSES = (
     "certificate_pending",
     "certificate_noncertifiable",
     "readback_pending",
+)
+DOWNSTREAM_EVIDENCE_DEFERRED_REASON_ID = "matrix_downstream_evidence_deferred"
+MATRIX_SAFE_DEFERRED_STATUS_ACTION_IDS = frozenset(
+    {
+        "active_report_manifest_freshness",
+        "external_report_lifecycle",
+    }
 )
 
 
@@ -201,23 +232,117 @@ def _reason_detail_summary(
     }
 
 
-def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    source_by_action: dict[str, list[str]] = {str(action["action_id"]): [] for action in ACTION_CATALOG}
+def _matrix_action_evaluation(
+    vault: Path,
+    action: dict[str, Any],
+    *,
+    observable_evidence_paths: set[str],
+    deferred_evidence_paths: set[str],
+) -> tuple[str, list[dict[str, Any]], list[str], bool]:
+    action_paths = [
+        str(path).strip()
+        for path in action.get("evidence_paths", [])
+        if str(path).strip()
+    ]
+    observable_action = {
+        **action,
+        "evidence_paths": [
+            path for path in action_paths if path in observable_evidence_paths
+        ],
+    }
+    action_id = str(action["action_id"])
+    action_deferred_paths = set(
+        matrix_deferred_release_verified_action_paths(action_id)
+    )
+    deferred_paths = sorted(
+        set(action_paths).intersection(deferred_evidence_paths)
+        | action_deferred_paths
+    )
+    observable_action["evidence_paths"] = [
+        path
+        for path in observable_action["evidence_paths"]
+        if path not in action_deferred_paths
+    ]
+    release_verification_deferred = action_id in RELEASE_VERIFIED_ACTION_RESOLVERS
+    if not release_verification_deferred and (
+        not deferred_paths or action_id in MATRIX_SAFE_DEFERRED_STATUS_ACTION_IDS
+    ):
+        status, evidence = status_from_evidence(vault, observable_action)
+        return status, evidence, deferred_paths, False
+
+    evidence, existing_count, expected_count = collect_action_evidence(
+        vault, observable_action
+    )
+    if expected_count and existing_count == 0:
+        status = "planned"
+    elif existing_count < expected_count:
+        status = "partially_automated"
+    else:
+        status = "requires_release_run_verification"
+    if archive_reconciliation_observation_reason_ids(vault, action_id):
+        status = "partially_automated"
+    return status, evidence, deferred_paths, True
+
+
+def _matrix_action_reason_ids(
+    vault: Path,
+    *,
+    action_id: str,
+    status: str,
+    evidence: list[dict[str, Any]],
+    deferred_evaluation: bool,
+) -> list[str]:
+    if not deferred_evaluation:
+        return action_status_reason_ids(
+            vault,
+            action_id,
+            status,
+            evidence,
+            existing_count=sum(1 for item in evidence if item["exists"]),
+            expected_count=len(evidence),
+        )
+    reason_ids = (
+        ["evidence_missing"]
+        if any(not item["exists"] for item in evidence)
+        else [DOWNSTREAM_EVIDENCE_DEFERRED_REASON_ID]
+    )
+    reason_ids.extend(
+        matrix_observable_release_verified_action_reason_ids(vault, action_id)
+    )
+    reason_ids.extend(archive_reconciliation_observation_reason_ids(vault, action_id))
+    return list(dict.fromkeys(reason_ids))
+
+
+def _action_items(
+    vault: Path,
+    coverage: list[dict[str, Any]],
+    *,
+    observable_evidence_paths: set[str],
+    deferred_evidence_paths: set[str],
+) -> list[dict[str, Any]]:
+    source_by_action: dict[str, list[str]] = {
+        str(action["action_id"]): [] for action in ACTION_CATALOG
+    }
     for item in coverage:
         for action_id in item["matched_action_ids"]:
             source_by_action.setdefault(str(action_id), []).append(str(item["path"]))
     action_items: list[dict[str, Any]] = []
     for action in ACTION_CATALOG:
-        status, evidence = status_from_evidence(vault, action)
         action_id = str(action["action_id"])
-        existing_count = sum(1 for item in evidence if item["exists"])
-        status_reason_ids = action_status_reason_ids(
+        status, evidence, deferred_paths, deferred_evaluation = (
+            _matrix_action_evaluation(
+                vault,
+                action,
+                observable_evidence_paths=observable_evidence_paths,
+                deferred_evidence_paths=deferred_evidence_paths,
+            )
+        )
+        status_reason_ids = _matrix_action_reason_ids(
             vault,
-            action_id,
-            status,
-            evidence,
-            existing_count=existing_count,
-            expected_count=len(evidence),
+            action_id=action_id,
+            status=status,
+            evidence=evidence,
+            deferred_evaluation=deferred_evaluation,
         )
         status_reason_details = action_status_reason_details(
             status_reason_ids,
@@ -252,6 +377,7 @@ def _action_items(vault: Path, coverage: list[dict[str, Any]]) -> list[dict[str,
                 status_reason_details,
             ),
             "evidence": evidence,
+            "deferred_evidence_paths": deferred_paths,
         }
         if sprint_priority:
             item["sprint_priority"] = sprint_priority
@@ -542,14 +668,92 @@ def _summary(
     }
 
 
-def _stabilize_self_evidence(actions: list[dict[str, Any]], *, status: str) -> None:
-    for action in actions:
-        for evidence in action.get("evidence", []):
-            if not isinstance(evidence, dict):
-                continue
-            if evidence.get("path") == DEFAULT_OUT:
-                evidence["status"] = status
-                evidence["producer"] = PRODUCER
+def _action_matrix_envelope_inputs(
+    vault: Path,
+    *,
+    report_paths: list[Path] | None = None,
+    archive_paths: list[Path] | None = None,
+    action_evidence_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    active_paths = report_paths if report_paths is not None else active_report_paths(vault)
+    archived_paths = (
+        archive_paths if archive_paths is not None else archived_report_paths(vault)
+    )
+    return {
+        "source_paths": SOURCE_PATHS,
+        "file_inputs": {
+            "external_report_reference_manifest": REFERENCE_MANIFEST,
+            "external_report_line_digests": LOCAL_REPORT_LINE_DIGESTS,
+        },
+        "path_group_inputs": {
+            "action_evidence_files": (
+                action_evidence_paths
+                if action_evidence_paths is not None
+                else _action_evidence_boundary(vault)[0]
+            ),
+            "active_external_reports": [report_path(vault, path) for path in active_paths],
+            "archived_external_reports": [
+                report_path(vault, path) for path in archived_paths
+            ],
+            "archive_reconciliation_observation_paths": (
+                archive_reconciliation_observation_paths(vault)
+            ),
+        },
+        "text_inputs": {
+            "archive_reconciliation_observations": json.dumps(
+                archive_reconciliation_observation_inventory(vault),
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+            "action_catalog": json.dumps(
+                ACTION_CATALOG,
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+        },
+    }
+
+
+def _action_evidence_boundary(vault: Path) -> tuple[list[str], set[str]]:
+    from ops.scripts.release.release_closeout_fixed_point import (
+        fixed_point_output_paths_at_or_downstream,
+        fixed_point_writer_specs_from_policy,
+    )
+
+    matrix_target = next(
+        str(writer["target"])
+        for writer in fixed_point_writer_specs_from_policy(vault)
+        if writer.get("name") == "external-report-action-matrix"
+    )
+    deferred_paths = matrix_deferred_release_verified_paths() | (
+        fixed_point_output_paths_at_or_downstream(
+            vault,
+            matrix_target,
+        )
+    )
+    catalog_paths = {
+        str(path).strip()
+        for action in ACTION_CATALOG
+        for path in action.get("evidence_paths", [])
+        if str(path).strip()
+    }
+    observable_paths = sorted(catalog_paths - deferred_paths)
+    return observable_paths, catalog_paths.intersection(deferred_paths)
+
+
+def action_matrix_input_fingerprints(
+    vault: Path,
+    *,
+    policy_path: str | None = None,
+) -> dict[str, str]:
+    resolved_vault = vault.resolve()
+    _, resolved_policy_path = load_policy(resolved_vault, policy_path)
+    return artifact_input_fingerprints(
+        resolved_vault,
+        resolved_policy_path=resolved_policy_path,
+        schema_path=SCHEMA_PATH,
+        **_action_matrix_envelope_inputs(resolved_vault),
+    )
 
 
 def build_report(
@@ -563,8 +767,16 @@ def build_report(
     runtime_context = context or RuntimeContext.from_policy(policy)
     report_paths = active_report_paths(resolved_vault)
     archive_paths = archived_report_paths(resolved_vault)
+    observable_evidence_paths, deferred_evidence_paths = _action_evidence_boundary(
+        resolved_vault
+    )
     coverage = _report_coverage(resolved_vault, report_paths)
-    actions = _action_items(resolved_vault, coverage)
+    actions = _action_items(
+        resolved_vault,
+        coverage,
+        observable_evidence_paths=set(observable_evidence_paths),
+        deferred_evidence_paths=deferred_evidence_paths,
+    )
     statuses = {
         str(action["action_id"]): str(action["current_status"])
         for action in actions
@@ -594,7 +806,6 @@ def build_report(
         )
         else "pass"
     )
-    _stabilize_self_evidence(actions, status=status)
     return {
         **build_canonical_report_envelope(
             resolved_vault,
@@ -604,33 +815,12 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/release/external_report_action_matrix.py",
-                "ops/scripts/release/external_report_action_catalog.py",
-                "ops/scripts/release/external_report_inventory_runtime.py",
-                "ops/scripts/release/external_report_lifecycle_runtime.py",
-                "ops/scripts/release/external_report_reference_manifest.py",
-            ],
-            file_inputs={
-                "external_report_reference_manifest": REFERENCE_MANIFEST,
-            },
-            path_group_inputs={
-                "active_external_reports": [report_path(resolved_vault, path) for path in report_paths],
-                "archived_external_reports": [
-                    report_path(resolved_vault, path) for path in archive_paths
-                ],
-                "archive_reconciliation_observation_paths": archive_reconciliation_observation_paths(
-                    resolved_vault
-                ),
-            },
-            text_inputs={
-                "archive_reconciliation_observations": json.dumps(
-                    archive_reconciliation_observation_inventory(resolved_vault),
-                    ensure_ascii=False,
-                    sort_keys=True,
-                ),
-                "action_catalog": json.dumps(ACTION_CATALOG, ensure_ascii=False, sort_keys=True),
-            },
+            **_action_matrix_envelope_inputs(
+                resolved_vault,
+                report_paths=report_paths,
+                archive_paths=archive_paths,
+                action_evidence_paths=observable_evidence_paths,
+            ),
         ),
         "vault": report_path(resolved_vault, resolved_vault),
         "status": status,

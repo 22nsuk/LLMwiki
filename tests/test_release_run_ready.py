@@ -38,7 +38,7 @@ pytestmark = pytest.mark.public
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 READY_PLAN_GOLDEN_SHA256 = (
-    "e08277ffaa84abb63472bdbda942ba6c24ce2320b343d662fad2d46aa0b64dd6"
+    "e6cceeee959118d900ac03362b73ea1ebdbe4a4b7765756c57e1da0cc989cb1e"
 )
 FORBIDDEN_PRIVATE_PREFIXES = (
     "raw/",

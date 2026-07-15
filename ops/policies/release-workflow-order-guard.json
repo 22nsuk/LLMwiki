@@ -12,6 +12,8 @@
     "release-finality-resettle",
     "release-terminal-finality",
     "release-authority-post-ready-finality",
+    "release-authority-finality-current-check",
+    "release-authority-archive-candidate-gate",
     "release-authority-settle",
     "release-auto-promotion-preflight-prerequisites",
     "release-auto-promotion-preflight",
@@ -31,25 +33,11 @@
       "role": "release-closeout-post-check-finalizer-strict-dry-run"
     },
     {
-      "target": "auto-improve-readiness-report-body",
+      "target": "auto-improve-readiness-report-body-current-or-refresh",
       "required_assignments": {
         "AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH": "1"
       },
-      "role": "auto-improve-readiness-report-body-worktree-guard-refresh"
-    },
-    {
-      "target": "release-run-ready-plan-check",
-      "required_assignments": {
-        "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP": "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
-      },
-      "role": "release-run-ready-plan-check-auto-promotion-distribution"
-    },
-    {
-      "target": "release-run-ready-check",
-      "required_assignments": {
-        "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP": "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
-      },
-      "role": "release-run-ready-check-auto-promotion-distribution"
+      "role": "auto-improve-readiness-current-or-refresh-worktree-guard-refresh"
     },
     {
       "target": "release-evidence-cohort-preseal-refresh",
@@ -61,17 +49,20 @@
     {
       "target": "release-closeout-fixed-point",
       "required_assignments": {
+        "RELEASE_EVIDENCE_COHORT_POLICY": "strict_same_fingerprint",
+        "RELEASE_EVIDENCE_COHORT_ZIP_METADATA": "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)",
+        "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA": "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)",
+        "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP": "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
+      },
+      "role": "release-closeout-fixed-point-strict-auto-promotion-artifacts"
+    },
+    {
+      "target": "release-closeout-fixed-point",
+      "required_assignments": {
         "RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA": "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)",
         "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP": "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
       },
       "role": "release-closeout-fixed-point-auto-promotion-artifacts"
-    },
-    {
-      "target": "release-run-ready",
-      "required_assignments": {
-        "RELEASE_CLOSEOUT_DISTRIBUTION_ZIP": "$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)"
-      },
-      "role": "release-run-ready-auto-promotion-distribution"
     },
     {
       "target": "release-evidence-cohort",
@@ -215,12 +206,12 @@
           "raw_line": "$(MAKE) external-report-action-matrix"
         },
         {
-          "role": "generated-artifact-index-body",
-          "target": "generated-artifact-index-body",
-          "raw_line": "$(MAKE) generated-artifact-index-body"
+          "role": "generated-artifact-index-body-current-or-refresh",
+          "target": "generated-artifact-index-body-current-or-refresh",
+          "raw_line": "$(MAKE) generated-artifact-index-body-current-or-refresh"
         }
       ],
-      "details": "release-auto-promotion-preflight-prerequisites must stay a narrow action-matrix then generated-index-body refresh, with no full generated-core refresh."
+      "details": "release-auto-promotion-preflight-prerequisites must stay a narrow action-matrix refresh followed by an exact generated-index current-or-refresh check, with no full generated-core refresh."
     },
     {
       "id": "release_auto_promotion_preflight_protected_recipe",
@@ -257,9 +248,9 @@
           "raw_line": "$(MAKE) artifact-freshness-refresh-check"
         },
         {
-          "role": "auto-improve-readiness-report-body-worktree-guard-refresh",
-          "target": "auto-improve-readiness-report-body",
-          "raw_line": "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
+          "role": "auto-improve-readiness-current-or-refresh-worktree-guard-refresh",
+          "target": "auto-improve-readiness-report-body-current-or-refresh",
+          "raw_line": "$(MAKE) auto-improve-readiness-report-body-current-or-refresh AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
         },
         {
           "role": "learning-readiness-signoff-revalidation",
@@ -272,9 +263,9 @@
           "raw_line": "$(MAKE) remediation-backlog"
         },
         {
-          "role": "auto-improve-readiness-report-body",
-          "target": "auto-improve-readiness-report-body",
-          "raw_line": "$(MAKE) auto-improve-readiness-report-body"
+          "role": "auto-improve-readiness-report-body-current-or-refresh",
+          "target": "auto-improve-readiness-report-body-current-or-refresh",
+          "raw_line": "$(MAKE) auto-improve-readiness-report-body-current-or-refresh"
         },
         {
           "role": "tmp-json-clean",
@@ -290,6 +281,18 @@
       "details": "release-auto-promotion-preflight must keep readiness invalidation, evidence refreshes, cleanup, then the preflight authority writer as one exact physical recipe."
     },
     {
+      "id": "release_authority_archive_candidate_gate_protected_recipe",
+      "target": "release-authority-archive-candidate-gate",
+      "expected_lines": [
+        {
+          "role": "archive-execution-manifest-check",
+          "target": "archive-execution-manifest-check",
+          "raw_line": "$(MAKE) archive-execution-manifest-check"
+        }
+      ],
+      "details": "release-authority-archive-candidate-gate is a read-only Stage 3 boundary and may only check the existing archive execution manifest."
+    },
+    {
       "id": "release_auto_promotion_preseal_protected_recipe",
       "target": "release-auto-promotion-preseal",
       "expected_lines": [
@@ -302,16 +305,6 @@
           "role": "release-auto-promotion-goal-run-id-guard",
           "target": "release-auto-promotion-goal-run-id-guard",
           "raw_line": "$(MAKE) release-auto-promotion-goal-run-id-guard"
-        },
-        {
-          "role": "release-run-ready-plan-check-auto-promotion-distribution",
-          "target": "release-run-ready-plan-check",
-          "raw_line": "$(MAKE) release-run-ready-plan-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)\""
-        },
-        {
-          "role": "release-run-ready-check-auto-promotion-distribution",
-          "target": "release-run-ready-check",
-          "raw_line": "$(MAKE) release-run-ready-check RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)\""
         },
         {
           "role": "bootstrap-preflight",
@@ -349,9 +342,9 @@
           "raw_line": "$(MAKE) learning-readiness-signoff-revalidation"
         },
         {
-          "role": "auto-improve-readiness-report-body-worktree-guard-refresh",
-          "target": "auto-improve-readiness-report-body",
-          "raw_line": "$(MAKE) auto-improve-readiness-report-body AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
+          "role": "auto-improve-readiness-current-or-refresh-worktree-guard-refresh",
+          "target": "auto-improve-readiness-report-body-current-or-refresh",
+          "raw_line": "$(MAKE) auto-improve-readiness-report-body-current-or-refresh AUTO_IMPROVE_READINESS_WORKTREE_GUARD_REFRESH=1"
         },
         {
           "role": "remediation-backlog",
@@ -359,9 +352,9 @@
           "raw_line": "$(MAKE) remediation-backlog"
         },
         {
-          "role": "auto-improve-readiness-report-body",
-          "target": "auto-improve-readiness-report-body",
-          "raw_line": "$(MAKE) auto-improve-readiness-report-body"
+          "role": "auto-improve-readiness-report-body-current-or-refresh",
+          "target": "auto-improve-readiness-report-body-current-or-refresh",
+          "raw_line": "$(MAKE) auto-improve-readiness-report-body-current-or-refresh"
         },
         {
           "role": "release-closeout-summary-report",
@@ -399,19 +392,14 @@
           "raw_line": "$(MAKE) release-clean-blocker-ledger"
         },
         {
-          "role": "release-closeout-fixed-point-auto-promotion-artifacts",
-          "target": "release-closeout-fixed-point",
-          "raw_line": "$(MAKE) release-closeout-fixed-point RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)\" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)\""
-        },
-        {
-          "role": "release-run-ready-auto-promotion-distribution",
-          "target": "release-run-ready",
-          "raw_line": "$(MAKE) release-run-ready RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)\""
-        },
-        {
           "role": "release-evidence-cohort-strict-same-fingerprint-auto-promotion-metadata",
           "target": "release-evidence-cohort",
           "raw_line": "$(MAKE) release-evidence-cohort RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint RELEASE_EVIDENCE_COHORT_ZIP_METADATA=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)\""
+        },
+        {
+          "role": "release-closeout-fixed-point-strict-auto-promotion-artifacts",
+          "target": "release-closeout-fixed-point",
+          "raw_line": "$(MAKE) release-closeout-fixed-point RELEASE_EVIDENCE_COHORT_POLICY=strict_same_fingerprint RELEASE_EVIDENCE_COHORT_ZIP_METADATA=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)\" RELEASE_CLOSEOUT_BATCH_MANIFEST_ZIP_METADATA=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_ZIP_METADATA)\" RELEASE_CLOSEOUT_DISTRIBUTION_ZIP=\"$(RELEASE_AUTO_PROMOTION_EFFECTIVE_DISTRIBUTION_ZIP)\""
         },
         {
           "role": "tmp-json-clean",
@@ -424,7 +412,7 @@
           "raw_line": "$(PYTHON) -m ops.scripts.release_auto_promotion_preflight --vault \"$(VAULT)\" --phase preseal --out \"$(RELEASE_AUTO_PROMOTION_PRESEAL_OUT)\" --auto-improve-readiness \"$(AUTO_IMPROVE_READINESS_OUT)\" --remediation-backlog \"$(REMEDIATION_BACKLOG_OUT)\" --learning-revalidation \"$(LEARNING_READINESS_SIGNOFF_REVALIDATION_OUT)\" --closeout-summary \"$(RELEASE_CLOSEOUT_SUMMARY_OUT)\" --evidence-cohort \"$(RELEASE_EVIDENCE_COHORT_OUT)\" --goal-run-identity \"$(RELEASE_AUTO_PROMOTION_GOAL_RUN_IDENTITY_OUT)\""
         }
       ],
-      "details": "release-auto-promotion-preseal must keep run-readiness checks, bounded cleanup, authority artifact binding, cleanup, then the preseal authority writer as one exact physical recipe."
+      "details": "release-auto-promotion-preseal must finish bounded cleanup and every finality-tracked writer before fixed-point, clean temporary JSON, then leave the preseal authority writer terminal."
     }
   ],
   "expected_subsequences": [
@@ -545,29 +533,47 @@
       "details": "release-authority-post-ready-finality must bind the promoted batch manifest and distribution ZIP before strict replay, dry-run finalizer, and terminal finality verification."
     },
     {
+      "id": "release_authority_finality_current_check_sequence",
+      "target": "release-authority-finality-current-check",
+      "roles": [
+        "tmp-json-clean",
+        "release-closeout-batch-manifest-replay-verify",
+        "release-closeout-post-check-finalizer-strict-dry-run",
+        "tmp-json-clean",
+        "release-closeout-finality-verify",
+        "release-finality-resettle-current-diagnose"
+      ],
+      "exact": true,
+      "details": "release-authority-finality-current-check must validate the ZIP-bound batch, strict finalizer dry run, and finality without invoking a canonical writer; diagnostics remain failure-only and read-only."
+    },
+    {
       "id": "release_authority_settle_sequence",
       "target": "release-authority-settle",
       "roles": [
-        "release-finality-resettle-current-or-refresh",
         "release-auto-promotion-goal-run-id-verified-check",
         "release-auto-promotion-preflight",
-        "release-run-ready",
         "release-auto-promotion-preseal",
+        "release-authority-finality-current-check",
+        "release-run-ready",
         "release-sealed-run-ready",
         "release-auto-promotion-ready",
         "release-authority-archive-candidate-gate",
-        "release-authority-post-ready-finality-current-or-refresh"
+        "release-auto-promotion-preflight-check",
+        "release-run-ready-check",
+        "release-auto-promotion-preseal-check",
+        "release-sealed-run-ready-check",
+        "release-auto-promotion-ready-check"
       ],
-      "details": "release-authority-settle must verify the goal run, run preflight/run/preseal/sealed readiness in order, archive the candidate gate after auto-promotion readiness, and finish with post-ready finality current-or-refresh."
+      "details": "release-authority-settle must verify the goal run, write preflight and preseal evidence, prove finality current once before Stage 1, then write run/sealed/Stage 3 authority and finish through read-only archive and authority checks without a post-ready finality writer rerun."
     },
     {
       "id": "release_auto_promotion_preflight_prerequisites_sequence",
       "target": "release-auto-promotion-preflight-prerequisites",
       "roles": [
         "external-report-action-matrix",
-        "generated-artifact-index-body"
+        "generated-artifact-index-body-current-or-refresh"
       ],
-      "details": "release-auto-promotion-preflight-prerequisites must refresh the external report action matrix before the generated artifact index body consumes it."
+      "details": "release-auto-promotion-preflight-prerequisites must refresh the external report action matrix before the generated artifact index current-or-refresh facade consumes it."
     },
     {
       "id": "release_auto_promotion_preflight_sequence",
@@ -579,10 +585,10 @@
         "release-smoke-fast-refresh-check",
         "test-execution-summary-current-or-refresh",
         "artifact-freshness-refresh-check",
-        "auto-improve-readiness-report-body-worktree-guard-refresh",
+        "auto-improve-readiness-current-or-refresh-worktree-guard-refresh",
         "learning-readiness-signoff-revalidation",
         "remediation-backlog",
-        "auto-improve-readiness-report-body",
+        "auto-improve-readiness-report-body-current-or-refresh",
         "tmp-json-clean",
         "release-auto-promotion-preflight-authority-write"
       ],
@@ -594,8 +600,6 @@
       "roles": [
         "release-auto-promotion-ready-invalidate",
         "release-auto-promotion-goal-run-id-guard",
-        "release-run-ready-plan-check-auto-promotion-distribution",
-        "release-run-ready-check-auto-promotion-distribution",
         "bootstrap-preflight",
         "registry-preflight",
         "release-smoke-full-current-check",
@@ -603,9 +607,9 @@
         "external-report-reference-manifest-settle",
         "release-auto-promotion-safe-cleanup-cleanup-only",
         "learning-readiness-signoff-revalidation",
-        "auto-improve-readiness-report-body-worktree-guard-refresh",
+        "auto-improve-readiness-current-or-refresh-worktree-guard-refresh",
         "remediation-backlog",
-        "auto-improve-readiness-report-body",
+        "auto-improve-readiness-report-body-current-or-refresh",
         "release-closeout-summary-report",
         "release-evidence-cohort-preseal-refresh-auto-promotion-metadata",
         "artifact-freshness-refresh-check",
@@ -613,13 +617,12 @@
         "release-evidence-dashboard-report",
         "release-lane-summary",
         "release-clean-blocker-ledger",
-        "release-closeout-fixed-point-auto-promotion-artifacts",
-        "release-run-ready-auto-promotion-distribution",
         "release-evidence-cohort-strict-same-fingerprint-auto-promotion-metadata",
+        "release-closeout-fixed-point-strict-auto-promotion-artifacts",
         "tmp-json-clean",
         "release-auto-promotion-preseal-authority-write"
       ],
-      "details": "release-auto-promotion-preseal must prove current run readiness, run bounded cleanup and evidence refreshes, bind the distribution ZIP through fixed-point closeout, rerun strict cohort validation, clean temporary JSON, then write preseal authority."
+      "details": "release-auto-promotion-preseal must run bounded cleanup and evidence refreshes, write the strict cohort before fixed-point closeout, clean temporary JSON, then leave the preseal authority writer terminal without writing run-ready evidence."
     },
     {
       "id": "release_post_commit_finalizer_sequence",
@@ -723,8 +726,8 @@
     {
       "id": "release_authority_settle_sequence",
       "target": "release-authority-settle",
-      "role": "release-authority-post-ready-finality-current-or-refresh",
-      "reason": "post_ready_finality_must_be_terminal"
+      "role": "release-auto-promotion-ready-check",
+      "reason": "stage_3_authority_check_must_be_last_make_invocation"
     },
     {
       "id": "check_finalized_finality_terminal",
@@ -815,16 +818,16 @@
       "id": "release_auto_promotion_preflight_repetition_budget",
       "target": "release-auto-promotion-preflight",
       "allowed_repeated_targets": [
-        "auto-improve-readiness-report-body"
+        "auto-improve-readiness-report-body-current-or-refresh"
       ],
       "violation_reason": "unexpected_repeated_auto_promotion_preflight_target",
-      "details": "Auto-promotion preflight intentionally refreshes readiness twice: once with worktree guard refresh and once after remediation evidence. Other repeated targets need an explicit contract update."
+      "details": "Auto-promotion preflight checks readiness twice: once after the worktree guard refresh and once after remediation evidence. The expensive writer runs only when exact currentness fails."
     },
     {
       "id": "release_auto_promotion_preseal_repetition_budget",
       "target": "release-auto-promotion-preseal",
       "allowed_repeated_targets": [
-        "auto-improve-readiness-report-body",
+        "auto-improve-readiness-report-body-current-or-refresh",
         "release-closeout-summary-report"
       ],
       "violation_reason": "unexpected_repeated_auto_promotion_preseal_target",

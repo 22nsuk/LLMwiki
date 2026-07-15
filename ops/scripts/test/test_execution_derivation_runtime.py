@@ -164,6 +164,20 @@ def write_collection_manifest(
     }
 
 
+def _resolve_collection_manifest_path(
+    vault: Path,
+    path_value: str | Path,
+) -> Path:
+    vault_root = vault.resolve()
+    path = Path(path_value)
+    resolved = (
+        path.resolve() if path.is_absolute() else (vault_root / path).resolve()
+    )
+    if not resolved.is_relative_to(vault_root):
+        raise ValueError("collection manifest path is outside vault")
+    return resolved
+
+
 def load_collection_manifest_digest(
     vault: Path,
     path_value: str | Path,
@@ -171,9 +185,7 @@ def load_collection_manifest_digest(
     expected_suite: str,
     expected_semantic_command: str,
 ) -> dict[str, Any]:
-    path = Path(path_value)
-    if not path.is_absolute():
-        path = vault / path
+    path = _resolve_collection_manifest_path(vault, path_value)
     manifest = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(manifest, dict):
         raise ValueError("test execution collection manifest must be a JSON object")
@@ -324,12 +336,9 @@ def _collection_manifest_reference(
     path_value = str(digest.get("manifest_path", ""))
     if not path_value:
         return None
-    relative_path = Path(path_value)
-    if relative_path.is_absolute() or ".." in relative_path.parts:
-        return None
-    vault_root = vault.resolve()
-    path = (vault_root / relative_path).resolve()
-    if not path.is_relative_to(vault_root):
+    try:
+        path = _resolve_collection_manifest_path(vault, path_value)
+    except ValueError:
         return None
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))

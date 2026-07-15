@@ -16,6 +16,11 @@ __pycache__/
 tmp/
 tmp_*.txt
 
+# Local agent state; repository-owned workflow skills remain trackable
+/.agents/*
+!/.agents/skills/
+!/.agents/skills/**
+
 # Local-only full-vault and generated evidence surfaces
 AGENTS.local.md
 external-reports/

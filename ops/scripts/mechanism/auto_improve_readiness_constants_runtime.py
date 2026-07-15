@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 READINESS_REPORT_REL_PATH = "ops/reports/auto-improve-readiness.json"
+AUTO_IMPROVE_SESSIONS_DIR = "ops/reports/auto-improve-sessions"
 OUTCOME_METRICS_REPORT_REL_PATH = "ops/reports/outcome-metrics.json"
 MECHANISM_REVIEW_REPORT_REL_PATH = "ops/reports/mechanism-review-candidates.json"
 MUTATION_PROPOSAL_REPORT_REL_PATH = "ops/reports/mutation-proposals.json"
@@ -37,6 +38,7 @@ READINESS_SOURCE_PATHS = [
     "ops/scripts/core/payload_field_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_constants_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_queue_runtime.py",
+    "ops/scripts/mechanism/auto_improve_readiness_queue_telemetry_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_next_run_repair_runtime.py",
     "ops/scripts/mechanism/auto_improve_next_run_decision_runtime.py",
     "ops/scripts/mechanism/auto_improve_readiness_learning_runtime.py",

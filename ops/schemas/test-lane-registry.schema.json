@@ -421,17 +421,23 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "status", "repository", "signer_workflow", "workflow_path", "runner",
-        "summary_suite", "semantic_command", "environment"
+        "status", "authority_effect", "repository", "signer_workflow",
+        "workflow_path", "runner", "summary_suite", "summary_semantic_command",
+        "collection_suite", "collection_semantic_command", "environment"
       ],
       "properties": {
         "status": { "const": "additive_non_authoritative" },
+        "authority_effect": { "const": "diagnostic_only_no_promotion" },
         "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
         "signer_workflow": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml$" },
         "workflow_path": { "type": "string", "pattern": "^\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml$" },
         "runner": { "const": "ubuntu-latest" },
         "summary_suite": { "const": "full" },
-        "semantic_command": { "const": "aggregate test execution summary shards" },
+        "summary_semantic_command": { "const": "aggregate test execution summary shards" },
+        "collection_suite": { "const": "full-shard-1" },
+        "collection_semantic_command": {
+          "const": "-m pytest -p xdist.plugin -n 4 --maxprocesses=4 --dist=loadfile -p no:cacheprovider"
+        },
         "environment": {
           "type": "object",
           "additionalProperties": false,

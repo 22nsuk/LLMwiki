@@ -80,6 +80,8 @@ def _assert_supply_chain_target_names(case: unittest.TestCase, text: str) -> Non
         "generated-artifact-index:",
         "generated-artifact-index-check:",
         "generated-artifact-index-body:",
+        "generated-artifact-index-body-current-check:",
+        "generated-artifact-index-body-current-or-refresh:",
         "archive-execution-manifest:",
         "archive-execution-manifest-report:",
         "archive-execution-manifest-apply:",
@@ -242,6 +244,34 @@ def _assert_artifact_index_and_freshness_recipes(case: unittest.TestCase, text: 
         generated_index_check,
     )
     case.assertNotIn("ops.scripts.canonical_artifact_promote", generated_index_check)
+    generated_index_current_check = _target_block(
+        text, "generated-artifact-index-body-current-check"
+    )
+    case.assertIn(
+        '$(PYTHON) -m ops.scripts.generated_artifact_index --vault "$(VAULT)" --current-check',
+        generated_index_current_check,
+    )
+    case.assertNotIn("--out", generated_index_current_check)
+    case.assertNotIn(
+        "ops.scripts.canonical_artifact_promote", generated_index_current_check
+    )
+    generated_index_current_or_refresh = _target_block(
+        text, "generated-artifact-index-body-current-or-refresh"
+    )
+    case.assertEqual(
+        generated_index_current_or_refresh.count(
+            "$(MAKE) generated-artifact-index-body-current-check"
+        ),
+        2,
+    )
+    case.assertIn(
+        "$(MAKE) generated-artifact-index-body &&",
+        generated_index_current_or_refresh,
+    )
+    case.assertNotIn(
+        "ops.scripts.canonical_artifact_promote",
+        generated_index_current_or_refresh,
+    )
     case.assertIn(
         '$(PYTHON) -m ops.scripts.closure_registry_envelope --vault "$(VAULT)" --registry "$(CLOSURE_REGISTRY_ENVELOPE_REGISTRY)"',
         _target_block(text, "closure-registry-envelope"),

@@ -41,7 +41,7 @@
       "profile_id": "public_code_mirror",
       "purpose": "Public-safe code and ops mirror that is reproducible without the private corpus.",
       "release_authority_role": "public_mirror",
-      "included_surfaces": ["ops/", "tests/", "tools/", ".codex/agents/", ".github/", "root_docs"],
+      "included_surfaces": ["ops/", "tests/", "tools/", ".agents/skills/", ".codex/agents/", ".github/", "root_docs"],
       "excluded_surfaces": ["raw/", "wiki/", "system/", "runs/", "external-reports/", "ops/reports/", "ops/manifest.json", "ops/raw-registry.json"],
       "generated_artifact_policy": {
         "source_package": "not_applicable",

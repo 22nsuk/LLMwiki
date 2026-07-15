@@ -9,6 +9,7 @@ import unittest
 from collections.abc import Mapping, Sequence
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import ops.scripts.public.public_check_summary as public_check_summary_module
@@ -19,6 +20,7 @@ from ops.scripts.public.public_check_summary import (
     PublicCheckRequest,
     _default_command_runner,
     _public_check_config_fingerprint,
+    _public_export_negative_assertions,
     _public_pytest_summary_cache_path,
     _resolve_public_python,
     build_report,
@@ -124,6 +126,30 @@ def timeout_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) 
 
 
 class PublicCheckSummaryTests(unittest.TestCase):
+    def _build_report_with_exported_text(
+        self,
+        temp_dir: str,
+        rel_path: str,
+        text: str,
+    ) -> dict[str, Any]:
+        vault = Path(temp_dir) / "vault"
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        seed_public_policy_file(vault)
+        target = vault / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+        return build_report(
+            vault,
+            PublicCheckRequest(
+                public_out=str(Path(temp_dir) / "public"),
+                public_python="python",
+                pytest_flags="-q",
+            ),
+            context=fixed_context(),
+            command_runner=fake_runner,
+        )
+
     def test_default_runner_exports_public_python_for_nested_make_entrypoints(self) -> None:
         captured_env: dict[str, str] = {}
 
@@ -330,6 +356,180 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 ["negative_assertion:local_path_absence"],
             )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_public_check_summary_fails_on_exported_foreign_local_path_leak(self) -> None:
+        for leaked_path in (
+            "/workspace/LLMwiki/repo",
+            "/Users/alice/work/repo",
+            "/private/var/folders/ab/tmp/repo",
+            "/" + "tmp/run-123-workspace/vault/wiki/page.md",
+            "/" + "var/tmp/run-123/vault",
+            "/" + "private/tmp/run-123/vault",
+            "workspace:/home/alice/work/repo",
+            "file:///" + "home/alice/work/repo",
+            "vscode://file/" + "home/alice/work/repo",
+            "c" + r":\temp\repo",
+            "d" + ":/a/project",
+        ):
+            with self.subTest(leaked_path=leaked_path), tempfile.TemporaryDirectory() as temp_dir:
+                report = self._build_report_with_exported_text(
+                    temp_dir,
+                    "README.md",
+                    f"Do not export local path {leaked_path}.\n",
+                )
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(
+                    report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                    ["README.md"],
+                )
+
+    def test_public_check_summary_allows_exported_api_route(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "README.md",
+                "GET /users/{id}\n",
+            )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                [],
+            )
+
+    def test_public_check_summary_allows_url_containing_current_vault_text(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            public_out = Path(temp_dir) / "public"
+            rel_path = "tests/test_public_surface_policy.py"
+            exported_file = public_out / rel_path
+            exported_file.parent.mkdir(parents=True)
+            exported_file.write_text(
+                'URL = "https://example.com/workspace/LLMwiki"\n',
+                encoding="utf-8",
+            )
+
+            assertions = _public_export_negative_assertions(
+                public_out,
+                {},
+                [{"path": rel_path}],
+                source_vault=Path("/", "workspace", "LLMwiki"),
+            )
+
+            self.assertEqual(
+                assertions["local_path_absence"]["violations"],
+                [],
+            )
+
+    def test_public_check_summary_rejects_foreign_paths_in_unregistered_source_files(
+        self,
+    ) -> None:
+        for rel_path in (
+            "ops/scripts/leak.py",
+            "tests/leak.py",
+            "tools/leak.py",
+        ):
+            with self.subTest(rel_path=rel_path), tempfile.TemporaryDirectory() as temp_dir:
+                report = self._build_report_with_exported_text(
+                    temp_dir,
+                    rel_path,
+                    'DEV_ROOT = "/Users/alice/work/repo"\n',
+                )
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(
+                    report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                    [rel_path],
+                )
+
+    def test_public_check_summary_allows_registered_source_path_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "tests/test_public_check_summary.py",
+                'FIXTURE_ROOT = "/workspace/example"\n',
+            )
+
+            self.assertEqual(report["status"], "pass")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                [],
+            )
+
+    def test_public_check_summary_rejects_longer_path_with_allowed_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            longer_path = "/" + "workspace/example-secret/private"
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "tests/test_public_check_summary.py",
+                f'DEV_ROOT = "{longer_path}"\n',
+            )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                ["tests/test_public_check_summary.py"],
+            )
+
+    def test_public_check_summary_allows_registered_fixture_containing_current_vault(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source_vault = Path("/", "workspace", "LLMwiki")
+            public_out = Path(temp_dir) / "public"
+            fixture_path = public_out / "tests" / "test_public_check_summary.py"
+            fixture_path.parent.mkdir(parents=True)
+            fixture_path.write_text(
+                f'FIXTURE_ROOT = "{source_vault}/repo"\n',
+                encoding="utf-8",
+            )
+            assertions = _public_export_negative_assertions(
+                public_out,
+                {},
+                [{"path": "tests/test_public_check_summary.py"}],
+                source_vault=source_vault,
+            )
+
+            self.assertEqual(
+                assertions["local_path_absence"]["violations"],
+                [],
+            )
+
+    def test_public_check_summary_rejects_unregistered_path_beside_allowed_fixture(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            allowed_fixture = "/" + "workspace/example"
+            unexpected_path = "/" + "Users/real-user/private-repo"
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "tests/test_public_check_summary.py",
+                f'FIXTURE_ROOT = "{allowed_fixture}"\n'
+                f'DEV_ROOT = "{unexpected_path}"\n',
+            )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                ["tests/test_public_check_summary.py"],
+            )
+
+    def test_public_check_summary_rejects_current_vault_in_unregistered_source_file(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source_vault = (Path(temp_dir) / "vault").resolve()
+            report = self._build_report_with_exported_text(
+                temp_dir,
+                "tests/leak.py",
+                f'DEV_ROOT = "{source_vault}/repo"\n',
+            )
+
+            self.assertEqual(report["status"], "fail")
+            self.assertEqual(
+                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                ["tests/leak.py"],
+            )
 
     def test_generated_report_files_are_excluded_without_private_export_violations(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

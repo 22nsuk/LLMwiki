@@ -522,9 +522,22 @@ class ExecutorRuntimeTests(unittest.TestCase):
             prompt = (vault / "runs" / "run-executor" / "worker-prompt.md").read_text(encoding="utf-8")
             self.assertIn("Return JSON only.", prompt)
             self.assertIn("proposal_snapshot", prompt)
-            self.assertIn("Repository-required local skills", prompt)
+            self.assertIn("Repository-required skills", prompt)
+            self.assertIn(".agents/skills/<skill>/SKILL.md", prompt)
             self.assertIn("$CODEX_HOME/skills/<skill>/SKILL.md", prompt)
+            self.assertIn(
+                "even when the system-provided available skills list already contains the same skill name",
+                prompt,
+            )
+            self.assertIn(
+                "Only when the repository body is absent or unreadable",
+                prompt,
+            )
             self.assertIn("do not fail solely because the system available-skills list omitted", prompt)
+            self.assertLess(
+                prompt.index(".agents/skills/<skill>/SKILL.md"),
+                prompt.index("$CODEX_HOME/skills/<skill>/SKILL.md"),
+            )
             self.assertIn("Worker structural budget guardrails:", prompt)
             self.assertIn("changed-files-manifest.json", prompt)
             self.assertIn("do not generate or require those artifacts inside the worker phase", prompt)
@@ -714,7 +727,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             )
             self.assertEqual(
                 hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
-                "adcf40b14b547fd5de863c8de19b352129c1a2d0d8b0a9ccde24a163bc870528",
+                "cf5493110ce78081f7428cf4c730717462d6f9ab8eb4b3e03d761a90e03d7f3e",
             )
             section_positions = [
                 prompt.index(section)
@@ -724,7 +737,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
                     "Run context:",
                     "Repository write boundary:",
                     "Execution environment guidance:",
-                    "Repository-required local skills:",
+                    "Repository-required skills:",
                     "Executor phase boundary:",
                     "Scope freeze summary:",
                     "Routing summary:",

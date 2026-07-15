@@ -44,10 +44,6 @@
       "replacement": "make collaboration-governance"
     },
     {
-      "canonical_module": "ops.scripts.release.release_run_manifest",
-      "replacement": "make release-run-ready-check"
-    },
-    {
       "canonical_module": "ops.scripts.release.release_status_surface",
       "replacement": ""
     },

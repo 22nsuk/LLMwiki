@@ -341,6 +341,78 @@ class SourceSubstanceCohortRemediateTest(unittest.TestCase):
         self.assertEqual(report["entries"][0]["status"], "operator_review")
         self.assertEqual(report["entries"][0]["reason_codes"], ["raw_path_not_file"])
 
+    def test_raw_input_fingerprints_reject_paths_outside_vault(self) -> None:
+        outside = self.vault.parent / f"{self.vault.name}-outside-secret.md"
+        outside.write_text("outside secret", encoding="utf-8")
+        self.addCleanup(outside.unlink, missing_ok=True)
+        symlink = self.vault / "raw/outside-link.md"
+        symlink.symlink_to(outside)
+
+        raw_source_fingerprints: set[str] = set()
+        for raw_path in (
+            str(outside),
+            f"../{outside.name}",
+            "raw/outside-link.md",
+        ):
+            with self.subTest(raw_path=raw_path):
+                page = self._write_page(raw_path=raw_path)
+                self.assertEqual(remediation._raw_input_paths(self.vault, [page]), [])
+                report = remediation.build_report(
+                    self.vault,
+                    context=FIXED_CONTEXT,
+                    enforce_registry=False,
+                )
+                raw_source_fingerprints.add(
+                    report["input_fingerprints"]["raw_sources"]
+                )
+                self.assertNotIn(str(outside), json.dumps(report))
+
+        self.assertEqual(len(raw_source_fingerprints), 1)
+        missing_page = self._write_page(raw_path="raw/missing.md")
+        self.assertEqual(
+            remediation._raw_input_paths(self.vault, [missing_page]),
+            ["raw/missing.md"],
+        )
+
+    def test_remediation_fingerprints_classification_and_registry_inputs(self) -> None:
+        self._write_page()
+        self._write_raw(raw_markdown())
+
+        initial = remediation.build_report(
+            self.vault,
+            context=FIXED_CONTEXT,
+            enforce_registry=False,
+        )
+        synthesis = self.vault / "wiki/synthesis--synthetic.md"
+        synthesis.write_text(
+            synthesis.read_text(encoding="utf-8") + "\nAdditional linkage context.\n",
+            encoding="utf-8",
+        )
+        synthesis_changed = remediation.build_report(
+            self.vault,
+            context=FIXED_CONTEXT,
+            enforce_registry=False,
+        )
+
+        self.assertNotEqual(
+            initial["input_fingerprints"]["classification_input_fingerprints"],
+            synthesis_changed["input_fingerprints"][
+                "classification_input_fingerprints"
+            ],
+        )
+
+        registry = self.vault / "ops/raw-registry.json"
+        registry.write_text('{"entries": []}\n', encoding="utf-8")
+        registry_changed = remediation.build_report(
+            self.vault,
+            context=FIXED_CONTEXT,
+            enforce_registry=False,
+        )
+        self.assertNotEqual(
+            synthesis_changed["input_fingerprints"]["raw_registry"],
+            registry_changed["input_fingerprints"]["raw_registry"],
+        )
+
     def test_rst_raw_uses_the_same_text_recovery_contract_as_classifier(self) -> None:
         self._write_page(raw_path="raw/synthetic.rst")
         self._write_raw("\n\n".join(ENGLISH_SENTENCES), name="synthetic.rst")

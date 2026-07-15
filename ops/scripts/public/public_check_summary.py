@@ -34,7 +34,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         DEFAULT_PUBLIC_OUT,
         export_public_repo,
     )
-    from ops.scripts.public.public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
+    from ops.scripts.public.public_surface_policy import (
+        PUBLIC_INCLUDED_REPORT_FILES,
+        find_public_local_path_leaks,
+    )
     from ops.scripts.test.test_execution_summary import parse_pytest_counts
 else:
     from ops.scripts.core.artifact_freshness_runtime import (
@@ -54,7 +57,10 @@ else:
     from ops.scripts.test.test_execution_summary import parse_pytest_counts
 
     from .export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
-    from .public_surface_policy import PUBLIC_INCLUDED_REPORT_FILES
+    from .public_surface_policy import (
+        PUBLIC_INCLUDED_REPORT_FILES,
+        find_public_local_path_leaks,
+    )
 
 
 DEFAULT_OUT = "ops/reports/public-check-summary.json"
@@ -81,8 +87,6 @@ PRIVATE_EXPORT_PATTERNS = (
     "ops/raw-registry.json",
     "ops/reports/",
 )
-
-
 @dataclass(frozen=True)
 class PublicCheckRequest:
     mode: str = "default"
@@ -391,11 +395,16 @@ def _public_export_negative_assertions(
         and (path in excluded_files or any(path.startswith(pattern) for pattern in PRIVATE_EXPORT_PATTERNS))
     )
     source_vault_marker = source_vault.resolve().as_posix()
-    local_path_violations = sorted(
-        path
-        for path in exported_paths
-        if source_vault_marker and source_vault_marker in _read_public_text(public_out / path)
-    )
+    local_path_violations: list[str] = []
+    for path in exported_paths:
+        text = _read_public_text(public_out / path)
+        if find_public_local_path_leaks(
+            text,
+            rel_path=path,
+            source_root=source_vault_marker,
+        ):
+            local_path_violations.append(path)
+    local_path_violations.sort()
 
     def assertion_payload(violations: list[str]) -> dict[str, Any]:
         return {

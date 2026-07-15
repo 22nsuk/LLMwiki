@@ -49,6 +49,7 @@ class DistributionProfileMatrixTests(unittest.TestCase):
         public_profile = {item["profile_id"]: item for item in self._matrix()["profiles"]}["public_code_mirror"]
 
         self.assertIn("ops/", public_profile["included_surfaces"])
+        self.assertIn(".agents/skills/", public_profile["included_surfaces"])
         for private_surface in ("raw/", "wiki/", "system/", "runs/", "external-reports/"):
             self.assertIn(private_surface, public_profile["excluded_surfaces"])
 

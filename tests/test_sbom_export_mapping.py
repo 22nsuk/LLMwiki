@@ -55,12 +55,22 @@ class SbomExportMappingTests(unittest.TestCase):
                 "def test_ok():\n    assert True\n",
                 encoding="utf-8",
             )
+            skill_path = (
+                vault
+                / ".agents"
+                / "skills"
+                / "example-skill"
+                / "SKILL.md"
+            )
+            skill_path.parent.mkdir(parents=True)
+            skill_path.write_text("# Skill\n", encoding="utf-8")
 
             report = build_report(vault, context=fixed_context())
             destination = write_report(vault, report, "ops/reports/sbom-export-mapping.json")
             persisted = json.loads(destination.read_text(encoding="utf-8"))
 
             dependency_map = {item["path"]: item for item in persisted["dependency_input_mapping"]}
+            export_map = {item["path"]: item for item in persisted["export_mapping"]}
             self.assertEqual(persisted["status"], "pass")
             self.assertTrue(persisted["surface_summary"]["public_subset_of_release"])
             self.assertEqual(persisted["surface_summary"]["public_only_file_count"], 1)
@@ -74,6 +84,12 @@ class SbomExportMappingTests(unittest.TestCase):
             self.assertEqual(dependency_map["requirements.txt"]["authority_role"], "compatibility")
             self.assertFalse(dependency_map["requirements.txt"]["in_public_export"])
             self.assertTrue(dependency_map["pyproject.toml"]["in_release_manifest"])
+            skill_mapping = export_map[
+                ".agents/skills/example-skill/SKILL.md"
+            ]
+            self.assertEqual(skill_mapping["category"], "agent-config")
+            self.assertTrue(skill_mapping["in_public_export"])
+            self.assertTrue(skill_mapping["in_release_manifest"])
             self.assertEqual(persisted["provenance_summary"]["locked_dependency_edge_count"], 1)
             self.assertEqual(persisted["provenance_summary"]["source_package_evidence_status"], "pass")
             self.assertEqual(persisted["provenance_summary"]["source_zip_sha256"], SOURCE_ZIP_SHA256)

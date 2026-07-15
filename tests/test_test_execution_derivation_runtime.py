@@ -500,6 +500,72 @@ def test_collection_manifest_reference_rejects_input_digest_drift(
     assert collection_manifest_reference_is_rebindable(vault, digest) is False
 
 
+def test_collection_manifest_paths_stay_inside_vault(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    schema_name = "test-execution-collection-manifest.schema.json"
+    shutil.copyfile(
+        REPO_ROOT / "ops" / "schemas" / schema_name,
+        vault / "ops/schemas" / schema_name,
+    )
+    manifest = build_collection_manifest(
+        vault,
+        suite="full-shard-1",
+        semantic_command="-m pytest",
+        nodeids=["tests/test_sample.py::test_ok"],
+        selection_kind="full_suite",
+        deselected_tests=[],
+        deselection_lifecycle=_lifecycle(),
+        context=FIXED_CONTEXT,
+    )
+    identity = write_collection_manifest(
+        vault,
+        manifest,
+        "build/release-payloads/full.collection.json",
+    )
+    inside = vault / identity["manifest_path"]
+
+    loaded = load_collection_manifest_digest(
+        vault,
+        inside,
+        expected_suite="full-shard-1",
+        expected_semantic_command="-m pytest",
+    )
+    assert loaded["manifest_path"] == identity["manifest_path"]
+
+    outside = tmp_path / "outside.collection.json"
+    outside.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="outside vault"):
+        load_collection_manifest_digest(
+            vault,
+            outside,
+            expected_suite="full-shard-1",
+            expected_semantic_command="-m pytest",
+        )
+
+    symlink = vault / "build/release-payloads/outside.collection.json"
+    symlink.symlink_to(outside)
+    with pytest.raises(ValueError, match="outside vault"):
+        load_collection_manifest_digest(
+            vault,
+            symlink.relative_to(vault),
+            expected_suite="full-shard-1",
+            expected_semantic_command="-m pytest",
+        )
+    escaped_digest = {
+        **identity,
+        "manifest_path": symlink.relative_to(vault).as_posix(),
+        "nodeid_count": manifest["nodeid_count"],
+        "sha256": manifest["nodeids_sha256"],
+    }
+    assert collection_manifest_reference_is_current(vault, escaped_digest) is False
+    assert collection_manifest_reference_is_rebindable(vault, escaped_digest) is False
+
+
 def test_derivation_rejects_parent_and_input_digest_drift(tmp_path: Path) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()

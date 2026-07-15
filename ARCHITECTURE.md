@@ -24,7 +24,7 @@ actual corpus and operator evidence.
 | Knowledge corpus | `wiki/`, `system/` | excluded | maintained content and system knowledge |
 | Run artifacts | `runs/` | excluded | planning, promotion, and goal-run evidence |
 | Ops control layer | `ops/`, `mk/`, `tests/`, `tools/` | included | policy, schema, scripts, Make, and tests |
-| Docs and agents | `docs/`, root docs, `.codex/agents/` | included | public operating contract and role surface |
+| Docs, skills, and agents | `docs/`, root docs, `.agents/skills/`, `.codex/agents/` | included | public operating contract, workflow skills, and role surface |
 | CI/export | `.github/`, root config | included | reproducible public validation |
 
 ## Runtime Loops

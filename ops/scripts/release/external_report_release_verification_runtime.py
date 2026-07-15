@@ -50,6 +50,42 @@ REVIEW_BUNDLE_FULL_VAULT_HYGIENE_OBSERVATION_ID = "review_bundle_full_vault_hygi
 FULL_VAULT_ARCHIVE_MTIME_NORMALIZATION_OBSERVATION_ID = (
     "full_vault_archive_mtime_normalization_gap"
 )
+MATRIX_DEFERRED_RELEASE_EVIDENCE_PATHS: dict[str, frozenset[str]] = {
+    "source_package_distribution_binding": frozenset(
+        {
+            "ops/reports/release-closeout-summary.json",
+            "ops/reports/release-evidence-dashboard.json",
+            "build/release/release-run-manifest.json",
+            "build/release/release-sealed-run-manifest.json",
+        }
+    ),
+    "release_evidence_bundle_and_attestation": frozenset(
+        {
+            "ops/reports/release-closeout-summary.json",
+            "ops/reports/release-evidence-dashboard.json",
+            "ops/reports/release-closeout-fixed-point.json",
+            "ops/reports/release-closeout-batch-manifest.json",
+            "ops/reports/release-closeout-finality-attestation.json",
+            "build/release/release-run-manifest.json",
+            "build/release/release-sealed-run-manifest.json",
+        }
+    ),
+    "full_suite_evidence_currentness": frozenset(
+        {
+            "ops/reports/release-closeout-summary.json",
+            "ops/reports/release-evidence-dashboard.json",
+            "build/release/release-run-manifest.json",
+        }
+    ),
+    "promotion_truth_ladder": frozenset(
+        {
+            "ops/reports/auto-improve-readiness.json",
+            "ops/reports/release-closeout-summary.json",
+            "ops/reports/release-evidence-dashboard.json",
+            "build/release/release-auto-promotion-ready-manifest.json",
+        }
+    ),
+}
 SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
 ARCHIVED_REPORT_ACTION_BASIS_REQUIRED_FIELDS = (
     "path",
@@ -583,6 +619,30 @@ def release_verified_action_reason_ids(vault: Path, action_id: str) -> list[str]
     if action_id == "promotion_truth_ladder":
         reasons.extend(_promotion_truth_ladder_reason_ids(vault))
     return _dedupe_reason_ids(reasons)
+
+
+def matrix_observable_release_verified_action_reason_ids(
+    vault: Path, action_id: str
+) -> list[str]:
+    reasons: list[str] = []
+    if action_id == "source_package_distribution_binding":
+        reasons.extend(_source_package_reason_ids(vault))
+        reasons.extend(_reference_manifest_distribution_reason_ids(vault))
+    elif action_id == "full_suite_evidence_currentness":
+        reasons.extend(_full_suite_reason_ids(vault))
+    return _dedupe_reason_ids(reasons)
+
+
+def matrix_deferred_release_verified_action_paths(action_id: str) -> list[str]:
+    return sorted(MATRIX_DEFERRED_RELEASE_EVIDENCE_PATHS.get(action_id, ()))
+
+
+def matrix_deferred_release_verified_paths() -> set[str]:
+    return {
+        path
+        for paths in MATRIX_DEFERRED_RELEASE_EVIDENCE_PATHS.values()
+        for path in paths
+    }
 
 
 def source_package_distribution_binding_verified(vault: Path) -> bool:

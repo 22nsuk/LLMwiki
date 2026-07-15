@@ -64,7 +64,7 @@ DEPENDENCY_INPUT_PATHS = (
 
 
 def _path_category(rel_path: str) -> str:
-    if rel_path.startswith(".codex/agents/"):
+    if rel_path.startswith((".agents/skills/", ".codex/agents/")):
         return "agent-config"
     if rel_path.startswith(".github/"):
         return "ci-workflow"

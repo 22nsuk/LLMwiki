@@ -67,6 +67,10 @@ class ReleaseSourceReadyCommitTests(unittest.TestCase):
         self.assertEqual(classify_path(".gitignore"), "generated_canonical")
         self.assertEqual(classify_path(".github/workflows/ci.yml"), "public_source")
         self.assertEqual(classify_path("./.github/CODEOWNERS"), "public_source")
+        self.assertEqual(
+            classify_path(".agents/skills/example-skill/SKILL.md"),
+            "public_source",
+        )
         self.assertEqual(classify_path("AGENTS.local.md"), "local_source_contract")
         self.assertEqual(classify_path("docs"), "public_source")
         self.assertEqual(classify_path("docs/development.md"), "public_source")

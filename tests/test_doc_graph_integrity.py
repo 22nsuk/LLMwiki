@@ -29,6 +29,10 @@ class DocGraphIntegrityTests(unittest.TestCase):
             (vault / "docs").mkdir()
             (vault / "ops").mkdir()
             (vault / "README.md").write_text("[Docs](docs/README.md)\n", encoding="utf-8")
+            for name in ("alpha", "beta"):
+                skill_path = vault / ".agents" / "skills" / name / "SKILL.md"
+                skill_path.parent.mkdir(parents=True)
+                skill_path.write_text(f"# {name.title()} Skill\n", encoding="utf-8")
             (vault / "docs" / "README.md").write_text("[Topic](topic.md)\n", encoding="utf-8")
             (vault / "docs" / "topic.md").write_text("topic\n", encoding="utf-8")
             (vault / "docs" / "orphan.md").write_text("orphan\n", encoding="utf-8")
@@ -53,7 +57,38 @@ class DocGraphIntegrityTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["summary"]["missing_link_count"], 0)
         self.assertEqual(report["summary"]["unallowed_orphan_count"], 0)
+        self.assertIn(".agents/skills/alpha/SKILL.md", report["docs"])
+        self.assertIn(".agents/skills/beta/SKILL.md", report["docs"])
+        self.assertNotIn(".agents/skills/alpha/SKILL.md", report["orphan_docs"])
+        self.assertNotIn(".agents/skills/beta/SKILL.md", report["orphan_docs"])
         self.assertEqual(validate_with_schema(report, schema), [])
+
+    def test_doc_graph_rejects_unlinked_nested_agent_markdown(self) -> None:
+        scenarios = (
+            ("repo-skill", ".agents/skills/example/SKILL.md"),
+            ("subagent", ".codex/agents/README.md"),
+        )
+        for label, entrypoint_rel in scenarios:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                vault = Path(temp_dir)
+                entrypoint = vault / entrypoint_rel
+                entrypoint.parent.mkdir(parents=True)
+                entrypoint.write_text(f"# {label}\n", encoding="utf-8")
+                notes = entrypoint.parent / "notes.md"
+                notes.write_text("# Unlinked notes\n", encoding="utf-8")
+                if label == "subagent":
+                    (vault / "README.md").write_text(
+                        "[Agents](.codex/agents/README.md)\n",
+                        encoding="utf-8",
+                    )
+
+                report = build_report(vault, context=fixed_context())
+
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(
+                    report["unallowed_orphans"],
+                    [notes.relative_to(vault).as_posix()],
+                )
 
 
 if __name__ == "__main__":
