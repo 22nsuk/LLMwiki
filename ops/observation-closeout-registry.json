@@ -73,6 +73,15 @@
       "next_action": "Add a fast export-and-negative-assertion boundary target for changed-path feedback, keep the full public pytest lane checkpoint-grade, and recalibrate the registry estimate from representative generated timing evidence.",
       "exit_condition": "Close when public-boundary source edits receive a fast authoritative minimum without replaying full public pytest and planner cost estimates reflect representative generated evidence.",
       "owner_or_lane": "test-evidence-cost-governance"
+    },
+    {
+      "path": "ops/reports/task-improvement-observations/task-20260715-pr71-dependabot-pin-bridge/improvement-observations.json",
+      "observation_id": "dependabot_workflow_pin_catalog_bridge",
+      "status": "planned",
+      "retained_reason": "Dependabot's github-actions updater edits generated workflow uses lines but cannot update the Python pin catalog that owns those projections, so future managed action updates can repeat PR 71's sync-derived failure.",
+      "next_action": "Implement a deterministic, allow-listed bridge that validates a Dependabot-authored action-pin diff, updates matching canonical catalog rules, regenerates workflows, and emits a reviewable commit-ready patch without executing pull-request code.",
+      "exit_condition": "Close when grouped action updates, split CI versus release/security scopes, SHA/tag consistency, actor/path restrictions, and idempotent sync-derived output are covered by focused tests and Dependabot updates no longer require manual catalog repair.",
+      "owner_or_lane": "workflow-action-pin-maintenance"
     }
   ]
 }
