@@ -66,7 +66,7 @@ jobs:
           path: tmp/trusted-ci
 
       - name: Attest trusted CI full-suite evidence bundle
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: tmp/trusted-ci/test-execution-summary-full-evidence.zip
 
@@ -156,8 +156,8 @@ jobs:
           path: build/release/release-live-attestation.json
           if-no-files-found: error
 
-  publish:
-    name: publish / py3.12
+  release-artifacts:
+    name: release artifacts / py3.12
     needs: verify-clean-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -238,11 +238,6 @@ jobs:
           if-no-files-found: error
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1.14
-        with:
-          packages-dir: dist/

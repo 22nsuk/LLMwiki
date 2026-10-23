@@ -16,7 +16,6 @@ updates:
         exclude-patterns:
           - "github/codeql-action*"
           - "actions/attest-build-provenance"
-          - "pypa/gh-action-pypi-publish"
         update-types:
           - "minor"
           - "patch"
@@ -24,11 +23,10 @@ updates:
       github-actions-codeql:
         patterns:
           - "github/codeql-action*"
-      # These paths need release validation beyond pull-request CI.
+      # Attestations need execution validation beyond pull-request CI.
       github-actions-release:
         patterns:
           - "actions/attest-build-provenance"
-          - "pypa/gh-action-pypi-publish"
         update-types:
           - "minor"
           - "patch"

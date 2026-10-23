@@ -17,8 +17,7 @@ SETUP_PYTHON_ACTION_SHA = "a309ff8b426b58ec0e2a45f0f869d46889d02405"
 SETUP_UV_ACTION_SHA = "08807647e7069bb48b6ef5acd8ec9567f424441b"
 UPLOAD_ARTIFACT_ACTION_SHA = "cf430e030ddbb5b0abf93d22962f4752f3646cd9"
 DOWNLOAD_ARTIFACT_ACTION_SHA = "9000827ccba6bdab643e8b6fd33ac0654aef8333"
-ATTEST_BUILD_PROVENANCE_ACTION_SHA = "0f67c3f4856b2e3261c31976d6725780e5e4c373"
-PYPI_PUBLISH_ACTION_SHA = "cef221092ed1bacb1cc03d23a2d87d1d172e277b"
+ATTEST_BUILD_PROVENANCE_ACTION_SHA = "4d101475d8b20a2381f78447822ac1eab6504dd8"
 CODEQL_ACTION_SHA = "24c54180a607b1449ed407dd24f251e4e9147c8d"
 DEPENDENCY_REVIEW_ACTION_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 
@@ -33,9 +32,6 @@ PINNED_UPLOAD_ARTIFACT_ACTION = f"actions/upload-artifact@{UPLOAD_ARTIFACT_ACTIO
 PINNED_DOWNLOAD_ARTIFACT_ACTION = f"actions/download-artifact@{DOWNLOAD_ARTIFACT_ACTION_SHA}"
 PINNED_ATTEST_BUILD_PROVENANCE_ACTION = (
     f"actions/attest-build-provenance@{ATTEST_BUILD_PROVENANCE_ACTION_SHA}"
-)
-PINNED_PYPI_PUBLISH_ACTION = (
-    f"pypa/gh-action-pypi-publish@{PYPI_PUBLISH_ACTION_SHA}"
 )
 PINNED_CODEQL_ACTION_PREFIX = "github/codeql-action/"
 PINNED_CODEQL_INIT_ACTION = f"github/codeql-action/init@{CODEQL_ACTION_SHA}"
@@ -101,18 +97,11 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "attest-build-provenance",
         "action": "actions/attest-build-provenance",
         "sha": ATTEST_BUILD_PROVENANCE_ACTION_SHA,
-        "version_comment": "v4.1.1",
+        "version_comment": "v4.2.2",
         "paths": (
             ".github/workflows/ci.yml",
             ".github/workflows/release.yml",
         ),
-    },
-    {
-        "id": "pypi-publish",
-        "action": "pypa/gh-action-pypi-publish",
-        "sha": PYPI_PUBLISH_ACTION_SHA,
-        "version_comment": "release/v1.14",
-        "paths": (".github/workflows/release.yml",),
     },
     {
         "id": "codeql-init",

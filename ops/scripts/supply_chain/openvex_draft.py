@@ -286,7 +286,7 @@ def build_openvex_draft(
             "This OpenVEX artifact is generated from the shared supply-chain artifact model.",
             "Repo-native advisory input is optional; when absent, the draft remains an applicability shell with no statements.",
             "SPDX emission is enabled from the same canonical model used by CycloneDX and OpenVEX.",
-            "In-toto/SLSA, Sigstore verification metadata, and PyPI release hardening attach to the same artifact set.",
+            "In-toto/SLSA and Sigstore verification metadata attach to the same release artifact set.",
         ],
     }
 

@@ -60,7 +60,7 @@ def canonical_nodeids(nodeids: Sequence[str]) -> list[str]:
         if not nodeid
         or "\n" in nodeid
         or "\r" in nodeid
-        or "\\" in nodeid
+        or "\\" in nodeid.partition("::")[0]
         or nodeid.startswith("/")
         or ".py::" not in nodeid
     ]

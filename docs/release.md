@@ -13,6 +13,38 @@ The release source ZIP is distinct from both the full local vault and the
 public export. See [repository-surfaces.md](repository-surfaces.md) for the
 surface comparison; this document owns release evidence and staged authority.
 
+## Distribution Policy
+
+Git checkouts at a selected commit or tag are the standard installation path.
+Run `make dev-install` in that checkout to install the locked dependencies and
+the local Python package. Verified source archives and their evidence bundles
+are the release handoff path. Keep private vault inputs on their designated
+surfaces; a public checkout does not supply full-vault release authority.
+
+The project does not operate a PyPI publication channel. No PyPI account,
+Trusted Publisher, publishing token, or `pypi` deployment environment is needed
+for this workflow. Python dependency installation still uses the canonical
+package index, and `pyproject.toml`, `uv.lock`, package builds, dependency review,
+SBOMs, and provenance checks remain part of maintenance.
+
+Package metadata includes `Private :: Do Not Upload`, which
+[makes PyPI reject an upload](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#classifiers).
+This classifier does not change the public source license or prevent direct
+wheel installation.
+
+The Release workflow retains the full-vault verification gates and a
+`release-artifacts` job that verifies the source/evidence binding, builds the
+Python distributions, uploads workflow artifacts, and attests their provenance.
+Its OIDC permission is used for GitHub artifact attestations. It does not upload
+packages to an index. Wheel installation alone does not provide the repository's
+Make targets, tests, or vault inputs.
+
+Changing the distribution channel does not waive runnable, sealed, or
+auto-promotion evidence. The full-vault gates still block release artifacts when
+that evidence is missing or stale. Reconsider PyPI only if concrete external
+consumers require it and an installed-package workflow and compatibility policy
+are supported and tested.
+
 ## Common Targets
 
 - `make status` / `llm-wiki-status`: read-only operator status surface. It

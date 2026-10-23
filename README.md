@@ -157,6 +157,13 @@ The project package is `llm-wiki-vnext` and requires Python 3.12+. Runtime
 third-party dependencies are intentionally small: `PyYAML` and `jsonschema`.
 Developer tooling is locked through `uv.lock` and installed by `make dev-install`.
 
+This project is distributed through Git and verified source archives; it is not
+published to PyPI. Use a checkout at the intended commit or tag and run
+`make dev-install`. Wheels remain buildable for direct installation of the Python
+tools, but do not include the Make workflow, tests, or vault contents. Dependency
+installation from PyPI and its security checks remain supported. See
+[the release distribution policy](./docs/release.md#distribution-policy).
+
 Installed console scripts include:
 
 ```bash

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import tomllib
 import unittest
 from pathlib import Path
 
 from tests.workflow_static_helpers import (
     PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
     PINNED_DOWNLOAD_ARTIFACT_ACTION,
-    PINNED_PYPI_PUBLISH_ACTION,
     assert_locked_install_shape as _assert_locked_install_shape,
     assert_workflow_run_contains as _assert_run_contains,
     assert_workflow_uses_are_sha_pinned as _assert_workflow_uses_are_sha_pinned,
@@ -37,11 +37,26 @@ def _governance() -> dict[str, object]:
 
 
 class ReleaseWorkflowStaticTests(unittest.TestCase):
-    def test_release_workflow_enables_trusted_publishing_and_attestations(self) -> None:
+    def test_package_metadata_prevents_pypi_upload(self) -> None:
+        project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
+        self.assertIn("Private :: Do Not Upload", project["classifiers"])
+
+    def test_workflows_do_not_publish_to_pypi(self) -> None:
+        for path in sorted(Path(".github/workflows").glob("*.yml")):
+            workflow = load_workflow(path)
+            for job_name, job in _jobs(workflow).items():
+                self.assertIsInstance(job, dict)
+                for step in _steps(job):
+                    with self.subTest(workflow=path.name, job=job_name, step=step.get("name")):
+                        self.assertFalse(
+                            str(step.get("uses", "")).startswith("pypa/gh-action-pypi-publish@")
+                        )
+
+    def test_release_workflow_builds_and_attests_release_artifacts(self) -> None:
         workflow = _workflow()
         on_section = _workflow_on(workflow)
         verify = _job(workflow, "verify-clean-release")
-        publish = _job(workflow, "publish")
+        artifacts = _job(workflow, "release-artifacts")
 
         self.assertEqual(workflow.get("name"), "Release")
         release_event = on_section.get("release", {})
@@ -54,9 +69,9 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         self.assertIn("upload_post_check_finalizer_artifact", inputs)
         self.assertEqual(workflow.get("env"), {"REVIEW_ARCHIVE_PROFILE": "clean"})
         self.assertEqual(verify.get("timeout-minutes"), 60)
-        self.assertEqual(publish.get("timeout-minutes"), 30)
+        self.assertEqual(artifacts.get("timeout-minutes"), 30)
         self.assertEqual(
-            publish.get("permissions"),
+            artifacts.get("permissions"),
             {"contents": "read", "id-token": "write", "attestations": "write"},
         )
         _assert_locked_install_shape(
@@ -66,7 +81,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             jobs_requiring_setup=(
                 "trusted-ci-full-suite-evidence",
                 "verify-clean-release",
-                "publish",
+                "release-artifacts",
             ),
         )
         _assert_workflow_uses_are_sha_pinned(self, workflow)
@@ -87,25 +102,34 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         )
         _assert_run_contains(
             self,
-            _step(publish, "Generate supply-chain artifacts"),
+            _step(artifacts, "Generate supply-chain artifacts"),
             ("make openvex-draft-cached", "make supply-chain-benchmark"),
         )
         self.assertEqual(
-            _step(publish, "Attest build provenance").get("uses"),
+            _step(artifacts, "Attest build provenance").get("uses"),
             PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
         )
-        self.assertEqual(
-            _step(publish, "Publish to PyPI").get("uses"),
-            PINNED_PYPI_PUBLISH_ACTION,
+        _assert_run_contains(
+            self, _step(artifacts, "Build distributions"), ("python -m build",)
         )
-        publish_runs = "\n".join(_run_text(step) for step in _steps(publish))
-        self.assertNotIn("python -m pip install -r requirements-dev.txt build", publish_runs)
+        upload = _step(artifacts, "Upload release artifacts")
+        self.assertIn("dist/*", _path_entries(upload))
+        self.assertEqual(upload["with"]["name"], "release-artifacts")
+        artifact_step_names = [str(step.get("name", "")) for step in _steps(artifacts)]
+        for before, after in (
+            ("Verify live release authority", "Build distributions"),
+            ("Build distributions", "Upload release artifacts"),
+            ("Upload release artifacts", "Attest build provenance"),
+        ):
+            self.assertLess(artifact_step_names.index(before), artifact_step_names.index(after))
+        artifact_runs = "\n".join(_run_text(step) for step in _steps(artifacts))
+        self.assertNotIn("python -m pip install -r requirements-dev.txt build", artifact_runs)
 
     def test_trusted_ci_full_suite_attestation_is_additive_and_minimal(self) -> None:
         workflow = _workflow()
         evidence = _job(workflow, "trusted-ci-full-suite-evidence")
         attestation = _job(workflow, "attest-trusted-ci-full-suite-evidence")
-        publish = _job(workflow, "publish")
+        artifacts = _job(workflow, "release-artifacts")
 
         self.assertNotIn("permissions", evidence)
         self.assertEqual(evidence.get("runs-on"), "ubuntu-latest")
@@ -139,7 +163,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             attest_step.get("with"),
             {"subject-path": "tmp/trusted-ci/test-execution-summary-full-evidence.zip"},
         )
-        self.assertEqual(publish.get("needs"), "verify-clean-release")
+        self.assertEqual(artifacts.get("needs"), "verify-clean-release")
 
     def test_release_governance_policy_matches_remote_visible_workflows(self) -> None:
         governance = _governance()
@@ -223,10 +247,10 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             )
             self.assertIn(with_section.get("name"), release_assets)
 
-    def test_publish_consumes_verify_job_live_release_artifacts(self) -> None:
+    def test_release_artifacts_consumes_verify_job_live_release_artifacts(self) -> None:
         workflow = _workflow()
         verify = _job(workflow, "verify-clean-release")
-        publish = _job(workflow, "publish")
+        artifacts = _job(workflow, "release-artifacts")
 
         _assert_run_contains(
             self,
@@ -334,7 +358,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             ),
         ):
             with self.subTest(step=step_name):
-                step = _step(publish, step_name)
+                step = _step(artifacts, step_name)
                 with_section = step.get("with", {})
                 self.assertIsInstance(with_section, dict)
                 self.assertEqual(with_section.get("name"), artifact_name)
@@ -342,7 +366,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
                 self.assertEqual(step.get("uses"), PINNED_DOWNLOAD_ARTIFACT_ACTION)
         _assert_run_contains(
             self,
-            _step(publish, "Verify live release authority"),
+            _step(artifacts, "Verify live release authority"),
             (
                 "ops.scripts.release.release_live_artifact_attestation verify",
                 '--source-zip-path "$SOURCE_ZIP"',
