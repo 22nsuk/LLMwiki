@@ -299,6 +299,12 @@ release/security checkout scopes. Then run `make sync-derived`,
 CI checks. Running the sync before updating the catalog restores the previous
 pins. Grouping narrows review scope; it does not synchronize the catalog.
 
+The shared Python/uv setup accepts `pip-cache: "false"` to install locked
+dependencies without restoring the optional pip cache. The cross-environment
+evidence bundle job uses this setting so pip-cache restore stalls cannot consume
+its ten-minute budget. Other jobs retain pip caching, and all jobs still run
+the same lock check, frozen export, and dependency installation.
+
 ## Change-Type Gates
 
 Use the table as a minimum local closeout plan. For source-derived surfaces,

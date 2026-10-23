@@ -6,6 +6,10 @@ inputs:
     description: Python version to install
     required: false
     default: "3.12"
+  pip-cache:
+    description: Restore and save the pip dependency cache
+    required: false
+    default: "true"
 
 runs:
   using: composite
@@ -14,7 +18,7 @@ runs:
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
         python-version: ${{ inputs.python-version }}
-        cache: pip
+        cache: ${{ inputs.pip-cache == 'true' && 'pip' || '' }}
         cache-dependency-path: |
           pyproject.toml
           uv.lock

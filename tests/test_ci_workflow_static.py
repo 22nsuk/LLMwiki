@@ -119,6 +119,24 @@ class CiWorkflowStaticTests(unittest.TestCase):
                         )
                         self.assertEqual(matches, expected)
 
+    def test_shared_python_setup_can_skip_pip_cache_and_still_install_locked_dependencies(self) -> None:
+        action = yaml.safe_load(
+            Path(".github/actions/setup-python-uv/action.yml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(action["inputs"]["pip-cache"]["default"], "true")
+        setup = _step_by_name(action["runs"], "Setup Python")
+        self.assertEqual(
+            setup["with"]["cache"], "${{ inputs.pip-cache == 'true' && 'pip' || '' }}"
+        )
+        install = _step_by_name(action["runs"], "Install dependencies from lock")
+        self.assertNotIn("if", install)
+        for command in (
+            "make uv-lock-check",
+            "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
+            "python -m pip install -r tmp/locked-requirements.ci.txt",
+        ):
+            self.assertIn(command, _run_text(install))
+
     def test_github_security_automation_surface_is_present_and_pinned(self) -> None:
         dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
         self.assertIsInstance(dependabot, dict)
@@ -504,6 +522,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
 
         self.assertEqual(job.get("name"), "raw-registry-cross-env evidence bundle / py3.12")
         self.assertEqual(job.get("needs"), "raw-registry-cross-environment")
+        self.assertEqual(_step_by_name(job, "Setup Python and uv")["with"]["pip-cache"], "false")
         download_with = workflow_mapping(
             _step_by_name(job, "Download raw registry cross-environment matrices").get("with", {}),
             "raw registry download with section must be a mapping",
