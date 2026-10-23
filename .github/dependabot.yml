@@ -8,9 +8,30 @@ updates:
       time: "05:00"
       timezone: "Asia/Seoul"
     groups:
-      github-actions:
+      # Accepted workflow updates must also update the canonical pin catalog.
+      # See docs/development.md before running make sync-derived.
+      github-actions-ci:
         patterns:
           - "*"
+        exclude-patterns:
+          - "github/codeql-action*"
+          - "actions/attest-build-provenance"
+          - "pypa/gh-action-pypi-publish"
+        update-types:
+          - "minor"
+          - "patch"
+      # Keep init/analyze on the same version, including major upgrades.
+      github-actions-codeql:
+        patterns:
+          - "github/codeql-action*"
+      # These paths need release validation beyond pull-request CI.
+      github-actions-release:
+        patterns:
+          - "actions/attest-build-provenance"
+          - "pypa/gh-action-pypi-publish"
+        update-types:
+          - "minor"
+          - "patch"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "pip"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 import pytest
@@ -79,6 +80,45 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
 
 
 class CiWorkflowStaticTests(unittest.TestCase):
+    def test_dependabot_groups_separate_ci_codeql_and_release_updates(self) -> None:
+        dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
+        actions = next(
+            item for item in dependabot["updates"]
+            if item["package-ecosystem"] == "github-actions"
+        )
+        groups = actions["groups"]
+        families = {
+            "github-actions-ci": (
+                "actions/checkout", "actions/setup-python", "astral-sh/setup-uv",
+                "actions/upload-artifact", "actions/download-artifact",
+                "actions/dependency-review-action",
+            ),
+            "github-actions-codeql": (
+                "github/codeql-action/init", "github/codeql-action/analyze",
+            ),
+            "github-actions-release": (
+                "actions/attest-build-provenance", "pypa/gh-action-pypi-publish",
+            ),
+        }
+        for family, dependencies in families.items():
+            for dependency in dependencies:
+                for update_type in ("major", "minor", "patch"):
+                    with self.subTest(dependency=dependency, update_type=update_type):
+                        matches = [
+                            name for name, group in groups.items()
+                            if update_type in group.get("update-types", ("major", "minor", "patch"))
+                            and any(fnmatchcase(dependency, pattern) for pattern in group["patterns"])
+                            and not any(
+                                fnmatchcase(dependency, pattern)
+                                for pattern in group.get("exclude-patterns", ())
+                            )
+                        ]
+                        expected = (
+                            [] if update_type == "major" and family != "github-actions-codeql"
+                            else [family]
+                        )
+                        self.assertEqual(matches, expected)
+
     def test_github_security_automation_surface_is_present_and_pinned(self) -> None:
         dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
         self.assertIsInstance(dependabot, dict)
