@@ -46,6 +46,15 @@ separately from the canonical-index check so local index configuration drift is
 visible as environment normalization work instead of being mistaken for lockfile
 staleness.
 
+CI and release jobs share `.github/actions/setup-python-uv/action.yml` for
+Python, uv, and frozen dependency installation. Pip and uv cache downloads have
+a one-minute timeout per segment; an unavailable cache falls through to the same
+locked install. Interpreter setup, lock validation, and installation failures
+still fail the job. On Linux, the action also loads the packaged Bubblewrap
+AppArmor profile and verifies the production sandbox launcher can import the
+installed dependencies. See [candidate validation isolation](ops-runtime.md)
+for the host requirements.
+
 ## Supported Test Entrypoints
 
 Use Make targets for repository-owned test lanes. They apply the documented

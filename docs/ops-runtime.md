@@ -42,8 +42,19 @@ preferred operator entrypoint for report generators and maintenance lanes.
 Mechanism repository-health checks, worker repository-health preflight, and
 candidate dependency probes require Linux with Bubblewrap installed at
 `/usr/bin/bwrap` and working user, PID, and network namespaces. On Debian/Ubuntu,
-install it with `sudo apt-get install bubblewrap`. Unsupported hosts or failed
-sandbox setup block validation; they never run the candidate on the host.
+install it with `sudo apt-get install bubblewrap`. Ubuntu hosts with AppArmor
+user-namespace restrictions also need the packaged Bubblewrap profile loaded:
+
+```bash
+sudo apt-get install --yes bubblewrap apparmor-profiles
+sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+```
+
+Installing Bubblewrap alone does not load this profile and can leave network
+namespace setup failing with `Failed RTM_NEWADDR: Operation not permitted`.
+The shared CI setup action loads the profile and runs the production sandbox
+launcher with dependency imports before the test lanes start. Unsupported hosts
+or failed sandbox setup block validation; they never run the candidate on the host.
 
 The trusted parent launches the check in a fresh filesystem and network
 namespace. Only the candidate workspace is writable on the host; `/tmp` and
