@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.core.artifact_io_runtime import write_vault_schema_validated_json
+from ops.scripts.core.candidate_sandbox_runtime import validate_candidate_workspace
 from ops.scripts.core.executor_runtime_errors_runtime import (
     ExecutorRuntimeExecutionError,
 )
@@ -73,6 +74,13 @@ def worker_repo_health_preflight_detail(
     return combined[-1000:]
 
 
+def validate_worker_workspace(workspace_root: Path) -> None:
+    try:
+        validate_candidate_workspace(workspace_root)
+    except (OSError, ValueError) as exc:
+        raise ExecutorRuntimeExecutionError(f"unsafe candidate workspace: {exc}") from exc
+
+
 def write_worker_structural_complexity_preflight_report(
     artifact_root: Path,
     *,
@@ -82,6 +90,7 @@ def write_worker_structural_complexity_preflight_report(
     changed_targets: list[str],
     context: RuntimeContext,
 ) -> tuple[str, dict[str, Any]]:
+    validate_worker_workspace(workspace_root)
     source_targets = structural_complexity_source_targets(changed_targets)
     report = build_structural_complexity_budget_report(
         workspace_root,

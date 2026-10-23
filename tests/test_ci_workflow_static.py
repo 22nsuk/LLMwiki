@@ -79,6 +79,13 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
 
 
 class CiWorkflowStaticTests(unittest.TestCase):
+    def test_candidate_sandbox_install_is_limited_to_linux(self) -> None:
+        action = load_workflow(Path(".github/actions/setup-python-uv/action.yml"))
+        runs = workflow_mapping(action.get("runs"), "composite action runs must be a mapping")
+        sandbox = _step_by_name(runs, "Install candidate validation sandbox")
+        self.assertEqual(sandbox.get("if"), "runner.os == 'Linux'")
+        self.assertIn("apt-get install --yes bubblewrap", _run_text(sandbox))
+
     def test_github_security_automation_surface_is_present_and_pinned(self) -> None:
         dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
         self.assertIsInstance(dependabot, dict)

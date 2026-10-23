@@ -1633,11 +1633,11 @@ class MakefileStaticGateTests(unittest.TestCase):
             block,
         )
         self.assertIn(
-            'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"',
+            'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --link-mode copy -r "$(DEV_LOCKED_REQUIREMENTS)"',
             block,
         )
         self.assertIn(
-            'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .',
+            'UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --link-mode copy --no-deps -e .',
             block,
         )
         self.assertIn(

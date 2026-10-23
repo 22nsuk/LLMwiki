@@ -17,6 +17,9 @@ report-contract, public mirror, mechanism, and release entrypoints.
 export omits the project itself, then installs the local project separately as
 editable with `--no-deps`, so local setup and CI both replay the same frozen
 third-party dependency authority without losing editable source behavior.
+The uv installer uses `--link-mode copy` so package files do not share writable
+inodes with the host cache. Candidate validation rejects hard links; rerun
+`make dev-install` to replace older environments created with uv's hardlink mode.
 If an existing `.venv` is present, the install first moves it to `.venv.previous`
 and creates the new environment directly at `.venv`, so generated console
 scripts keep valid shebangs. Failed installs remove the partial `.venv` and

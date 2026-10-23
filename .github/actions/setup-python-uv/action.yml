@@ -10,6 +10,13 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install candidate validation sandbox
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes bubblewrap
+
     - name: Setup Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:

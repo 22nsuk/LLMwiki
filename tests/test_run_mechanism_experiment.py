@@ -364,6 +364,7 @@ def _ephemeral_noise_run_command(case: unittest.TestCase, vault: Path) -> Any:
         cwd: Path,
         timeout_seconds: int,
         argv: list[str] | None = None,
+        candidate: bool = False,
     ) -> dict:
         case.assertNotEqual(cwd, vault.resolve())
         case.assertEqual(cwd.name, "vault")
@@ -894,6 +895,7 @@ else:
                 cwd: Path,
                 timeout_seconds: int,
                 argv: list[str] | None = None,
+                candidate: bool = False,
             ) -> dict:
                 self.assertNotEqual(cwd, vault.resolve())
                 self.assertEqual(cwd.name, "vault")
@@ -1018,6 +1020,7 @@ else:
                 cwd: Path,
                 timeout_seconds: int,
                 argv: list[str] | None = None,
+                candidate: bool = False,
             ) -> dict:
                 self.assertNotEqual(cwd, vault.resolve())
                 self.assertEqual(cwd.name, "vault")
@@ -1147,6 +1150,7 @@ else:
                 cwd: Path,
                 timeout_seconds: int,
                 argv: list[str] | None = None,
+                candidate: bool = False,
             ) -> dict:
                 self.assertNotEqual(cwd, vault.resolve())
                 self.assertEqual(cwd.name, "vault")
@@ -1328,6 +1332,7 @@ else:
                 cwd: Path,
                 timeout_seconds: int,
                 argv: list[str] | None = None,
+                candidate: bool = False,
             ) -> dict:
                 self.assertNotEqual(cwd, vault.resolve())
                 self.assertEqual(cwd.name, "vault")
@@ -1464,6 +1469,7 @@ else:
                 cwd: Path,
                 timeout_seconds: int,
                 argv: list[str] | None = None,
+                candidate: bool = False,
             ) -> dict:
                 self.assertNotEqual(cwd, vault.resolve())
                 self.assertEqual(cwd.name, "vault")

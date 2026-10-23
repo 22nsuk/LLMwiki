@@ -76,8 +76,8 @@ dev-install:
 		$(UV) venv --python "$(BOOTSTRAP_PYTHON)" "$(VENV_DIR)"; \
 		mkdir -p "$(dir $(DEV_LOCKED_REQUIREMENTS))"; \
 		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) export $(UV_EXPORT_DEV_REQUIREMENTS_FLAGS) -o "$(DEV_LOCKED_REQUIREMENTS)" >/dev/null; \
-		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" -r "$(DEV_LOCKED_REQUIREMENTS)"; \
-		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --no-deps -e .; \
+		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --link-mode copy -r "$(DEV_LOCKED_REQUIREMENTS)"; \
+		UV_DEFAULT_INDEX="$(DEV_INSTALL_INDEX_URL)" $(UV) pip install --python "$(VENV_PYTHON)" --link-mode copy --no-deps -e .; \
 	else \
 		echo "uv not found; falling back to stdlib venv via $(BOOTSTRAP_PYTHON)"; \
 		"$(BOOTSTRAP_PYTHON)" -m venv "$(VENV_DIR)"; \

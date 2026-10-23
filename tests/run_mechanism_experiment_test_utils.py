@@ -448,6 +448,7 @@ def raw_registry_preflight_run_command(case: unittest.TestCase, vault: Path) -> 
         cwd: Path,
         timeout_seconds: int,
         argv: list[str] | None = None,
+        candidate: bool = False,
     ) -> dict:
         case.assertNotEqual(cwd, vault.resolve())
         if "repo health ok" in command:

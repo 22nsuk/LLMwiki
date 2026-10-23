@@ -80,26 +80,13 @@ def _provision_workspace_python_symlink(
     return workspace_python
 
 
-def _write_workspace_python_delegate(vault: Path) -> Path:
-    delegate = vault.parent / f"{vault.name}-trusted-python"
-    delegate.write_text(
-        f"#!/bin/sh\nexec {shlex.quote(sys.executable)} \"$@\"\n",
-        encoding="utf-8",
-    )
-    delegate.chmod(0o755)
-    return delegate
-
-
 def _seed_executor_vault(vault: Path) -> None:
     seed_minimal_vault(vault)
     (vault / "ops" / "scripts").mkdir(parents=True, exist_ok=True)
     (vault / "tests").mkdir(parents=True, exist_ok=True)
     venv_bin = vault / ".venv" / "bin"
     venv_bin.mkdir(parents=True, exist_ok=True)
-    _provision_workspace_python_symlink(
-        vault,
-        source_python=_write_workspace_python_delegate(vault),
-    )
+    _provision_workspace_python_symlink(vault)
     (vault / "ops" / "schemas" / "executor-report.schema.json").write_text(
         (REPO_ROOT / "ops" / "schemas" / "executor-report.schema.json").read_text(encoding="utf-8"),
         encoding="utf-8",
@@ -1020,6 +1007,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
             ).absolute()
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 if _is_git_rev_parse_head(argv):
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
                 workspace_python = vault / ".venv" / "bin" / "python"
@@ -1600,7 +1589,7 @@ class ExecutorRuntimeTests(unittest.TestCase):
             self.assertIn("workspace Python trust check", notes)
             self.assertIn("missing workspace python identity manifest", notes)
 
-    def test_external_workspace_dependency_preflight_executes_artifact_python(self) -> None:
+    def test_external_workspace_dependency_preflight_uses_captured_runtime_for_artifact_alias(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             artifact_root = Path(temp_dir) / "artifact"
             workspace_root = Path(temp_dir) / "workspace"
@@ -1618,10 +1607,12 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 selected_rung=3,
             )
             artifact_python = (artifact_root / ".venv" / "bin" / "python").absolute()
-            trusted_artifact_python = artifact_python.resolve(strict=True)
+            trusted_artifact_python = Path(sys.executable).absolute()
             captured_preflight_argv: list[str] = []
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 if _is_git_rev_parse_head(argv):
                     return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
                 captured_preflight_argv[:] = argv
@@ -2089,14 +2080,6 @@ class ExecutorRuntimeTests(unittest.TestCase):
             workspace_root.mkdir()
             _seed_executor_vault(artifact_root)
             seed_subagent_profiles(artifact_root, ["validator"])
-            artifact_python = artifact_root / ".venv" / "bin" / "python"
-            artifact_python.write_text(
-                f"#!/bin/sh\n"
-                f"if [ \"${{1:-}}\" = \"-c\" ]; then exec {json.dumps(sys.executable)} \"$@\"; fi\n"
-                "printf 'artifact-python\\n'\n",
-                encoding="utf-8",
-            )
-            artifact_python.chmod(0o755)
             workspace_python = _write_external_workspace_python_shim(artifact_root, workspace_root)
             workspace_venv_bin = workspace_python.parent
             (workspace_root / "ops" / "schemas").mkdir(parents=True)
@@ -2167,14 +2150,14 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 (artifact_root / "runs" / "run-executor" / "validator-last-message.json").is_file()
             )
             python_check = subprocess.run(
-                ["python"],
+                ["python", "-c", "import sys; print(sys.executable)"],
                 cwd=workspace_root,
                 env=captured_env,
                 text=True,
                 capture_output=True,
                 check=False,
             )
-            self.assertEqual(python_check.stdout, "artifact-python\n")
+            self.assertEqual(python_check.stdout, f"{artifact_root / '.venv/bin/python'}\n")
 
     def test_codex_exec_uses_external_workspace_sandbox_for_read_only_temp_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2392,8 +2375,6 @@ class ExecutorRuntimeTests(unittest.TestCase):
             seed_subagent_profiles(vault, ["validator"])
             venv_bin = vault / ".venv" / "bin"
             venv_bin.mkdir(parents=True, exist_ok=True)
-            (venv_bin / "python").write_text("#!/bin/sh\n", encoding="utf-8")
-            (venv_bin / "python").chmod(0o755)
             (venv_bin / "codex").write_text("#!/bin/sh\n", encoding="utf-8")
             (venv_bin / "codex").chmod(0o755)
             _write_routing_report(
@@ -2999,6 +2980,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 if _is_worker_repo_health_preflight(argv):
                     self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
                     self.assertTrue(_is_full_worker_repo_health_preflight(argv))
@@ -3083,6 +3066,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 if _is_worker_repo_health_preflight(argv):
                     self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
                     self.assertTrue(_is_focused_worker_repo_health_preflight(argv))
@@ -3170,6 +3155,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 if _is_worker_repo_health_preflight(argv):
                     events.append("post-worker-repo-health")
                     self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
@@ -3383,6 +3370,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout=f"{role} ok\n", stderr="")
 
             def fake_preflight(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 if _is_worker_repo_health_preflight(argv):
                     events.append("post-worker-repo-health")
                     self.assertEqual(Path(str(kwargs.get("cwd"))), vault)
@@ -3509,6 +3498,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout="cli ok\n", stderr="")
 
             def fake_preflight(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 return _executor_subprocess_completed(argv)
 
             with (
@@ -3586,6 +3577,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout=f"{role}\n", stderr="")
 
             def fake_preflight(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 return _executor_subprocess_completed(argv)
 
             with (
@@ -3687,6 +3680,8 @@ class ExecutorRuntimeTests(unittest.TestCase):
                 return mock.Mock(returncode=returncode, stdout=f"{role}\n", stderr="")
 
             def fake_preflight(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == "/usr/bin/bwrap":
+                    argv = argv[argv.index("--") + 1:]
                 return _executor_subprocess_completed(argv)
 
             with (

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -40,13 +41,13 @@ class TrustedCandidateRunnerTests(unittest.TestCase):
         self.assertNotIn("PYTHONHOME", env)
         self.assertEqual(env["PYTHON"], "/trusted/python")
 
-    def test_resolve_trusted_repo_health_argv_uses_trusted_make_for_external_workspace(self) -> None:
+    def test_resolve_trusted_repo_health_argv_uses_candidate_make_inside_sandbox(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             trusted = Path(temp_dir) / "trusted"
             workspace = Path(temp_dir) / "workspace"
             trusted.mkdir()
             workspace.mkdir()
-            (trusted / "Makefile").write_text("check:\n\t@echo ok\n", encoding="utf-8")
+            (workspace / "Makefile").write_text("check:\n\t@echo ok\n", encoding="utf-8")
             argv = resolve_trusted_repo_health_argv(
                 test_files=[],
                 workspace_mode="full_copy",
@@ -56,7 +57,7 @@ class TrustedCandidateRunnerTests(unittest.TestCase):
             )
             self.assertEqual(Path(argv[0]).name, "make")
             self.assertEqual(argv[1], "-C")
-            self.assertEqual(argv[2], str(trusted))
+            self.assertEqual(argv[2], str(workspace))
             self.assertTrue(any(str(token).startswith("VAULT=") for token in argv))
             self.assertTrue(any(str(token).startswith("PYTHON=") for token in argv))
 
@@ -79,7 +80,7 @@ class TrustedCandidateRunnerTests(unittest.TestCase):
                         argv=["echo", "ok"],
                         workspace_root=vault,
                         trusted_vault_root=vault,
-                        trusted_python=Path("/trusted/python"),
+                        trusted_python=Path(sys.executable),
                         timeout_seconds=5,
                         audit_rel_path=audit_rel,
                     )
@@ -171,8 +172,11 @@ class TrustedCandidateRunnerTests(unittest.TestCase):
             trusted_python.unlink()
             trusted_python.symlink_to(second_target)
 
-            with mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run") as run:
-                outcome = run_trusted_candidate_command(
+            with (
+                mock.patch("ops.scripts.core.trusted_candidate_runner.subprocess.run") as run,
+                self.assertRaisesRegex(ValueError, "unsafe candidate workspace"),
+            ):
+                run_trusted_candidate_command(
                     TrustedCandidateRunRequest(
                         purpose="test",
                         argv=[str(trusted_python), "-c", "pass"],
@@ -185,8 +189,6 @@ class TrustedCandidateRunnerTests(unittest.TestCase):
                 )
 
             run.assert_not_called()
-            self.assertEqual(outcome.returncode, 126)
-            self.assertIn("trusted python symlink target changed", outcome.stderr)
 
     def test_workspace_python_identity_blocks_modified_shim(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
