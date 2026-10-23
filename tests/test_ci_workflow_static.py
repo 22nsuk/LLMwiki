@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 import pytest
@@ -79,6 +80,63 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
 
 
 class CiWorkflowStaticTests(unittest.TestCase):
+    def test_dependabot_groups_separate_ci_codeql_and_release_updates(self) -> None:
+        dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
+        actions = next(
+            item for item in dependabot["updates"]
+            if item["package-ecosystem"] == "github-actions"
+        )
+        groups = actions["groups"]
+        families = {
+            "github-actions-ci": (
+                "actions/checkout", "actions/setup-python", "astral-sh/setup-uv",
+                "actions/upload-artifact", "actions/download-artifact",
+                "actions/dependency-review-action",
+            ),
+            "github-actions-codeql": (
+                "github/codeql-action/init", "github/codeql-action/analyze",
+            ),
+            "github-actions-release": (
+                "actions/attest-build-provenance", "pypa/gh-action-pypi-publish",
+            ),
+        }
+        for family, dependencies in families.items():
+            for dependency in dependencies:
+                for update_type in ("major", "minor", "patch"):
+                    with self.subTest(dependency=dependency, update_type=update_type):
+                        matches = [
+                            name for name, group in groups.items()
+                            if update_type in group.get("update-types", ("major", "minor", "patch"))
+                            and any(fnmatchcase(dependency, pattern) for pattern in group["patterns"])
+                            and not any(
+                                fnmatchcase(dependency, pattern)
+                                for pattern in group.get("exclude-patterns", ())
+                            )
+                        ]
+                        expected = (
+                            [] if update_type == "major" and family != "github-actions-codeql"
+                            else [family]
+                        )
+                        self.assertEqual(matches, expected)
+
+    def test_shared_python_setup_can_skip_pip_cache_and_still_install_locked_dependencies(self) -> None:
+        action = yaml.safe_load(
+            Path(".github/actions/setup-python-uv/action.yml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(action["inputs"]["pip-cache"]["default"], "true")
+        setup = _step_by_name(action["runs"], "Setup Python")
+        self.assertEqual(
+            setup["with"]["cache"], "${{ inputs.pip-cache == 'true' && 'pip' || '' }}"
+        )
+        install = _step_by_name(action["runs"], "Install dependencies from lock")
+        self.assertNotIn("if", install)
+        for command in (
+            "make uv-lock-check",
+            "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",
+            "python -m pip install -r tmp/locked-requirements.ci.txt",
+        ):
+            self.assertIn(command, _run_text(install))
+
     def test_github_security_automation_surface_is_present_and_pinned(self) -> None:
         dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
         self.assertIsInstance(dependabot, dict)
@@ -464,6 +522,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
 
         self.assertEqual(job.get("name"), "raw-registry-cross-env evidence bundle / py3.12")
         self.assertEqual(job.get("needs"), "raw-registry-cross-environment")
+        self.assertEqual(_step_by_name(job, "Setup Python and uv")["with"]["pip-cache"], "false")
         download_with = workflow_mapping(
             _step_by_name(job, "Download raw registry cross-environment matrices").get("with", {}),
             "raw registry download with section must be a mapping",

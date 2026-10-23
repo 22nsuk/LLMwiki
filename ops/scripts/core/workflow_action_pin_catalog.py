@@ -11,15 +11,15 @@ class WorkflowActionPinRule(TypedDict):
     paths: tuple[str, ...]
 
 
-CI_CHECKOUT_ACTION_SHA = "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-RELEASE_SECURITY_CHECKOUT_ACTION_SHA = "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
+CI_CHECKOUT_ACTION_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+RELEASE_SECURITY_CHECKOUT_ACTION_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
 SETUP_PYTHON_ACTION_SHA = "a309ff8b426b58ec0e2a45f0f869d46889d02405"
 SETUP_UV_ACTION_SHA = "08807647e7069bb48b6ef5acd8ec9567f424441b"
-UPLOAD_ARTIFACT_ACTION_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-DOWNLOAD_ARTIFACT_ACTION_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
+UPLOAD_ARTIFACT_ACTION_SHA = "cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+DOWNLOAD_ARTIFACT_ACTION_SHA = "9000827ccba6bdab643e8b6fd33ac0654aef8333"
 ATTEST_BUILD_PROVENANCE_ACTION_SHA = "0f67c3f4856b2e3261c31976d6725780e5e4c373"
 PYPI_PUBLISH_ACTION_SHA = "cef221092ed1bacb1cc03d23a2d87d1d172e277b"
-CODEQL_ACTION_SHA = "99df26d4f13ea111d4ec1a7dddef6063f76b97e9"
+CODEQL_ACTION_SHA = "24c54180a607b1449ed407dd24f251e4e9147c8d"
 DEPENDENCY_REVIEW_ACTION_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 
 PINNED_CI_CHECKOUT_ACTION = f"actions/checkout@{CI_CHECKOUT_ACTION_SHA}"
@@ -49,14 +49,14 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "checkout-ci",
         "action": "actions/checkout",
         "sha": CI_CHECKOUT_ACTION_SHA,
-        "version_comment": "v7.0.0",
+        "version_comment": "v7.0.1",
         "paths": (".github/workflows/ci.yml",),
     },
     {
         "id": "checkout-release-security",
         "action": "actions/checkout",
         "sha": RELEASE_SECURITY_CHECKOUT_ACTION_SHA,
-        "version_comment": "v7.0.0",
+        "version_comment": "v7.0.1",
         "paths": (
             ".github/workflows/release.yml",
             ".github/workflows/codeql.yml",
@@ -81,7 +81,7 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "upload-artifact",
         "action": "actions/upload-artifact",
         "sha": UPLOAD_ARTIFACT_ACTION_SHA,
-        "version_comment": "v7.0.1",
+        "version_comment": "v7.0.2",
         "paths": (
             ".github/workflows/ci.yml",
             ".github/workflows/release.yml",
@@ -91,7 +91,7 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "download-artifact",
         "action": "actions/download-artifact",
         "sha": DOWNLOAD_ARTIFACT_ACTION_SHA,
-        "version_comment": "v8.0.1",
+        "version_comment": "v8.0.2",
         "paths": (
             ".github/workflows/ci.yml",
             ".github/workflows/release.yml",
@@ -118,14 +118,14 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "codeql-init",
         "action": "github/codeql-action/init",
         "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.37.0",
+        "version_comment": "v4.38.3",
         "paths": (".github/workflows/codeql.yml",),
     },
     {
         "id": "codeql-analyze",
         "action": "github/codeql-action/analyze",
         "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.37.0",
+        "version_comment": "v4.38.3",
         "paths": (".github/workflows/codeql.yml",),
     },
     {

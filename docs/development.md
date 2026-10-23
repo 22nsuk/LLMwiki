@@ -281,6 +281,30 @@ use, classify it as infrastructure/budget triage. Do not debug action pins,
 test failures, or release evidence until the budget is available and a rerun or
 rebase produces jobs that reach checkout.
 
+GitHub Actions update groups are defined in
+[`.github/dependabot.yml`](../.github/dependabot.yml). CI tooling and release
+publication use separate minor/patch groups; major upgrades receive individual
+PRs. CodeQL has its own group for every update level so `init` and `analyze`
+remain on the same version. Attestation and PyPI publishing updates need their
+own execution evidence because pull-request CI does not run those paths. The
+[Dependabot grouping reference](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#groups)
+describes matching and the fallback to individual PRs.
+
+Workflow action references are generated from
+[`workflow_action_pin_catalog.py`](../ops/scripts/core/workflow_action_pin_catalog.py).
+For an accepted Dependabot update, first copy the reviewed SHA and version
+comment into the matching catalog rules, preserving the separate CI and
+release/security checkout scopes. Then run `make sync-derived`,
+`make sync-derived-check`, and the focused workflow tests before the required
+CI checks. Running the sync before updating the catalog restores the previous
+pins. Grouping narrows review scope; it does not synchronize the catalog.
+
+The shared Python/uv setup accepts `pip-cache: "false"` to install locked
+dependencies without restoring the optional pip cache. The cross-environment
+evidence bundle job uses this setting so pip-cache restore stalls cannot consume
+its ten-minute budget. Other jobs retain pip caching, and all jobs still run
+the same lock check, frozen export, and dependency installation.
+
 ## Change-Type Gates
 
 Use the table as a minimum local closeout plan. For source-derived surfaces,
