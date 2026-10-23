@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Python and uv
         uses: ./.github/actions/setup-python-uv
@@ -161,7 +161,7 @@ jobs:
 
       - name: Upload release closeout cost evidence
         if: always() && matrix.tier == 'release-closeout-regression'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-closeout-cost-evidence-${{ matrix.python-version }}
           path: |
@@ -178,7 +178,7 @@ jobs:
 
       - name: Upload release authority blocked preflight
         if: always() && matrix.tier == 'release-closeout-regression'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-authority-blocked-preflight-${{ matrix.python-version }}
           path: |
@@ -225,7 +225,7 @@ jobs:
 
       - name: Upload public check summary diagnostics
         if: always() && matrix.tier == 'public'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: public-check-summary-${{ matrix.python-version }}
           path: |
@@ -242,7 +242,7 @@ jobs:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Python and uv
         uses: ./.github/actions/setup-python-uv
@@ -264,7 +264,7 @@ jobs:
 
       - name: Upload Windows smoke artifact
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-release-smoke-report
           path: ops/reports/release-smoke-report-windows.json
@@ -290,7 +290,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Python and uv
         uses: ./.github/actions/setup-python-uv
@@ -307,7 +307,7 @@ jobs:
 
       - name: Upload raw registry cross-environment matrix
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: raw-registry-cross-environment-${{ matrix.profile }}
           path: ops/reports/raw-registry-cross-environment-matrix-${{ matrix.profile }}.json
@@ -323,15 +323,17 @@ jobs:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Python and uv
         uses: ./.github/actions/setup-python-uv
         with:
           python-version: "3.12"
+          # Keep cache-service stalls outside this job's ten-minute budget.
+          pip-cache: "false"
 
       - name: Download raw registry cross-environment matrices
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: raw-registry-cross-environment-*
           path: ops/reports
@@ -357,7 +359,7 @@ jobs:
 
       - name: Upload raw registry cross-environment evidence bundle
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: raw-registry-cross-environment-evidence-bundle
           path: |
@@ -376,7 +378,7 @@ jobs:
       attestations: write
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Python and uv
         uses: ./.github/actions/setup-python-uv
@@ -392,7 +394,7 @@ jobs:
           subject-path: dist/*
 
       - name: Upload distribution packages
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist-packages
           path: dist/*
@@ -405,7 +407,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Python and uv
         uses: ./.github/actions/setup-python-uv
@@ -422,7 +424,7 @@ jobs:
         run: make openvex-draft-cached
 
       - name: Upload supply-chain artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: supply-chain-reports
           path: |
