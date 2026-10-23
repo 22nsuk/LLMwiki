@@ -298,12 +298,16 @@ rebase produces jobs that reach checkout.
 
 GitHub Actions update groups are defined in
 [`.github/dependabot.yml`](../.github/dependabot.yml). CI tooling and release
-publication use separate minor/patch groups; major upgrades receive individual
+attestation use separate minor/patch groups; major upgrades receive individual
 PRs. CodeQL has its own group for every update level so `init` and `analyze`
-remain on the same version. Attestation and PyPI publishing updates need their
-own execution evidence because pull-request CI does not run those paths. The
+remain on the same version. Attestation updates need their own execution
+evidence because pull-request CI does not run those paths. The
 [Dependabot grouping reference](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#groups)
 describes matching and the fallback to individual PRs.
+
+The project does not publish to PyPI, so there is no publisher Action or
+publisher update group. Python dependency updates and the canonical package
+index remain in use; see [the distribution policy](release.md#distribution-policy).
 
 Workflow action references are generated from
 [`workflow_action_pin_catalog.py`](../ops/scripts/core/workflow_action_pin_catalog.py).

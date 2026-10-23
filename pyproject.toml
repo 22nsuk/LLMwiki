@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
+classifiers = ["Private :: Do Not Upload"]
 dependencies = [
   "PyYAML>=6.0,<7",
   "jsonschema>=4.23,<5",

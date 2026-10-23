@@ -156,8 +156,8 @@ jobs:
           path: build/release/release-live-attestation.json
           if-no-files-found: error
 
-  publish:
-    name: publish / py3.12
+  release-artifacts:
+    name: release artifacts / py3.12
     needs: verify-clean-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -241,8 +241,3 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
-        with:
-          packages-dir: dist/

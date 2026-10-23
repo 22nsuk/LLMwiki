@@ -145,7 +145,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
                 "github/codeql-action/init", "github/codeql-action/analyze",
             ),
             "github-actions-release": (
-                "actions/attest-build-provenance", "pypa/gh-action-pypi-publish",
+                "actions/attest-build-provenance",
             ),
         }
         for family, dependencies in families.items():

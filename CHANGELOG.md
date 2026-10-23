@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10 — Git-based distribution
+
+- Retired project publication to PyPI, including the publisher Action and its
+  pin catalog, Dependabot, and workflow test contracts. This supersedes the
+  earlier PyPI Trusted Publishing follow-up.
+- Added the `Private :: Do Not Upload` package classifier to prevent accidental
+  uploads while retaining direct wheel installation.
+- Kept Git checkouts and verified source archives as the distribution paths,
+  with Python package builds, attestations, dependency security, and full-vault
+  release evidence checks retained.
+
 ## 2026-07 — Source-derived sync convergence
 
 - Added `make sync-derived` and `make sync-derived-check` as the single operator
