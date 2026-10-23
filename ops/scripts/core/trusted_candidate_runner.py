@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shlex
 import shutil
 import subprocess
@@ -9,26 +8,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-TRUSTED_CANDIDATE_ENV_ALLOWLIST = frozenset(
-    {
-        "HOME",
-        "LANG",
-        "LC_ALL",
-        "LC_CTYPE",
-        "PATH",
-        "PYTHONDONTWRITEBYTECODE",
-        "PYTHONHASHSEED",
-        "PYTHONIOENCODING",
-        "PYTHONUTF8",
-        "SYSTEMROOT",
-        "TEMP",
-        "TMP",
-        "TMPDIR",
-        "USER",
-        "USERPROFILE",
-        "WINDIR",
-    }
+from .candidate_sandbox_runtime import (
+    candidate_environment,
+    candidate_sandbox_argv,
+    validate_candidate_workspace,
 )
+from .filesystem_runtime import atomic_write_text
+
 TRUSTED_CANDIDATE_ENV_STRIP = frozenset(
     {
         "PYTHONHOME",
@@ -69,15 +55,9 @@ def build_trusted_candidate_env(
     trusted_python: Path,
     extra_env: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    env: dict[str, str] = {}
-    for key in TRUSTED_CANDIDATE_ENV_ALLOWLIST:
-        value = os.environ.get(key)
-        if value is not None:
-            env[key] = value
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env["PYTHON"] = str(trusted_python)
+    env = candidate_environment(python=trusted_python)
     if extra_env:
-        env.update(extra_env)
+        raise ValueError("candidate validation does not accept environment overrides")
     for stripped in TRUSTED_CANDIDATE_ENV_STRIP:
         env.pop(stripped, None)
     return env
@@ -127,20 +107,17 @@ def resolve_trusted_repo_health_argv(
         )
         return shlex.split(command, posix=True)
     if workspace_root.resolve() == trusted_vault_root.resolve():
-        return shlex.split(
-            f"make PYTHON={shlex.quote(str(trusted_python))} check",
-            posix=True,
-        )
-    makefile = trusted_vault_root / "Makefile"
+        return shlex.split(f"make PYTHON={shlex.quote(str(trusted_python))} check", posix=True)
+    makefile = workspace_root / "Makefile"
     if not makefile.is_file():
-        raise ValueError("trusted vault root is missing Makefile for repo-health preflight")
+        raise ValueError("candidate workspace is missing Makefile for repo-health preflight")
     make_path = shutil.which("make")
     if make_path is None:
         raise ValueError("make executable is unavailable for trusted repo-health preflight")
     return [
         make_path,
         "-C",
-        str(trusted_vault_root),
+        str(workspace_root),
         f"PYTHON={trusted_python}",
         f"VAULT={workspace_root}",
         "check",
@@ -152,10 +129,6 @@ def run_trusted_candidate_command(request: TrustedCandidateRunRequest) -> Truste
         request.argv,
         workspace_root=request.workspace_root,
         trusted_python=request.trusted_python,
-    )
-    env = build_trusted_candidate_env(
-        trusted_python=request.trusted_python,
-        extra_env=request.extra_env,
     )
     cwd = request.cwd or request.workspace_root
     timed_out = False
@@ -170,12 +143,26 @@ def run_trusted_candidate_command(request: TrustedCandidateRunRequest) -> Truste
         if actual_realpath != request.trusted_python_realpath:
             stderr = "trusted python symlink target changed before launch"
             returncode = 126
+    interpreter_alias = None
     if returncode != 126:
         try:
+            workspace_python = request.workspace_root.resolve() / ".venv" / "bin" / "python"
+            if request.workspace_root.resolve() == request.trusted_vault_root.resolve() and workspace_python.is_symlink():
+                # Preserve the existing same-root interpreter link without
+                # exposing its target; require it to remain unchanged afterward.
+                interpreter_alias = (workspace_python, workspace_python.resolve(strict=True))
+            env = build_trusted_candidate_env(
+                trusted_python=request.trusted_python, extra_env=request.extra_env,
+            )
+            sandbox_argv = candidate_sandbox_argv(
+                argv, workspace_root=request.workspace_root, cwd=cwd,
+                trusted_python=request.trusted_python, interpreter_alias=interpreter_alias,
+            )
             completed = subprocess.run(
-                argv,
+                sandbox_argv,
                 cwd=cwd,
                 env=env,
+                stdin=subprocess.DEVNULL,
                 text=True,
                 capture_output=True,
                 timeout=request.timeout_seconds,
@@ -189,9 +176,15 @@ def run_trusted_candidate_command(request: TrustedCandidateRunRequest) -> Truste
             stdout = str(exc.stdout or "")
             stderr = str(exc.stderr or "")
             returncode = 124
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             stderr = str(exc)
             returncode = 126
+    try:
+        validate_candidate_workspace(request.workspace_root, interpreter_alias=interpreter_alias)
+    except (OSError, ValueError) as exc:
+        # Callers write logs and ledgers after receiving an outcome. An unsafe
+        # tree must stop that entire path, including audit writes on failure.
+        raise ValueError(f"unsafe candidate workspace after validation: {exc}") from exc
     audit_record = {
         "purpose": request.purpose,
         "argv": argv,
@@ -202,14 +195,17 @@ def run_trusted_candidate_command(request: TrustedCandidateRunRequest) -> Truste
         "returncode": returncode,
         "timed_out": timed_out,
         "env_stripped": sorted(TRUSTED_CANDIDATE_ENV_STRIP),
-        "network_policy": "default_deny_not_enforced_by_subprocess_wrapper",
+        "network_policy": "isolated_network_namespace",
+        "execution_isolation": "bubblewrap",
     }
     if request.trusted_python_realpath is not None:
         audit_record["trusted_python_realpath"] = str(request.trusted_python_realpath)
     if request.audit_rel_path:
         audit_path = request.trusted_vault_root / request.audit_rel_path
+        if not audit_path.resolve().is_relative_to(request.trusted_vault_root.resolve()):
+            raise ValueError("candidate audit path must remain inside the trusted vault")
         audit_path.parent.mkdir(parents=True, exist_ok=True)
-        audit_path.write_text(json.dumps(audit_record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        atomic_write_text(audit_path, json.dumps(audit_record, ensure_ascii=False, indent=2) + "\n")
     return TrustedCandidateRunOutcome(
         returncode=returncode,
         stdout=stdout,

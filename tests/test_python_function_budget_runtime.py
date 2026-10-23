@@ -3,6 +3,9 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import pytest
 
 from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.core.python_function_budget_runtime import (
@@ -248,6 +251,79 @@ class PythonFunctionBudgetRuntimeTest(unittest.TestCase):
         self.assertNotIn("_build_executor_report", symbols)
         self.assertNotIn("_materialize_prompt", symbols)
         self.assertNotIn("load_readiness_inputs", symbols)
+
+
+@pytest.mark.parametrize("path_kind", [
+    "absolute_file", "parent_file", "absolute_directory", "parent_directory",
+    "file_link", "directory_link", "nested_file_link",
+])
+def test_function_budget_rejects_external_sources(tmp_path: Path, path_kind: str) -> None:
+    vault = tmp_path / "candidate"
+    vault.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    secret = outside / "synthetic.py"
+    secret.write_text("def synthetic_private_symbol(value):\n    return value\n", encoding="utf-8")
+    prefixes = {
+        "absolute_file": str(secret), "parent_file": "../outside/synthetic.py",
+        "absolute_directory": str(outside), "parent_directory": "../outside",
+    }
+    if path_kind not in prefixes:
+        source = vault / "sources"
+        source.mkdir()
+        link = source / "alias.py"
+        target = outside if path_kind == "directory_link" else secret
+        try:
+            link.symlink_to(target, target_is_directory=target.is_dir())
+        except OSError as exc:
+            pytest.skip(f"symlink setup unavailable: {exc}")
+        prefixes[path_kind] = "sources" if path_kind == "nested_file_link" else "sources/alias.py"
+    config = {"profiles": {"runtime": {
+        "include_prefixes": [prefixes[path_kind]], "lines": 1, "params": 0, "branches": 0,
+    }}}
+    reads = []
+    read_text = Path.read_text
+
+    def record_read(path: Path, *args: object, **kwargs: object) -> str:
+        if path.resolve() == secret:
+            reads.append(path)
+        return read_text(path, *args, **kwargs)
+
+    try:
+        with mock.patch.object(Path, "read_text", record_read), pytest.raises(ValueError, match="stay under vault"):
+            python_function_budget_candidates(vault, config)
+    finally:
+        assert reads == [], "diagnostics read the synthetic host file"
+
+
+def test_function_budget_preserves_contained_prefixes(tmp_path: Path) -> None:
+    source = tmp_path / "sources" / "valid.py"
+    source.parent.mkdir()
+    source.write_text("def ordinary(value):\n    return value\n", encoding="utf-8")
+    config = {"profiles": {"runtime": {
+        "include_prefixes": ["sources", str(source), "sources/../sources/valid.py", "missing"],
+        "lines": 1, "params": 0, "branches": 0,
+    }}}
+    candidates = python_function_budget_candidates(tmp_path, config)
+    assert [(item["page"], item["symbol"]) for item in candidates] == [("sources/valid.py", "ordinary")]
+
+
+def test_function_budget_preserves_internal_aliases(tmp_path: Path) -> None:
+    source = tmp_path / "sources" / "module.txt"
+    source.parent.mkdir()
+    source.write_text("def ordinary(value):\n    return value\n", encoding="utf-8")
+    try:
+        (tmp_path / "alias.py").symlink_to(source)
+        (tmp_path / "source_alias").symlink_to(source.parent, target_is_directory=True)
+        (source.parent / "entry.py").symlink_to(source)
+    except OSError as exc:
+        pytest.skip(f"symlink setup unavailable: {exc}")
+    config = {"profiles": {"runtime": {
+        "include_prefixes": ["alias.py", "source_alias"],
+        "lines": 1, "params": 0, "branches": 0,
+    }}}
+    candidates = python_function_budget_candidates(tmp_path, config)
+    assert [(item["page"], item["symbol"]) for item in candidates] == [("sources/module.txt", "ordinary")]
 
 
 if __name__ == "__main__":

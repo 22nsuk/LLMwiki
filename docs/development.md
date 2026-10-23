@@ -17,6 +17,9 @@ report-contract, public mirror, mechanism, and release entrypoints.
 export omits the project itself, then installs the local project separately as
 editable with `--no-deps`, so local setup and CI both replay the same frozen
 third-party dependency authority without losing editable source behavior.
+The uv installer uses `--link-mode copy` so package files do not share writable
+inodes with the host cache. Candidate validation rejects hard links; rerun
+`make dev-install` to replace older environments created with uv's hardlink mode.
 If an existing `.venv` is present, the install first moves it to `.venv.previous`
 and creates the new environment directly at `.venv`, so generated console
 scripts keep valid shebangs. Failed installs remove the partial `.venv` and
@@ -42,6 +45,15 @@ interpretation. Status views also report the ambient `uv lock --check` result
 separately from the canonical-index check so local index configuration drift is
 visible as environment normalization work instead of being mistaken for lockfile
 staleness.
+
+CI and release jobs share `.github/actions/setup-python-uv/action.yml` for
+Python, uv, and frozen dependency installation. When enabled, pip and uv cache
+downloads have a one-minute timeout per segment; an unavailable cache falls through to the same
+locked install. Interpreter setup, lock validation, and installation failures
+still fail the job. On Linux, the action also loads the packaged Bubblewrap
+AppArmor profile and verifies the production sandbox launcher can import the
+installed dependencies. See [candidate validation isolation](ops-runtime.md)
+for the host requirements.
 
 ## Supported Test Entrypoints
 

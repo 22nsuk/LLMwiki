@@ -8,13 +8,19 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from ops.scripts.core.executor_runtime import (
     ExecutorRuntimeExecutionError,
     _worker_source_digest_snapshot,
     run_executor_pipeline,
 )
+from ops.scripts.core.executor_runtime_worker_preflight_runtime import (
+    write_worker_structural_complexity_preflight_report,
+)
 from tests.executor_model_output_test_utils import write_valid_model_output
 from tests.minimal_vault_runtime import seed_subagent_profiles
+from tests.runtime_test_context import frozen_context
 from tests.test_executor_runtime import (
     _executor_subprocess_completed,
     _is_worker_repo_health_preflight,
@@ -23,7 +29,90 @@ from tests.test_executor_runtime import (
 )
 
 
+@pytest.mark.parametrize("linked_path", [
+    "ops/policies/wiki-maintainer-policy.yaml",
+    "ops/schemas/wiki-maintainer-policy.schema.json",
+    "ops/schemas/structural-complexity-budget-report.schema.json",
+    "ops/schemas/artifact-envelope.schema.json",
+    "ops/scripts/core/example.py",
+    "ops/scripts/eval/structural_complexity_budget_runtime.py",
+])
+def test_worker_diagnostics_validate_before_reading_inputs(tmp_path: Path, linked_path: str) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    _seed_executor_vault(vault)
+    secret = tmp_path / "synthetic"
+    secret.write_text("synthetic-only", encoding="utf-8")
+    target = vault / linked_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.unlink(missing_ok=True)
+    try:
+        target.symlink_to(secret)
+    except OSError as exc:
+        pytest.skip(f"symlink setup unavailable: {exc}")
+    original_open = Path.open
+    host_reads = []
+
+    def record_open(path: Path, *args: object, **kwargs: object):
+        if path.resolve() == secret:
+            host_reads.append(path)
+        return original_open(path, *args, **kwargs)
+
+    with (
+        mock.patch.object(Path, "open", record_open),
+        pytest.raises(ExecutorRuntimeExecutionError, match="unsafe candidate workspace"),
+    ):
+        write_worker_structural_complexity_preflight_report(
+            vault, workspace_root=vault, run_id="run-executor",
+            policy_path="ops/policies/wiki-maintainer-policy.yaml",
+            changed_targets=["ops/scripts/core/example.py"], context=frozen_context(),
+        )
+    assert host_reads == []
+
+
 class ExecutorWorkerPreflightRuntimeTests(unittest.TestCase):
+    def test_rejects_worker_links_before_host_source_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _seed_executor_vault(vault)
+            secret = Path(temp_dir) / "synthetic.py"
+            secret.write_text("def synthetic_private_symbol():\n    return 1\n", encoding="utf-8")
+            target = vault / "ops" / "scripts" / "example.py"
+            host_reads = []
+            original_open = Path.open
+
+            def record_open(path: Path, *args: object, **kwargs: object):
+                if path.resolve() == secret:
+                    host_reads.append(path)
+                return original_open(path, *args, **kwargs)
+
+            def worker(**kwargs: object) -> dict:
+                self.assertEqual(kwargs["role"], "worker")
+                target.unlink()
+                try:
+                    target.symlink_to(secret)
+                except OSError as exc:
+                    self.skipTest(f"symlink setup unavailable: {exc}")
+                return {"status": "pass"}
+
+            try:
+                with (
+                    mock.patch("ops.scripts.core.executor_runtime.execute_codex_exec_role", side_effect=worker),
+                    mock.patch.object(Path, "open", record_open),
+                    pytest.raises(ExecutorRuntimeExecutionError, match="unsafe candidate workspace"),
+                ):
+                    run_executor_pipeline(
+                        vault, workspace_root=vault, run_id="run-executor",
+                        policy_path="ops/policies/wiki-maintainer-policy.yaml",
+                        scope_freeze_rel="runs/run-executor/scope-freeze.json",
+                        proposal_snapshot_rel="runs/run-executor/proposal-snapshot.json",
+                        roles=["worker", "validator"],
+                        routing_reports=["subagent-routing.worker.json", "subagent-routing.validator.json"],
+                    )
+            finally:
+                self.assertEqual(host_reads, [], "worker snapshots read the synthetic host file")
+
     def test_source_snapshot_tracks_only_public_and_local_contract_sources(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

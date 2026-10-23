@@ -80,6 +80,54 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
 
 
 class CiWorkflowStaticTests(unittest.TestCase):
+    def test_candidate_sandbox_install_is_limited_to_linux(self) -> None:
+        action = load_workflow(Path(".github/actions/setup-python-uv/action.yml"))
+        runs = workflow_mapping(action.get("runs"), "composite action runs must be a mapping")
+        sandbox = _step_by_name(runs, "Install candidate validation sandbox")
+        self.assertEqual(sandbox.get("if"), "runner.os == 'Linux'")
+        install = _run_text(sandbox)
+        self.assertIn(
+            "sudo env NEEDRESTART_MODE=l apt-get install --yes bubblewrap apparmor-profiles",
+            install,
+        )
+        self.assertIn(
+            "apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict",
+            install,
+        )
+        smoke = _step_by_name(runs, "Verify candidate validation sandbox")
+        self.assertEqual(smoke.get("if"), "runner.os == 'Linux'")
+        smoke_run = _run_text(smoke)
+        self.assertIn(
+            "from ops.scripts.core.candidate_sandbox_runtime import run_candidate_command",
+            smoke_run,
+        )
+        self.assertIn("import jsonschema, pytest, yaml", smoke_run)
+        self.assertIn("timeout_seconds=30", smoke_run)
+        self.assertIn("raise SystemExit(result.returncode)", smoke_run)
+        steps = _steps(runs)
+        self.assertLess(steps.index(sandbox), steps.index(smoke))
+        self.assertLess(
+            steps.index(_step_by_name(runs, "Install dependencies from lock")),
+            steps.index(smoke),
+        )
+        for step in (sandbox, smoke):
+            self.assertFalse(step.get("continue-on-error", False))
+
+    def test_shared_setup_bounds_optional_cache_downloads(self) -> None:
+        action = load_workflow(Path(".github/actions/setup-python-uv/action.yml"))
+        runs = workflow_mapping(action.get("runs"), "composite action runs must be a mapping")
+        for name in ("Setup Python", "Setup uv"):
+            with self.subTest(step=name):
+                setup = _step_by_name(runs, name)
+                env = workflow_mapping(setup.get("env", {}), "setup env must be a mapping")
+                self.assertEqual(env.get("SEGMENT_DOWNLOAD_TIMEOUT_MINS"), "1")
+                self.assertFalse(setup.get("continue-on-error", False))
+        python_setup = _step_by_name(runs, "Setup Python")
+        config = workflow_mapping(python_setup.get("with", {}), "setup with must be a mapping")
+        self.assertEqual(
+            str(config.get("cache-dependency-path")).splitlines(), ["pyproject.toml", "uv.lock"]
+        )
+
     def test_dependabot_groups_separate_ci_codeql_and_release_updates(self) -> None:
         dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
         actions = next(
@@ -130,6 +178,9 @@ class CiWorkflowStaticTests(unittest.TestCase):
         )
         install = _step_by_name(action["runs"], "Install dependencies from lock")
         self.assertNotIn("if", install)
+        self.assertFalse(install.get("continue-on-error", False))
+        run = _run_text(install)
+        self.assertLess(run.index("make uv-lock-check"), run.index("uv export --frozen"))
         for command in (
             "make uv-lock-check",
             "uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt",

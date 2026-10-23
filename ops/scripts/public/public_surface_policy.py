@@ -156,6 +156,16 @@ def _windows_unc_path(server: str, suffix: str) -> str:
 PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
     str, tuple[PublicLocalPathLiteralExemption, ...]
 ] = {
+    # These are private sandbox mount destinations, not host workspace paths.
+    "ops/scripts/core/candidate_sandbox_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "home")),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "uv-cache")),
+    ),
+    "tests/test_candidate_sandbox_runtime.py": (
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "home")),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "scratch")),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "home/config")),
+    ),
     "ops/scripts/core/output_runtime.py": (
         PublicLocalPathLiteralExemption(_posix_local_path("home", r"""[^/\s\"']+""")),
         PublicLocalPathLiteralExemption(

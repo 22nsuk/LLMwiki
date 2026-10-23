@@ -37,6 +37,57 @@ After editable install, lifecycle policy public CLIs are exposed as
 `llm-wiki-*` console scripts from `pyproject.toml`. Make targets are the
 preferred operator entrypoint for report generators and maintenance lanes.
 
+## Candidate Validation Isolation
+
+Mechanism repository-health checks, worker repository-health preflight, and
+candidate dependency probes require Linux with Bubblewrap installed at
+`/usr/bin/bwrap` and working user, PID, and network namespaces. On Debian/Ubuntu,
+install it with `sudo apt-get install bubblewrap`. Ubuntu hosts with AppArmor
+user-namespace restrictions also need the packaged Bubblewrap profile loaded:
+
+```bash
+sudo apt-get install --yes bubblewrap apparmor-profiles
+sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+```
+
+Installing Bubblewrap alone does not load this profile and can leave network
+namespace setup failing with `Failed RTM_NEWADDR: Operation not permitted`.
+The shared CI setup action loads the profile and runs the production sandbox
+launcher with dependency imports before the test lanes start. Unsupported hosts
+or failed sandbox setup block validation; they never run the candidate on the host.
+
+The trusted parent launches the check in a fresh filesystem and network
+namespace. Only the candidate workspace is writable on the host; `/tmp` and
+shared memory are disposable, bounded mounts. System tools and the launcher's
+Python runtime are read-only. The parent supplies a synthetic HOME and a fixed
+environment without credentials, Python import overrides, or user tool config.
+Network-dependent checks must use local fixtures and dependencies installed
+before validation. Both default and explicit check commands use this boundary.
+Full-copy preflight runs the candidate Makefile inside the sandbox, so it checks
+candidate code without writing to the live checkout. Candidate descendants are
+terminated when their validation command exits or times out.
+
+Python mount sources are captured from the controller's runtime before candidate
+execution. A candidate interpreter link cannot add host mounts. Requests that
+resolve to the controller's base executable run through its original virtualenv
+path, preserving installed dependencies and installer prefix aliases. Requests
+for a different installation fail closed: start the controller in that Python
+environment to use it for validation.
+
+Workspace files must not contain external symlinks (except validated virtualenv
+interpreter entrypoints), hard links, sockets, devices, or FIFOs. This is checked
+before execution and before the host reads resulting diagnostics. Unsafe outputs
+abort before host audit, log, or ledger writes, including failed validation.
+Ordinary files and internal symlinks remain supported. Files already
+copied into the candidate are visible there; keep secrets out of candidate inputs.
+The authorized mutation controller retains its existing agent and artifact access.
+
+Host diagnostics apply the same workspace checks before worker snapshots and
+structural preflight. Function-budget policy prefixes and discovered Python files
+must resolve inside the candidate vault, including file and directory symlinks.
+An escaping path blocks diagnostics after both successful and failed checks;
+contained paths, internal aliases, and missing optional prefixes remain supported.
+
 ## Generated Artifacts
 
 Schema-backed JSON reports should use the shared artifact writer helpers and

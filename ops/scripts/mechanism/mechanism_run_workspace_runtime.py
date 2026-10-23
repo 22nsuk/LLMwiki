@@ -6,12 +6,17 @@ import shutil
 import sys
 import time
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from typing import Any
 
 from ops.scripts.core.behavior_delta_runtime import (
     build_behavior_delta_report,
     write_behavior_delta_report,
+)
+from ops.scripts.core.candidate_sandbox_runtime import (
+    run_candidate_command,
+    validate_candidate_workspace,
 )
 from ops.scripts.core.command_runtime import run_with_timeout
 from ops.scripts.core.filesystem_runtime import (
@@ -699,13 +704,20 @@ def _run_command(
     cwd: Path,
     timeout_seconds: int,
     argv: list[str] | None = None,
+    candidate: bool = False,
 ) -> dict:
     resolved_argv = list(argv) if argv is not None else _command_argv(command, cwd=cwd)
-    completed = run_with_timeout(
+    runner = run_candidate_command if candidate else run_with_timeout
+    completed = runner(
         resolved_argv,
         cwd=cwd,
         timeout_seconds=timeout_seconds,
     )
+    if candidate:
+        try:
+            validate_candidate_workspace(cwd)
+        except (OSError, ValueError) as exc:
+            raise RunMechanismExperimentUsageError(f"unsafe candidate validation output: {exc}") from exc
     return {
         "command": command,
         "argv": resolved_argv,
@@ -756,6 +768,10 @@ def _repo_health_step(
     baseline_file_digests: dict[str, str],
     diff_model: str = FULL_WORKSPACE_DIFF_MODEL,
 ) -> RepoHealthStepResult:
+    try:
+        validate_candidate_workspace(workspace_vault)
+    except (OSError, ValueError) as exc:
+        raise RunMechanismExperimentUsageError(f"unsafe candidate workspace: {exc}") from exc
     return repo_health_step(
         vault,
         workspace_vault,
@@ -765,7 +781,7 @@ def _repo_health_step(
         diff_model=diff_model,
         dependencies=RepoHealthStepDependencies(
             command_argv=_command_argv,
-            run_command=_run_command,
+            run_command=partial(_run_command, candidate=True),
             write_command_logs=write_command_logs,
             write_timeout_failure_artifact=write_timeout_failure_artifact,
             append_ledger_event=append_ledger_event,

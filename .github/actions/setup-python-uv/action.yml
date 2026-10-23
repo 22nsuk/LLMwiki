@@ -14,8 +14,20 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Install candidate validation sandbox
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        # The ephemeral runner needs this profile, not unrelated service restarts.
+        sudo env NEEDRESTART_MODE=l apt-get install --yes bubblewrap apparmor-profiles
+        sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+
     - name: Setup Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      env:
+        # A stalled optional cache must leave time for a cold locked install.
+        SEGMENT_DOWNLOAD_TIMEOUT_MINS: "1"
       with:
         python-version: ${{ inputs.python-version }}
         cache: ${{ inputs.pip-cache == 'true' && 'pip' || '' }}
@@ -25,6 +37,8 @@ runs:
 
     - name: Setup uv
       uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      env:
+        SEGMENT_DOWNLOAD_TIMEOUT_MINS: "1"
       with:
         version: "0.10.9"
 
@@ -36,3 +50,25 @@ runs:
         uv export --frozen --extra dev --format requirements-txt --no-hashes -o tmp/locked-requirements.ci.txt
         python -m pip install --upgrade pip
         python -m pip install -r tmp/locked-requirements.ci.txt
+
+    - name: Verify candidate validation sandbox
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        python - <<'PY'
+        import sys
+        import tempfile
+        from pathlib import Path
+
+        from ops.scripts.core.candidate_sandbox_runtime import run_candidate_command
+
+        with tempfile.TemporaryDirectory(prefix="candidate-sandbox-smoke-") as workspace:
+            result = run_candidate_command(
+                [sys.executable, "-c", "import jsonschema, pytest, yaml; print('candidate sandbox ready')"],
+                cwd=Path(workspace),
+                timeout_seconds=30,
+            )
+        sys.stdout.write(result.stdout)
+        sys.stderr.write(result.stderr)
+        raise SystemExit(result.returncode)
+        PY

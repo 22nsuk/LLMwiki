@@ -27,6 +27,7 @@ from .executor_runtime_scope_freeze_runtime import (
 from .executor_runtime_worker_preflight_runtime import (
     run_worker_repo_health_preflight as _run_worker_repo_health_preflight,
     run_worker_structural_complexity_preflight as _run_worker_structural_complexity_preflight,
+    validate_worker_workspace,
 )
 from .policy_runtime import load_policy, workspace_preparation_mode_from_policy
 from .runtime_context import RuntimeContext
@@ -100,6 +101,7 @@ def run_executor_pipeline(
     if not ordered_roles:
         raise ExecutorRuntimeUsageError("at least one --role is required")
 
+    validate_worker_workspace(workspace_root)
     primary_targets = _primary_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
     supporting_targets = _supporting_targets_from_scope_freeze(artifact_root, scope_freeze_rel)
     test_files = _test_files_from_scope_freeze(artifact_root, scope_freeze_rel)
@@ -133,6 +135,7 @@ def run_executor_pipeline(
         if report["status"] != "pass":
             raise ExecutorRuntimeExecutionError(f"{role} reported a blocking status")
         if role == "worker" and primary_targets:
+            validate_worker_workspace(workspace_root)
             primary_after_worker = _target_digest_snapshot(workspace_root, primary_targets)
             changed_primary_targets = _changed_targets(primary_before_worker, primary_after_worker)
             if not changed_primary_targets:

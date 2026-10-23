@@ -144,16 +144,28 @@ def _parse_profiles(config: dict) -> list[_FunctionBudgetProfile]:
     return profiles
 
 
+def _confined_source_path(vault: Path, path: Path) -> Path:
+    try:
+        resolved = path.resolve()
+    except RuntimeError as exc:
+        raise ValueError("cannot resolve function budget source path") from exc
+    if not resolved.is_relative_to(vault):
+        raise ValueError("function budget source path must stay under vault")
+    return resolved
+
+
 def _python_files_for_profile(vault: Path, profile: _FunctionBudgetProfile) -> list[tuple[str, Path]]:
+    vault = vault.resolve()
     files: dict[str, Path] = {}
     for prefix in profile.include_prefixes:
-        root = vault / prefix
-        if root.is_file() and root.suffix == ".py":
+        root = _confined_source_path(vault, vault / prefix)
+        if root.is_file() and Path(prefix).suffix == ".py":
             files[report_path(vault, root)] = root
             continue
         if not root.is_dir():
             continue
         for path in sorted(root.rglob("*.py")):
+            path = _confined_source_path(vault, path)
             if not path.is_file():
                 continue
             files[report_path(vault, path)] = path
