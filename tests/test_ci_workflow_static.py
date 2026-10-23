@@ -85,7 +85,10 @@ class CiWorkflowStaticTests(unittest.TestCase):
         sandbox = _step_by_name(runs, "Install candidate validation sandbox")
         self.assertEqual(sandbox.get("if"), "runner.os == 'Linux'")
         install = _run_text(sandbox)
-        self.assertIn("apt-get install --yes bubblewrap apparmor-profiles", install)
+        self.assertIn(
+            "sudo env NEEDRESTART_MODE=l apt-get install --yes bubblewrap apparmor-profiles",
+            install,
+        )
         self.assertIn(
             "apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict",
             install,

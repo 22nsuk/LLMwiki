@@ -15,7 +15,8 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install --yes bubblewrap apparmor-profiles
+        # The ephemeral runner needs this profile, not unrelated service restarts.
+        sudo env NEEDRESTART_MODE=l apt-get install --yes bubblewrap apparmor-profiles
         sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
 
     - name: Setup Python
