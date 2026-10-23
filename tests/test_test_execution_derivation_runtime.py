@@ -102,17 +102,39 @@ def test_xunit2_classname_name_and_parametrized_names_map_to_canonical_nodeids()
     assert evidence["subtests_passed_by_nodeid"] == dict.fromkeys(sorted(nodeids), 0)
 
 
-def test_xunit2_parametrized_name_preserves_double_colon_in_parameter_id() -> None:
-    nodeid = "tests/test_param.py::test_value[a::b]"
+@pytest.mark.parametrize(
+    "parameter_id",
+    [
+        pytest.param("a::b", id="double-colon"),
+        pytest.param(r"        if b:\n", id="escaped-newline"),
+        pytest.param(r"folder\file", id="windows-path-value"),
+    ],
+)
+def test_xunit2_parametrized_name_preserves_parameter_id(parameter_id: str) -> None:
+    nodeid = f"tests/test_param.py::test_value[{parameter_id}]"
     xml = (
-        b'<testsuite name="pytest" tests="1" errors="0" failures="0" skipped="0">'
-        b'<testcase classname="tests.test_param" name="test_value[a::b]" />'
-        b"</testsuite>"
+        '<testsuite name="pytest" tests="1" errors="0" failures="0" skipped="0">'
+        f'<testcase classname="tests.test_param" name="test_value[{parameter_id}]" />'
+        "</testsuite>"
     )
 
     evidence = parse_junit_testcases(xml, expected_nodeids=[nodeid])
 
     assert evidence["outcomes"] == {nodeid: "passed"}
+
+
+@pytest.mark.parametrize(
+    "nodeid",
+    [
+        pytest.param(r"tests\test_param.py::test_value", id="windows-file-path"),
+        pytest.param("/tests/test_param.py::test_value", id="absolute-file-path"),
+        pytest.param("tests/test_param.py::test_value[a\nb]", id="literal-newline"),
+        pytest.param("tests/test_param.py::test_value[a\rb]", id="literal-carriage-return"),
+    ],
+)
+def test_collection_digest_rejects_noncanonical_paths_and_line_breaks(nodeid: str) -> None:
+    with pytest.raises(ValueError, match="invalid canonical pytest nodeid"):
+        nodeids_sha256([nodeid])
 
 
 def test_xunit2_testcase_properties_account_for_passing_subtests_by_nodeid() -> None:

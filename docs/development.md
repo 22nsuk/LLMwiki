@@ -95,7 +95,10 @@ The same registry owns the expected trusted-CI repository, signer workflow,
 runner, aggregate command, concrete collection suite and pytest command, and
 Python/pytest environment. Import also requires an exact collection-to-JUnit
 nodeid match, matching outcomes and subtest counts, and a passing zero
-deselection lifecycle. This evidence remains diagnostic only: release CI emits
+deselection lifecycle. Collection nodeids use relative POSIX file paths while
+preserving pytest parameter IDs verbatim, including escaped characters and
+Windows path values. Literal line breaks remain invalid.
+This evidence remains diagnostic only: release CI emits
 and attests the ZIP in separate jobs, the test-running job has no OIDC
 permission, and a successful local import writes only
 `tmp/trusted-ci-evidence-import-report.json`. It does not replace the local
