@@ -18,7 +18,7 @@ SETUP_UV_ACTION_SHA = "08807647e7069bb48b6ef5acd8ec9567f424441b"
 UPLOAD_ARTIFACT_ACTION_SHA = "cf430e030ddbb5b0abf93d22962f4752f3646cd9"
 DOWNLOAD_ARTIFACT_ACTION_SHA = "9000827ccba6bdab643e8b6fd33ac0654aef8333"
 ATTEST_BUILD_PROVENANCE_ACTION_SHA = "4d101475d8b20a2381f78447822ac1eab6504dd8"
-CODEQL_ACTION_SHA = "24c54180a607b1449ed407dd24f251e4e9147c8d"
+CODEQL_ACTION_SHA = "6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee"
 DEPENDENCY_REVIEW_ACTION_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
 
 PINNED_CI_CHECKOUT_ACTION = f"actions/checkout@{CI_CHECKOUT_ACTION_SHA}"
@@ -107,14 +107,14 @@ WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
         "id": "codeql-init",
         "action": "github/codeql-action/init",
         "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.38.3",
+        "version_comment": "v4.39.0",
         "paths": (".github/workflows/codeql.yml",),
     },
     {
         "id": "codeql-analyze",
         "action": "github/codeql-action/analyze",
         "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.38.3",
+        "version_comment": "v4.39.0",
         "paths": (".github/workflows/codeql.yml",),
     },
     {
