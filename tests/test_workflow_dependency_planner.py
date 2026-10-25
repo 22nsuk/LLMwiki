@@ -77,6 +77,16 @@ FOCUSED_SUBAGENT_PROFILE_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_subagent_profile_schema.py",
 )
+FOCUSED_POLICY_GOLDEN_TEST_COMMANDS = (
+    FOCUSED_PYTEST_TEMPLATE.replace(
+        "{path}", "tests/test_runtime_hotspot_facade_golden_outputs.py"
+    ),
+    FOCUSED_PYTEST_TEMPLATE.replace(
+        "{path}",
+        "tests/test_auto_improve_readiness_runtime.py::AutoImproveReadinessRuntimeTests::"
+        "test_load_readiness_inputs_is_byte_stable_for_fixed_inputs",
+    ),
+)
 FOCUSED_EXPORT_PUBLIC_REPO_TEST_COMMAND = FOCUSED_PYTEST_TEMPLATE.replace(
     "{path}",
     "tests/test_export_public_repo.py",
@@ -1847,6 +1857,40 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                     ),
                     [],
                 )
+
+    def test_maintainer_policy_minimum_includes_golden_consumers(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["ops/policies/wiki-maintainer-policy.yaml"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["unknown_paths"], [])
+        for command in FOCUSED_POLICY_GOLDEN_TEST_COMMANDS:
+            self.assertIn(command, plan["selected_commands"])
+        self.assertIn("make static", plan["selected_commands"])
+        self.assertIn(
+            "make test-execution-summary-current-or-refresh",
+            plan["selected_commands"],
+        )
+        self.assertEqual(plan["coverage_class"], "maintainer_policy_golden")
+
+    def test_golden_baseline_helper_minimum_includes_owning_tests(self) -> None:
+        report = build_report(
+            self.vault,
+            changed_paths=["tests/runtime_hotspot_golden_contract.py"],
+            context=fixed_context(),
+        )
+
+        plan = report["changed_path_minimum_plan"]
+        self.assertEqual(plan["status"], "pass")
+        self.assertEqual(plan["unknown_paths"], [])
+        for command in FOCUSED_POLICY_GOLDEN_TEST_COMMANDS:
+            self.assertIn(command, plan["selected_commands"])
+        self.assertIn("make static", plan["selected_commands"])
+        self.assertEqual(plan["coverage_class"], "runtime_golden_contract")
 
     def test_changed_path_minimum_plan_matches_subagent_profile(self) -> None:
         for changed_path in (

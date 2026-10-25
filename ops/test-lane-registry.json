@@ -55,7 +55,9 @@
       "make sync-derived-check": 120,
       "make report-schema-samples-check": 30,
       "make supply-chain-check": 120,
-      "make public-check": 120
+      "make public-check": 120,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_runtime_hotspot_facade_golden_outputs.py": 20,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_auto_improve_readiness_runtime.py::AutoImproveReadinessRuntimeTests::test_load_readiness_inputs_is_byte_stable_for_fixed_inputs": 10
     },
     "unknown_path": {
       "rule_id": "unknown_path",
@@ -283,6 +285,21 @@
         "duration_seconds": 210
       },
       {
+        "rule_id": "runtime_hotspot_golden_contract",
+        "path_patterns": [
+          "tests/runtime_hotspot_golden_contract.py"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_runtime_hotspot_facade_golden_outputs.py",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_auto_improve_readiness_runtime.py::AutoImproveReadinessRuntimeTests::test_load_readiness_inputs_is_byte_stable_for_fixed_inputs"
+        ],
+        "reason": "Golden baseline helper changes must replay the session facade and readiness payload owners instead of falling through to an unknown-path advisory.",
+        "coverage_class": "runtime_golden_contract",
+        "static_required": true,
+        "duration_seconds": 90
+      },
+      {
         "rule_id": "focused_pytest_file",
         "path_patterns": [
           "tests/test_*.py"
@@ -326,6 +343,22 @@
         "coverage_class": "derived_surfaces_manifest",
         "static_required": true,
         "duration_seconds": 210
+      },
+      {
+        "rule_id": "maintainer_policy_golden_contract",
+        "path_patterns": [
+          "ops/policies/wiki-maintainer-policy.yaml"
+        ],
+        "commands": [
+          "make static",
+          "make test-execution-summary-current-or-refresh",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_runtime_hotspot_facade_golden_outputs.py",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_auto_improve_readiness_runtime.py::AutoImproveReadinessRuntimeTests::test_load_readiness_inputs_is_byte_stable_for_fixed_inputs"
+        ],
+        "reason": "Maintainer policy changes affect serialized readiness and session routing payloads, so retain report-contract coverage and replay their golden consumers.",
+        "coverage_class": "maintainer_policy_golden",
+        "static_required": true,
+        "duration_seconds": 270
       },
       {
         "rule_id": "schema_or_report_contract",
