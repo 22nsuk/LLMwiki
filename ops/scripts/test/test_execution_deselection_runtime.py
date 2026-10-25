@@ -81,8 +81,16 @@ def deselection_lifecycle(
         nodeid = str(item.get("nodeid", "")).strip()
         risk_owner = str(item.get("risk_owner", "")).strip()
         expires_at = str(item.get("expires_at", "")).strip()
-        if bool(item.get("release_blocking")):
+        release_blocking = bool(item.get("release_blocking"))
+        if release_blocking:
             release_blocking_count += 1
+            blockers.append(
+                {
+                    "code": "release_blocking_deselection",
+                    "nodeid": nodeid,
+                    "message": "Deselected test is marked release blocking.",
+                }
+            )
         if not risk_owner or not expires_at:
             missing_lifecycle_count += 1
             blockers.append(
@@ -102,27 +110,30 @@ def deselection_lifecycle(
                     "message": f"Deselection expired at {expires_at}.",
                 }
             )
-        if bool(item.get("release_blocking")):
-            blockers.append(
-                {
-                    "code": "release_blocking_deselection",
-                    "nodeid": nodeid,
-                    "message": "Deselected test is marked release blocking.",
-                }
-            )
 
     budget_expires_at = str(budget.get("expires_at", "")).strip()
-    if budget_expires_at and parse_utc_timestamp(
-        budget_expires_at,
-        context="deselection_budget.expires_at",
-    ) <= checked_at:
-        blockers.append(
-            {
-                "code": "expired_deselection_budget",
-                "nodeid": "",
-                "message": f"Deselection budget expired at {budget_expires_at}.",
-            }
-        )
+    has_policy_entries = isinstance(policy_items, list) and bool(policy_items)
+    budget_active = max_count > 0 or has_policy_entries or bool(actual_nodeids)
+    if budget_active:
+        if not budget_expires_at:
+            blockers.append(
+                {
+                    "code": "missing_deselection_budget_expiry",
+                    "nodeid": "",
+                    "message": "Active deselection budget is missing expires_at.",
+                }
+            )
+        elif parse_utc_timestamp(
+            budget_expires_at,
+            context="deselection_budget.expires_at",
+        ) <= checked_at:
+            blockers.append(
+                {
+                    "code": "expired_deselection_budget",
+                    "nodeid": "",
+                    "message": f"Deselection budget expired at {budget_expires_at}.",
+                }
+            )
     if len(actual_nodeids) > max_count:
         blockers.append(
             {

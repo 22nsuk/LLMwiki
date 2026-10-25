@@ -37,6 +37,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.public.public_surface_policy import (
         PUBLIC_INCLUDED_REPORT_FILES,
         find_public_local_path_leaks,
+        is_public_excluded_path,
+    )
+    from ops.scripts.public.source_history_scan_runtime import (
+        scan_source_history,
+        source_history_state_fingerprint,
     )
     from ops.scripts.test.test_execution_summary import parse_pytest_counts
 else:
@@ -60,6 +65,11 @@ else:
     from .public_surface_policy import (
         PUBLIC_INCLUDED_REPORT_FILES,
         find_public_local_path_leaks,
+        is_public_excluded_path,
+    )
+    from .source_history_scan_runtime import (
+        scan_source_history,
+        source_history_state_fingerprint,
     )
 
 
@@ -74,19 +84,10 @@ TAIL_LINE_COUNT = 80
 PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH = "ops/reports/test-execution-summary-public.json"
 PUBLIC_PYTEST_SUMMARY_CACHE_DIRNAME = "tmp-public-check-summary-cache"
 PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY = "public_check_config"
+SOURCE_HISTORY_STATE_FINGERPRINT_KEY = "source_history_state"
 CommandRunner = Callable[[Sequence[str], Path, int], TimedProcessResult]
-PRIVATE_EXPORT_PATTERNS = (
-    "raw/",
-    "wiki/",
-    "system/",
-    "runs/",
-    "external-reports/",
-    "AGENTS.local.md",
-    "ops/manifest.json",
-    "ops/operator/",
-    "ops/raw-registry.json",
-    "ops/reports/",
-)
+
+
 @dataclass(frozen=True)
 class PublicCheckRequest:
     mode: str = "default"
@@ -98,6 +99,7 @@ class PublicCheckRequest:
     pytest_flags: str = ""
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
     heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS
+    source_history_scan: bool = True
 
     def __post_init__(self) -> None:
         pytest_mark_expr = self.pytest_mark_expr
@@ -198,7 +200,9 @@ def _resolve_public_python(vault: Path, public_python: str) -> str:
     return str((vault / path).absolute())
 
 
-def _export_file_records(public_out: Path, manifest: dict[str, Any]) -> list[dict[str, Any]]:
+def _export_file_records(
+    public_out: Path, manifest: dict[str, Any]
+) -> list[dict[str, Any]]:
     rel_paths = [str(path) for path in manifest.get("files", []) if str(path).strip()]
     manifest_file = str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
     records = []
@@ -227,9 +231,11 @@ def _public_pytest_summary_path(public_out: Path) -> Path:
 
 
 def _public_pytest_summary_cache_path() -> Path:
-    return Path(tempfile.gettempdir()) / PUBLIC_PYTEST_SUMMARY_CACHE_DIRNAME / Path(
-        PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH
-    ).name
+    return (
+        Path(tempfile.gettempdir())
+        / PUBLIC_PYTEST_SUMMARY_CACHE_DIRNAME
+        / Path(PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).name
+    )
 
 
 def _persist_public_pytest_summary(temp_summary_path: Path, cache_path: Path) -> None:
@@ -254,17 +260,21 @@ def _pytest_public_summary_suite(pytest_mark_expr: str) -> str:
     return "public" if pytest_mark_expr.strip() == "public" else "pytest"
 
 
-def _public_check_config_payload(vault: Path, request: PublicCheckRequest) -> dict[str, Any]:
+def _public_check_config_payload(
+    vault: Path, request: PublicCheckRequest
+) -> dict[str, Any]:
     resolved_public_out = _resolve_out_dir(vault, request.public_out).resolve()
     resolved_vault = vault.resolve()
     try:
-        public_out_relative_to_vault = resolved_public_out.relative_to(resolved_vault).as_posix()
+        public_out_relative_to_vault = resolved_public_out.relative_to(
+            resolved_vault
+        ).as_posix()
         public_out_boundary = "inside_source_vault"
     except ValueError:
         public_out_relative_to_vault = ""
         public_out_boundary = "outside_source_vault"
     return {
-        "version": 1,
+        "version": 2,
         "mode": request.mode,
         "source_command": _public_check_source_command(request),
         "public_out": {
@@ -290,6 +300,10 @@ def _public_check_config_payload(vault: Path, request: PublicCheckRequest) -> di
         },
         "timeout_seconds": request.timeout_seconds,
         "heartbeat_interval_seconds": request.heartbeat_interval_seconds,
+        "source_history": {
+            "requested": request.source_history_scan,
+            "ref_scope": "all_refs_and_head" if request.source_history_scan else "none",
+        },
     }
 
 
@@ -351,7 +365,15 @@ def _pytest_public_summary_counts(summary_path: Path | None) -> dict[str, int]:
     if not isinstance(counts, dict):
         return {}
     normalized: dict[str, int] = {}
-    for key in ("passed", "failed", "errors", "skipped", "xfailed", "xpassed", "warnings"):
+    for key in (
+        "passed",
+        "failed",
+        "errors",
+        "skipped",
+        "xfailed",
+        "xpassed",
+        "warnings",
+    ):
         try:
             normalized[key] = int(counts.get(key, 0) or 0)
         except (TypeError, ValueError):
@@ -372,11 +394,6 @@ def _public_export_negative_assertions(
         for prefix in manifest.get("excluded_prefixes", [])
         if str(prefix).strip()
     )
-    excluded_files = {
-        str(path)
-        for path in manifest.get("excluded_files", [])
-        if str(path).strip()
-    }
     policy_report_exceptions = {
         str(path)
         for path in manifest.get("included_report_files", PUBLIC_INCLUDED_REPORT_FILES)
@@ -391,8 +408,7 @@ def _public_export_negative_assertions(
     private_pattern_violations = sorted(
         path
         for path in exported_paths
-        if path not in policy_report_exceptions
-        and (path in excluded_files or any(path.startswith(pattern) for pattern in PRIVATE_EXPORT_PATTERNS))
+        if path not in policy_report_exceptions and is_public_excluded_path(path)
     )
     source_vault_marker = source_vault.resolve().as_posix()
     local_path_violations: list[str] = []
@@ -424,7 +440,6 @@ def _public_export_boundary_status(
     vault: Path,
     public_out: Path,
     manifest: dict[str, Any],
-    negative_assertions: dict[str, Any],
 ) -> dict[str, str]:
     manifest_file = str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
     try:
@@ -434,13 +449,12 @@ def _public_export_boundary_status(
         outside_source_vault = True
     materialized = public_out.is_dir() and (public_out / manifest_file).is_file()
     has_git_history = (public_out / ".git").exists()
-    negative_clean = _negative_assertion_status(negative_assertions) == "pass"
     return {
         "physical_repo_split_status": "pass"
         if materialized and outside_source_vault
         else "fail",
-        "private_surface_history_absence_status": "pass"
-        if materialized and not has_git_history and negative_clean
+        "export_git_metadata_absence_status": "pass"
+        if materialized and not has_git_history
         else "fail",
     }
 
@@ -487,7 +501,9 @@ def _command_record(
             counts = parse_pytest_counts(result.stdout, result.stderr)
     return {
         "id": command_id,
-        "command": shlex.join([sanitize_report_text(display_vault, str(arg)) for arg in argv]),
+        "command": shlex.join(
+            [sanitize_report_text(display_vault, str(arg)) for arg in argv]
+        ),
         "cwd": ".",
         "status": "pass" if result.returncode == 0 and not result.timed_out else "fail",
         "returncode": result.returncode,
@@ -512,7 +528,9 @@ def _overall_status(commands: list[dict[str, Any]]) -> str:
         return "timeout"
     if any(command["returncode"] in {130, -2} for command in commands):
         return "interrupted"
-    return "pass" if all(command["status"] == "pass" for command in commands) else "fail"
+    return (
+        "pass" if all(command["status"] == "pass" for command in commands) else "fail"
+    )
 
 
 def _negative_assertion_status(assertions: dict[str, Any]) -> str:
@@ -529,7 +547,9 @@ def _public_pytest_command(commands: list[dict[str, Any]]) -> dict[str, Any]:
     return {}
 
 
-def _collect_public_export_snapshot(vault: Path, request: PublicCheckRequest) -> _PublicExportSnapshot:
+def _collect_public_export_snapshot(
+    vault: Path, request: PublicCheckRequest
+) -> _PublicExportSnapshot:
     public_out_path = _resolve_out_dir(vault, request.public_out)
     manifest = export_public_repo(vault, public_out_path)
     export_records = _export_file_records(public_out_path, manifest)
@@ -543,9 +563,10 @@ def _collect_public_export_snapshot(vault: Path, request: PublicCheckRequest) ->
         vault,
         public_out_path,
         manifest,
-        negative_assertions,
     )
-    manifest_path = public_out_path / str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json"))
+    manifest_path = public_out_path / str(
+        manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json")
+    )
     return _PublicExportSnapshot(
         public_out_path=public_out_path,
         manifest=manifest,
@@ -563,10 +584,12 @@ def _public_check_command_specs(
     public_out_path: Path,
     pytest_summary_cache_path: Path,
 ) -> list[tuple[str, list[str], Path | None]]:
-    pytest_summary_command, pytest_summary_relative_path = _pytest_public_summary_command(
-        public_python=public_python,
-        request=request,
-        reuse_from=pytest_summary_cache_path,
+    pytest_summary_command, pytest_summary_relative_path = (
+        _pytest_public_summary_command(
+            public_python=public_python,
+            request=request,
+            reuse_from=pytest_summary_cache_path,
+        )
     )
     return [
         (
@@ -627,7 +650,9 @@ def _run_public_check_commands(
     return commands
 
 
-def _public_check_status(commands: list[dict[str, Any]], negative_assertions: dict[str, Any]) -> str:
+def _public_check_status(
+    commands: list[dict[str, Any]], negative_assertions: dict[str, Any]
+) -> str:
     command_status = _overall_status(commands)
     assertion_status = _negative_assertion_status(negative_assertions)
     return command_status if command_status != "pass" else assertion_status
@@ -678,7 +703,9 @@ def _public_check_failure_causes(
                 "message": f"public export negative assertion {assertion_id} failed",
                 "assertion_id": str(assertion_id),
                 "status": str(assertion.get("status") or "unknown"),
-                "violation_count": int(assertion.get("violation_count", len(violations)) or 0),
+                "violation_count": int(
+                    assertion.get("violation_count", len(violations)) or 0
+                ),
                 "violations": violations,
             }
         )
@@ -688,6 +715,7 @@ def _public_check_failure_causes(
 def _summary_payload(
     vault: Path,
     export: _PublicExportSnapshot,
+    source_history: dict[str, Any],
     commands: list[dict[str, Any]],
     status: str,
     public_check_config_fingerprint: str,
@@ -698,19 +726,28 @@ def _summary_payload(
         "public_export_status": "pass",
         "public_check_status": status,
         "export_file_count": _int_value(export.manifest.get("file_count", 0)),
-        "export_source_file_count": _int_value(export.manifest.get("source_file_count", 0)),
+        "export_source_file_count": _int_value(
+            export.manifest.get("source_file_count", 0)
+        ),
         "export_root_fingerprint": export.export_root_fingerprint,
         "public_export_manifest_sha256": _sha256_file(export.manifest_path),
-        "public_surface_policy_sha256": _sha256_file(vault / "ops/scripts/public/public_surface_policy.py"),
+        "public_surface_policy_sha256": _sha256_file(
+            vault / "ops/scripts/public/public_surface_policy.py"
+        ),
         "public_check_config_fingerprint": public_check_config_fingerprint,
         "command_count": len(commands),
-        "command_fail_count": sum(1 for command in commands if command["status"] != "pass"),
+        "command_fail_count": sum(
+            1 for command in commands if command["status"] != "pass"
+        ),
         "negative_assertion_fail_count": sum(
             1
             for assertion in export.negative_assertions.values()
             if isinstance(assertion, dict) and assertion.get("status") != "pass"
         ),
         **export.boundary_status,
+        "source_history_evaluation_status": str(source_history["evaluation_status"]),
+        "source_history_status": str(source_history["status"]),
+        "source_history_violation_count": int(source_history["violation_count"]),
         "pytest_passed": int(pytest_counts.get("passed", 0) or 0),
         "pytest_failed": int(pytest_counts.get("failed", 0) or 0),
         "pytest_errors": int(pytest_counts.get("errors", 0) or 0),
@@ -724,26 +761,37 @@ def _summary_payload(
             (int(command.get("quiet_seconds", 0) or 0) for command in commands),
             default=0,
         ),
-        "public_pytest_heartbeat_count": int(public_pytest_command.get("heartbeat_count", 0) or 0),
-        "public_pytest_quiet_seconds": int(public_pytest_command.get("quiet_seconds", 0) or 0),
+        "public_pytest_heartbeat_count": int(
+            public_pytest_command.get("heartbeat_count", 0) or 0
+        ),
+        "public_pytest_quiet_seconds": int(
+            public_pytest_command.get("quiet_seconds", 0) or 0
+        ),
         "public_pytest_termination_reason": str(
             public_pytest_command.get("termination_reason", "not_run")
         ),
-        "public_pytest_signal_sent": str(public_pytest_command.get("signal_sent", "none")),
+        "public_pytest_signal_sent": str(
+            public_pytest_command.get("signal_sent", "none")
+        ),
         "public_pytest_final_state_observed": str(
             public_pytest_command.get("final_state_observed", "not_run")
         ),
     }
 
 
-def _public_export_payload(vault: Path, export: _PublicExportSnapshot) -> dict[str, Any]:
+def _public_export_payload(
+    vault: Path, export: _PublicExportSnapshot
+) -> dict[str, Any]:
     return {
         "output_dir": _display_external_path(export.public_out_path, vault),
-        "manifest_file": str(export.manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json")),
+        "manifest_file": str(
+            export.manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json")
+        ),
         "file_count": _int_value(export.manifest.get("file_count", 0)),
         "source_file_count": _int_value(export.manifest.get("source_file_count", 0)),
         "export_root_fingerprint": export.export_root_fingerprint,
         "manifest_sha256": _sha256_file(export.manifest_path),
+        "git_metadata_present": (export.public_out_path / ".git").exists(),
     }
 
 
@@ -753,6 +801,7 @@ def _render_public_check_report(
     resolved_policy_path: Path,
     runtime_context: RuntimeContext,
     export: _PublicExportSnapshot,
+    source_history: dict[str, Any],
     commands: list[dict[str, Any]],
     request: PublicCheckRequest,
 ) -> dict[str, Any]:
@@ -762,6 +811,7 @@ def _render_public_check_report(
         "ops/scripts/public/public_check_summary.py",
         "ops/scripts/public/export_public_repo.py",
         "ops/scripts/public/public_surface_policy.py",
+        "ops/scripts/public/source_history_scan_runtime.py",
         "ops/scripts/test/test_execution_summary.py",
     ]
     public_check_config_text = _public_check_config_text(vault, request)
@@ -781,25 +831,36 @@ def _render_public_check_report(
                     "Makefile",
                     "ops/scripts/public/export_public_repo.py",
                     "ops/scripts/public/public_surface_policy.py",
+                    "ops/scripts/public/source_history_scan_runtime.py",
                 ]
             },
             text_inputs={
                 PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY: public_check_config_text,
+                SOURCE_HISTORY_STATE_FINGERPRINT_KEY: str(
+                    source_history["history_state_fingerprint"]
+                ),
             },
         ),
         "vault": report_path(vault, vault),
-        "policy": {"path": report_path(vault, resolved_policy_path), "version": policy.get("version")},
+        "policy": {
+            "path": report_path(vault, resolved_policy_path),
+            "version": policy.get("version"),
+        },
         "status": status,
         "summary": _summary_payload(
             vault,
             export,
+            source_history,
             commands,
             status,
             public_check_config_fingerprint,
         ),
         "public_export": _public_export_payload(vault, export),
+        "source_history_scan": source_history,
         "public_export_negative_assertions": export.negative_assertions,
-        "failure_causes": _public_check_failure_causes(commands, export.negative_assertions),
+        "failure_causes": _public_check_failure_causes(
+            commands, export.negative_assertions
+        ),
         "commands": commands,
     }
 
@@ -815,6 +876,10 @@ def build_report(
     policy, resolved_policy_path = load_policy(vault, None)
     runtime_context = context or RuntimeContext.from_policy(policy)
     export = _collect_public_export_snapshot(vault, request)
+    source_history = scan_source_history(
+        vault,
+        requested=request.source_history_scan,
+    )
     commands = _run_public_check_commands(
         vault,
         request=request,
@@ -827,12 +892,15 @@ def build_report(
         resolved_policy_path,
         runtime_context,
         export,
+        source_history,
         commands,
         request,
     )
 
 
-def write_report(vault: Path, report: dict[str, Any], out_path: str = DEFAULT_OUT) -> Path:
+def write_report(
+    vault: Path, report: dict[str, Any], out_path: str = DEFAULT_OUT
+) -> Path:
     return write_schema_backed_report(
         SchemaBackedReportWriteRequest(
             vault=vault,
@@ -867,31 +935,52 @@ def reusable_summary_diagnostics(
     summary = payload.get("summary")
     summary = summary if isinstance(summary, dict) else {}
     input_fingerprints = payload.get("input_fingerprints")
-    input_fingerprints = input_fingerprints if isinstance(input_fingerprints, dict) else {}
+    input_fingerprints = (
+        input_fingerprints if isinstance(input_fingerprints, dict) else {}
+    )
     checks = {
         "artifact_kind": payload.get("artifact_kind") == "public_check_summary",
         "producer": payload.get("producer") == PRODUCER,
         "status": payload.get("status") == "pass",
         "public_check_status": summary.get("public_check_status") == "pass",
-        "source_tree_fingerprint": payload.get("source_tree_fingerprint") == current_source_tree_fingerprint,
+        "source_tree_fingerprint": payload.get("source_tree_fingerprint")
+        == current_source_tree_fingerprint,
     }
     if request is not None:
         expected_source_command = _public_check_source_command(request)
         observed_source_command = str(payload.get("source_command", ""))
         checks["source_command"] = observed_source_command == expected_source_command
-        expected_public_check_config_fingerprint = _public_check_config_fingerprint(vault, request)
+        expected_public_check_config_fingerprint = _public_check_config_fingerprint(
+            vault, request
+        )
         observed_public_check_config_fingerprint = str(
             input_fingerprints.get(PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY, "")
         )
         checks[PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY] = (
-            observed_public_check_config_fingerprint == expected_public_check_config_fingerprint
+            observed_public_check_config_fingerprint
+            == expected_public_check_config_fingerprint
+        )
+        expected_source_history_state_fingerprint = hashlib.sha256(
+            source_history_state_fingerprint(
+                vault,
+                requested=request.source_history_scan,
+            ).encode("utf-8")
+        ).hexdigest()
+        observed_source_history_state_fingerprint = str(
+            input_fingerprints.get(SOURCE_HISTORY_STATE_FINGERPRINT_KEY, "")
+        )
+        checks[SOURCE_HISTORY_STATE_FINGERPRINT_KEY] = (
+            observed_source_history_state_fingerprint
+            == expected_source_history_state_fingerprint
         )
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         diagnostics["reason"] = f"not_current:{','.join(failed)}"
         diagnostics["checks"] = checks
         diagnostics["current_source_tree_fingerprint"] = current_source_tree_fingerprint
-        diagnostics["observed_source_tree_fingerprint"] = str(payload.get("source_tree_fingerprint", ""))
+        diagnostics["observed_source_tree_fingerprint"] = str(
+            payload.get("source_tree_fingerprint", "")
+        )
         if request is not None:
             diagnostics["expected_public_check_config_fingerprint"] = (
                 expected_public_check_config_fingerprint
@@ -901,6 +990,12 @@ def reusable_summary_diagnostics(
             )
             diagnostics["expected_source_command"] = expected_source_command
             diagnostics["observed_source_command"] = observed_source_command
+            diagnostics["expected_source_history_state_fingerprint"] = (
+                expected_source_history_state_fingerprint
+            )
+            diagnostics["observed_source_history_state_fingerprint"] = (
+                observed_source_history_state_fingerprint
+            )
         return diagnostics
     diagnostics.update(
         {
@@ -910,6 +1005,9 @@ def reusable_summary_diagnostics(
             "source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
             "public_check_config_fingerprint": str(
                 input_fingerprints.get(PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY, "")
+            ),
+            "source_history_state_fingerprint": str(
+                input_fingerprints.get(SOURCE_HISTORY_STATE_FINGERPRINT_KEY, "")
             ),
         }
     )
@@ -938,7 +1036,9 @@ def _public_check_cli_failure_summary(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run public mirror checks and write a canonical summary.")
+    parser = argparse.ArgumentParser(
+        description="Run public mirror checks and write a canonical summary."
+    )
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--mode", choices=("default", "full"), default="default")
@@ -949,7 +1049,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pytest-mark-expr")
     parser.add_argument("--pytest-flags", default="")
     parser.add_argument("--timeout-seconds", type=int, default=DEFAULT_TIMEOUT_SECONDS)
-    parser.add_argument("--heartbeat-interval-seconds", type=int, default=DEFAULT_HEARTBEAT_INTERVAL_SECONDS)
+    parser.add_argument(
+        "--heartbeat-interval-seconds",
+        type=int,
+        default=DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
+    )
+    parser.add_argument(
+        "--skip-source-history-scan",
+        action="store_true",
+        help="Record source history as not_requested instead of scanning all refs and HEAD.",
+    )
     parser.add_argument("--reuse-if-current", action="store_true")
     parser.add_argument("--reuse-from")
     parser.add_argument(
@@ -980,13 +1089,28 @@ def main(argv: list[str] | None = None) -> int:
         pytest_flags=args.pytest_flags,
         timeout_seconds=args.timeout_seconds,
         heartbeat_interval_seconds=args.heartbeat_interval_seconds,
+        source_history_scan=not args.skip_source_history_scan,
     )
     if args.reuse_if_current:
-        diagnostics = reusable_summary_diagnostics(vault, args.reuse_from or args.out, request)
+        diagnostics = reusable_summary_diagnostics(
+            vault, args.reuse_from or args.out, request
+        )
         if diagnostics["reusable"]:
-            print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
+            print(
+                json.dumps(
+                    {"summary_mode": "reused", **diagnostics},
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
             return 0
-        print(json.dumps({"summary_mode": "executed", "reuse_diagnostics": diagnostics}, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {"summary_mode": "executed", "reuse_diagnostics": diagnostics},
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         if args.reuse_only:
             return 1
     report = build_report(

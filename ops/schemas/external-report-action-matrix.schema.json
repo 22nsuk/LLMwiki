@@ -79,6 +79,10 @@
         "verification_readiness_pending_count",
         "gate_effect_action_counts",
         "blocking_scope_action_counts",
+        "recommendation_intake_status_counts",
+        "recommendation_candidate_count",
+        "recommendation_covered_count",
+        "recommendation_unresolved_count",
         "unmatched_active_report_count",
         "reference_manifest_alignment_status",
         "reference_manifest_missing_active_report_count",
@@ -147,6 +151,31 @@
           "type": "object",
           "additionalProperties": { "type": "integer", "minimum": 0 }
         },
+        "recommendation_intake_status_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reviewed",
+            "legacy",
+            "missing",
+            "stale",
+            "invalid",
+            "not_applicable",
+            "unreadable"
+          ],
+          "properties": {
+            "reviewed": { "type": "integer", "minimum": 0 },
+            "legacy": { "type": "integer", "minimum": 0 },
+            "missing": { "type": "integer", "minimum": 0 },
+            "stale": { "type": "integer", "minimum": 0 },
+            "invalid": { "type": "integer", "minimum": 0 },
+            "not_applicable": { "type": "integer", "minimum": 0 },
+            "unreadable": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "recommendation_candidate_count": { "type": "integer", "minimum": 0 },
+        "recommendation_covered_count": { "type": "integer", "minimum": 0 },
+        "recommendation_unresolved_count": { "type": "integer", "minimum": 0 },
         "unmatched_active_report_count": { "type": "integer", "minimum": 0 },
         "reference_manifest_alignment_status": {
           "type": "string",
@@ -324,6 +353,28 @@
         "P2": { "type": "integer", "minimum": 0 }
       }
     },
+    "recommendation_intake_status": {
+      "type": "string",
+      "enum": [
+        "reviewed",
+        "legacy",
+        "missing",
+        "stale",
+        "invalid",
+        "not_applicable",
+        "unreadable"
+      ]
+    },
+    "recommendation_intake_error_codes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "line_sha256_array": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+      "uniqueItems": true
+    },
     "report_action_basis": {
       "type": "object",
       "additionalProperties": false,
@@ -336,6 +387,13 @@
         "unresolved_action_ids",
         "unresolved_action_count",
         "unmatched_recommendation_count",
+        "recommendation_intake_status",
+        "recommendation_intake_error_codes",
+        "recommendation_candidate_count",
+        "recommendation_covered_count",
+        "recommendation_unresolved_count",
+        "exact_mapped_action_ids",
+        "unmatched_recommendation_line_sha256",
         "operator_only_rationale",
         "archive_decision_code"
       ],
@@ -359,6 +417,23 @@
         },
         "unresolved_action_count": { "type": "integer", "minimum": 0 },
         "unmatched_recommendation_count": { "type": "integer", "minimum": 0 },
+        "recommendation_intake_status": {
+          "$ref": "#/$defs/recommendation_intake_status"
+        },
+        "recommendation_intake_error_codes": {
+          "$ref": "#/$defs/recommendation_intake_error_codes"
+        },
+        "recommendation_candidate_count": { "type": "integer", "minimum": 0 },
+        "recommendation_covered_count": { "type": "integer", "minimum": 0 },
+        "recommendation_unresolved_count": { "type": "integer", "minimum": 0 },
+        "exact_mapped_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unmatched_recommendation_line_sha256": {
+          "$ref": "#/$defs/line_sha256_array"
+        },
         "operator_only_rationale": {
           "type": "string",
           "enum": [
@@ -377,6 +452,7 @@
             "explicit_archive_status",
             "implemented_action_basis_without_archive_marker",
             "reference_manifest_lifecycle_evidence",
+            "recommendation_intake_requires_operator_review",
             "unmatched_recommendations_require_operator_review",
             "unreadable_narrative_report",
             "unresolved_actions_covered_by_broader_report",
@@ -395,6 +471,15 @@
         "coverage_markers",
         "priority_mentions",
         "unmatched_recommendation_count",
+        "recommendation_intake_status",
+        "recommendation_intake_error_codes",
+        "recommendation_candidate_count",
+        "recommendation_covered_count",
+        "recommendation_unresolved_count",
+        "exact_mapped_action_ids",
+        "unmatched_recommendation_line_sha256",
+        "advisory_matched_action_ids",
+        "advisory_matched_action_count",
         "matched_action_ids",
         "matched_action_count",
         "unresolved_action_ids",
@@ -416,6 +501,29 @@
         },
         "priority_mentions": { "$ref": "#/$defs/priority_counts" },
         "unmatched_recommendation_count": { "type": "integer", "minimum": 0 },
+        "recommendation_intake_status": {
+          "$ref": "#/$defs/recommendation_intake_status"
+        },
+        "recommendation_intake_error_codes": {
+          "$ref": "#/$defs/recommendation_intake_error_codes"
+        },
+        "recommendation_candidate_count": { "type": "integer", "minimum": 0 },
+        "recommendation_covered_count": { "type": "integer", "minimum": 0 },
+        "recommendation_unresolved_count": { "type": "integer", "minimum": 0 },
+        "exact_mapped_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "unmatched_recommendation_line_sha256": {
+          "$ref": "#/$defs/line_sha256_array"
+        },
+        "advisory_matched_action_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "advisory_matched_action_count": { "type": "integer", "minimum": 0 },
         "matched_action_ids": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
@@ -442,6 +550,7 @@
             "all_structured_actions_implemented",
             "binary_report_requires_operator_review",
             "reference_manifest_lifecycle_evidence",
+            "recommendation_intake_requires_operator_review",
             "unmatched_recommendations_require_operator_review",
             "unreadable_narrative_report",
             "unresolved_actions_keep_report_active"

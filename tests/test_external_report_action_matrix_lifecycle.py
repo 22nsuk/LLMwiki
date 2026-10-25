@@ -8,6 +8,10 @@ import pytest
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
 )
+from ops.scripts.release.external_report_inventory_runtime import (
+    LOCAL_REPORT_LINE_DIGESTS,
+    line_sha256,
+)
 from ops.scripts.release.external_report_lifecycle_runtime import (
     release_lane_mutability_split_status,
 )
@@ -403,6 +407,82 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
         self.assertTrue(write_report(self.vault, report).exists())
 
+    def test_digest_bound_intake_keeps_missing_broad_matches_advisory(self) -> None:
+        report_path = self.external / "review.md"
+        report_path.write_text(
+            "# Synthetic review\n\nP0 source package recommendation\n",
+            encoding="utf-8",
+        )
+        self._write_json(LOCAL_REPORT_LINE_DIGESTS, {"report_intakes": {}})
+
+        report = build_report(self.vault, context=fixed_context())
+        coverage = report["active_report_coverage"][0]
+
+        self.assertEqual(coverage["recommendation_intake_status"], "missing")
+        self.assertEqual(
+            coverage["recommendation_intake_error_codes"],
+            ["missing_report_intake"],
+        )
+        self.assertEqual(coverage["recommendation_candidate_count"], 0)
+        self.assertEqual(coverage["matched_action_ids"], [])
+        self.assertIn(
+            "source_package_distribution_binding",
+            coverage["advisory_matched_action_ids"],
+        )
+        self.assertEqual(
+            coverage["archive_decision_code"],
+            "recommendation_intake_requires_operator_review",
+        )
+        self.assertEqual(report["summary"]["unmatched_active_report_count"], 1)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_digest_bound_intake_projects_balanced_exact_coverage(self) -> None:
+        report_path = self.external / "review.md"
+        action_line = "### Phase 0 synthetic exact recommendation"
+        unresolved_line = "| synthetic recommendation awaiting an owner |"
+        report_path.write_text(
+            f"# Synthetic review\n\n{action_line}\n{unresolved_line}\n",
+            encoding="utf-8",
+        )
+        self._write_json(
+            LOCAL_REPORT_LINE_DIGESTS,
+            {
+                "report_intakes": {
+                    "external-reports/review.md": {
+                        "content_sha256": _sha256_file(report_path),
+                        "action_line_sha256": {
+                            line_sha256(action_line): ["bootstrap_dev_install_hardening"]
+                        },
+                        "operator_context_line_sha256": [],
+                        "unmatched_recommendation_line_sha256": [
+                            line_sha256(unresolved_line)
+                        ],
+                    }
+                }
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+        coverage = report["active_report_coverage"][0]
+
+        self.assertEqual(coverage["recommendation_intake_status"], "reviewed")
+        self.assertEqual(coverage["recommendation_candidate_count"], 2)
+        self.assertEqual(coverage["recommendation_covered_count"], 1)
+        self.assertEqual(coverage["recommendation_unresolved_count"], 1)
+        self.assertEqual(coverage["unmatched_recommendation_count"], 1)
+        self.assertEqual(
+            coverage["matched_action_ids"], ["bootstrap_dev_install_hardening"]
+        )
+        self.assertEqual(
+            coverage["archive_decision_code"],
+            "unmatched_recommendations_require_operator_review",
+        )
+        self.assertEqual(report["summary"]["recommendation_candidate_count"], 2)
+        self.assertEqual(report["summary"]["recommendation_covered_count"], 1)
+        self.assertEqual(report["summary"]["recommendation_unresolved_count"], 1)
+        self.assertEqual(report["summary"]["unmatched_active_report_count"], 1)
+        self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_matrix_summary_surfaces_artifact_freshness_stale_routing(self) -> None:
         (self.external / "release.md").write_text(
             "# Release Review\n\nexternal report lifecycle.\n",
@@ -726,6 +806,7 @@ class ExternalReportActionMatrixLifecycleTests(ExternalReportActionMatrixTestBas
                 "deferred_evidence_paths"
             ],
             [
+                "build/release/release-live-attestation.json",
                 "build/release/release-run-manifest.json",
                 "build/release/release-sealed-run-manifest.json",
                 "ops/reports/release-closeout-batch-manifest.json",

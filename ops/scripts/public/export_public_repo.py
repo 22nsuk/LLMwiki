@@ -17,7 +17,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
         PUBLIC_INCLUDED_REPORT_FILES,
-        is_public_excluded_by_local_state,
+        is_public_excluded_path,
         render_public_gitignore_block,
     )
 else:
@@ -29,7 +29,7 @@ else:
         PUBLIC_INCLUDE_FILES,
         PUBLIC_INCLUDE_PREFIXES,
         PUBLIC_INCLUDED_REPORT_FILES,
-        is_public_excluded_by_local_state,
+        is_public_excluded_path,
         render_public_gitignore_block,
     )
 
@@ -38,13 +38,9 @@ DEFAULT_PUBLIC_OUT = str(Path(tempfile.gettempdir()) / "llm-wiki-public-repo")
 
 
 def should_export_public(rel_path: str) -> bool:
-    if rel_path in PUBLIC_EXCLUDED_FILES:
-        return False
     if rel_path in PUBLIC_INCLUDED_REPORT_FILES:
         return True
-    if any(rel_path.startswith(prefix) for prefix in PUBLIC_EXCLUDED_PREFIXES):
-        return False
-    if is_public_excluded_by_local_state(rel_path):
+    if is_public_excluded_path(rel_path):
         return False
     return rel_path in PUBLIC_INCLUDE_FILES or any(
         rel_path.startswith(prefix) for prefix in PUBLIC_INCLUDE_PREFIXES
@@ -100,7 +96,9 @@ def _remove_tree(path: Path) -> None:
         return
 
 
-def export_public_repo(vault: Path, out_dir: Path, *, clean: bool = True) -> dict[str, object]:
+def export_public_repo(
+    vault: Path, out_dir: Path, *, clean: bool = True
+) -> dict[str, object]:
     if clean and out_dir.exists():
         _remove_tree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -135,7 +133,9 @@ def export_public_repo(vault: Path, out_dir: Path, *, clean: bool = True) -> dic
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Export the public code/ops mirror of this vault.")
+    parser = argparse.ArgumentParser(
+        description="Export the public code/ops mirror of this vault."
+    )
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_PUBLIC_OUT)
     parser.add_argument("--no-clean", action="store_true")

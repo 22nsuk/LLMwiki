@@ -365,6 +365,14 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
             )
             self.assertEqual(unique_external["matched_action_count"], 1)
             self.assertEqual(unique_external["unmatched_recommendation_count"], 0)
+            self.assertEqual(unique_external["recommendation_intake_status"], "legacy")
+            self.assertEqual(unique_external["recommendation_candidate_count"], 0)
+            self.assertEqual(unique_external["recommendation_covered_count"], 0)
+            self.assertEqual(unique_external["recommendation_unresolved_count"], 0)
+            self.assertEqual(unique_external["exact_mapped_action_ids"], [])
+            self.assertEqual(
+                unique_external["unmatched_recommendation_line_sha256"], []
+            )
             self.assertEqual(unique_external["operator_only_rationale"], "")
             self.assertEqual(
                 unique_external["archive_decision_code"],
@@ -421,12 +429,17 @@ class GeneratedArtifactIndexTests(unittest.TestCase):
                 legacy_basis["matched_action_ids"],
             )
             self.assertEqual(legacy_basis["unmatched_recommendation_count"], 0)
+            self.assertEqual(legacy_basis["recommendation_intake_status"], "legacy")
+            self.assertEqual(legacy_basis["recommendation_intake_error_codes"], [])
             self.assertNotIn("reason", legacy_basis)
             self.assertNotIn("superseded_by", legacy_basis)
             operator_basis = archived_basis[
                 "external-reports/archive/operator_review.pdf"
             ]
             self.assertEqual(operator_basis["report_type"], "binary_report")
+            self.assertEqual(
+                operator_basis["recommendation_intake_status"], "not_applicable"
+            )
             self.assertEqual(
                 operator_basis["operator_only_rationale"],
                 "binary_report_requires_operator_review",

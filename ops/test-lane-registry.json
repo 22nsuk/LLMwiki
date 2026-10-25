@@ -38,6 +38,9 @@
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_workflow_dependency_planner.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_source_revision_runtime.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_observation_closeout_lint.py": 30,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_external_report_action_matrix_lifecycle.py": 120,
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_external_report_action_matrix_status.py": 120,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_derived_surfaces.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_repo_skill_contract.py": 30,
       "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_subagent_profile_schema.py": 30,
@@ -51,6 +54,7 @@
       "make test-executor-runtime": 120,
       "make sync-derived-check": 120,
       "make report-schema-samples-check": 30,
+      "make supply-chain-check": 120,
       "make public-check": 120
     },
     "unknown_path": {
@@ -205,7 +209,8 @@
         "path_patterns": [
           "ops/scripts/public/export_public_repo.py",
           "ops/scripts/public/public_surface_policy.py",
-          "ops/scripts/public/public_check_summary.py"
+          "ops/scripts/public/public_check_summary.py",
+          "ops/scripts/public/source_history_scan_runtime.py"
         ],
         "commands": [
           "make static",
@@ -217,6 +222,35 @@
         "coverage_class": "public_check_source",
         "static_required": true,
         "duration_seconds": 150
+      },
+      {
+        "rule_id": "observation_closeout_registry_contract",
+        "path_patterns": [
+          "ops/observation-closeout-registry.json"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_observation_closeout_lint.py"
+        ],
+        "reason": "Observation closeout registry edits should validate retained open/planned lifecycle semantics without executing unrelated operator follow-ups.",
+        "coverage_class": "observation_closeout",
+        "static_required": true,
+        "duration_seconds": 90
+      },
+      {
+        "rule_id": "dependency_lock_contract",
+        "path_patterns": [
+          "pyproject.toml",
+          "uv.lock"
+        ],
+        "commands": [
+          "make static",
+          "make supply-chain-check"
+        ],
+        "reason": "Project metadata and canonical lock changes should validate the locked dependency and supply-chain contract.",
+        "coverage_class": "dependency_lock",
+        "static_required": true,
+        "duration_seconds": 180
       },
       {
         "rule_id": "python_runtime_source",
@@ -263,6 +297,21 @@
         "duration_seconds": 90
       },
       {
+        "rule_id": "external_report_action_matrix_test_runtime",
+        "path_patterns": [
+          "tests/external_report_action_matrix_test_runtime.py"
+        ],
+        "commands": [
+          "make static",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_external_report_action_matrix_lifecycle.py",
+          "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_external_report_action_matrix_status.py"
+        ],
+        "reason": "The shared external-report action-matrix fixture must replay both lifecycle and status owners instead of falling through to an unknown-path advisory.",
+        "coverage_class": "external_report_action_matrix",
+        "static_required": true,
+        "duration_seconds": 300
+      },
+      {
         "rule_id": "derived_surfaces_manifest_contract",
         "path_patterns": [
           "ops/policies/derived-surfaces.json",
@@ -297,14 +346,15 @@
       {
         "rule_id": "release_workflow_static_contract",
         "path_patterns": [
-          ".github/workflows/release.yml"
+          ".github/workflows/release.yml",
+          ".github/release-governance.yml"
         ],
         "commands": [
           "make static",
           "make workflow-dependency-planner-check",
           "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_release_workflow_static.py"
         ],
-        "reason": "Release workflow edits should run the dedicated static workflow contract without implying report-contract core promotion.",
+        "reason": "Release workflow and governance edits should run the dedicated static workflow contract without implying report-contract core promotion.",
         "coverage_class": "release_workflow_static",
         "static_required": true,
         "duration_seconds": 150

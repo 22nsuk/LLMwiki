@@ -37,14 +37,15 @@ repo-shared defaults는 아래 rung만 사용한다.
 
 | Rung | Model | Effort | Typical use in this repo |
 | --- | --- | --- | --- |
-| 1 | `gpt-5.6-sol` | `medium` | read-heavy mapping, route discovery, owner boundary clarification |
-| 2 | `gpt-5.6-sol` | `high` | bounded implementation, low/moderate-risk validation, risk-focused review, and architecture-sensitive analysis |
-| 3 | `gpt-5.6-sol` | `xhigh` | high-complexity validation, replayability, provenance, benchmark, and policy-weight audits |
+| 1 | `gpt-6.1-sol` | `high` | read-heavy mapping, route discovery, owner boundary clarification |
+| 2 | `gpt-6.1-sol` | `xhigh` | bounded implementation, low/moderate-risk validation, risk-focused review, and architecture-sensitive analysis |
+| 3 | `gpt-6.1-sol` | `max` | high-complexity validation, replayability, provenance, benchmark, and policy-weight audits |
+| 4 | `gpt-6-astra` | `high` | extreme-complexity implementation, validation, review, and specialist audits |
 
 추가 규칙:
-- repo-shared default model은 모든 rung에서 `gpt-5.6-sol`로 통일한다.
-- rung 차이는 모델 계열이 아니라 `reasoning_effort`의 `medium`, `high`, `xhigh` 차이로만 표현한다.
-- wire-level `reasoning_effort` override가 필요해도 repo-shared default는 위 3단계 ladder를 벗어나지 않는다.
+- rung 1–3은 `gpt-6.1-sol`의 `high`, `xhigh`, `max`를 사용하고, rung 4는 `gpt-6-astra`의 `high`를 사용한다.
+- rung 순서는 model과 reasoning effort의 조합으로 정의한다. 서로 다른 모델의 effort 문자열만으로 단계 순서를 비교하지 않는다.
+- wire-level `reasoning_effort` override가 필요해도 repo-shared default는 위 4단계 ladder를 벗어나지 않는다.
 - override가 정말 필요하면 세션에서 명시적으로 승인받고 올린다.
 
 ## Dynamic rung selection
@@ -56,6 +57,8 @@ repo-shared defaults는 아래 rung만 사용한다.
 - selector는 `primary_target`, `supporting_target`, `test_file`, `manual_risk_flag`를 읽고 `complexity_policy`와 `subagent_routing_policy`를 합쳐 선택한다.
 - selector report는 `escalation_reasons`, `deescalation_reasons`, `effort_sufficiency`를 함께 남겨, 왜 더 높은 effort를 쓰거나 쓰지 않았는지 audit 가능하게 한다.
 - 선택 결과는 항상 approved ladder와 role별 `allowed_rungs` 안으로 clamp된다.
+- `explorer`와 `owner-boundary-mapper`는 rung 1–2를 사용한다. 나머지 역할은 `extreme` score band(65–100) 또는 명시적인 `--requested-rung 4`에서 Astra High로 승격할 수 있다.
+- 기존 rung 3 감사 역할은 Sol Max를 기본 floor로 유지하며, 낮은 복잡도나 낮은 수동 요청으로 이 floor 아래로 내려가지 않는다.
 - target/risk가 모두 비어 있는 exploratory dispatch는 complexity `0`으로 시작해 discovery role이 과도하게 무거워지지 않게 한다.
 - 자동 `system_mechanism` 루프는 이 selector를 role별로 반복 호출해 `scope-freeze -> routing -> codex exec` 증적 체인을 남긴다.
 - `ops/reports/auto-improve-sessions/<session-id>.json`은 이 체인을 session-level rollup으로 다시 묶어, role/rung mix와 executor blocking outcome을 한 번에 읽게 한다.
@@ -80,7 +83,7 @@ hand-edit their `tmp/` outputs into public source.
 
 1. 부모 agent는 먼저 `python -m ops.scripts.core.select_subagent_rung --role <role>`을 실행한다. `--out`을 생략하면 결과는 `tmp/subagent-routing-report.json`에 ephemeral diagnostic으로 쓰인다.
 2. 가능한 경우 `--primary-target`, `--supporting-target`, `--test-file`, `--manual-risk-flag`를 함께 넣어 실제 작업 표면을 반영한다.
-3. 의도적으로 더 높은 floor가 필요할 때만 `--requested-rung <1|2|3>`을 추가한다. selector는 role별 `allowed_rungs` 안으로 clamp한다.
+3. 의도적으로 더 높은 floor가 필요할 때만 `--requested-rung <1|2|3|4>`을 추가한다. selector는 role별 `allowed_rungs` 안으로 clamp한다.
 4. 실행 증적을 남기는 mechanism/run 작업에서는 `--out runs/<run-id>/subagent-routing.<role>.json`을 명시한다. `ops/reports/subagent-routing-report.json`은 고정 입력을 가진 owner target이 아니므로 일반 수동 dispatch 기본 출력으로 쓰지 않는다.
 5. repo-native `codex_exec`나 model/reasoning override를 받는 controllable
    default/custom subagent 실행면에서는 report의
@@ -101,24 +104,24 @@ hand-edit their `tmp/` outputs into public source.
 
 | File | Default rung | Sandbox | Use when |
 | --- | --- | --- | --- |
-| `explorer.toml` | `gpt-5.6-sol` + `medium` | `read-only` | owning path, router entry point, contract boundary를 먼저 맵핑해야 할 때 |
-| `worker.toml` | `gpt-5.6-sol` + `high` | `workspace-write` | bounded implementation or repo edit가 필요할 때 |
-| `reviewer.toml` | `gpt-5.6-sol` + `high` | `workspace-write` in temp workspace, source read-only contract | PR-style risk review, missing tests, source-fidelity drift를 보고 싶을 때 |
-| `validator.toml` | `gpt-5.6-sol` + `high` | `workspace-write` in temp workspace, source read-only contract | bounded validation, command replay planning, executable regression risk를 확인할 때. Routing policy가 schema/policy/security/high-score 신호를 보면 `xhigh`로 승격한다. |
+| `explorer.toml` | `gpt-6.1-sol` + `high` | `read-only` | owning path, router entry point, contract boundary를 먼저 맵핑해야 할 때 |
+| `worker.toml` | `gpt-6.1-sol` + `xhigh` | `workspace-write` | bounded implementation or repo edit가 필요할 때 |
+| `reviewer.toml` | `gpt-6.1-sol` + `xhigh` | `workspace-write` in temp workspace, source read-only contract | PR-style risk review, missing tests, source-fidelity drift를 보고 싶을 때 |
+| `validator.toml` | `gpt-6.1-sol` + `xhigh` | `workspace-write` in temp workspace, source read-only contract | bounded validation, command replay planning, executable regression risk를 확인할 때. Routing policy가 schema/policy/security/high-score 신호를 보면 `max`로, extreme complexity면 Astra `high`로 승격한다. |
 
 ### Specialized read-only add-ons
 
 | File | Default rung | Use when |
 | --- | --- | --- |
-| `provenance-auditor.toml` | `gpt-5.6-sol` + `xhigh` | `Source trace`, raw registry, frontmatter provenance, claim fidelity를 엄격히 감사할 때 |
-| `parity-replay-auditor.toml` | `gpt-5.6-sol` + `xhigh` | `make check`, packaged-copy parity, baseline/candidate replayability를 따질 때 |
-| `benchmark-evidence-analyst.toml` | `gpt-5.6-sol` + `xhigh` | eval/lint/stage2/promotion artifact가 keep/discard를 정당화하는지 판단할 때 |
-| `owner-boundary-mapper.toml` | `gpt-5.6-sol` + `medium` | `wiki/`, `system/`, `ops/`, `tests/`, `runs/` 사이의 canonical owner boundary를 잡을 때 |
-| `scope-gate-reviewer.toml` | `gpt-5.6-sol` + `high` | 작업이 public/private/generated/release/runtime 경계를 넘는지 구현 전에 차단하거나 좁힐 때 |
-| `valuation-policy-auditor.toml` | `gpt-5.6-sol` + `xhigh` | same-eval promotion, policy exception, decision-weight 과대평가 여부를 감사할 때 |
-| `release-authority-auditor.toml` | `gpt-5.6-sol` + `xhigh` | release-run/sealed/auto-promotion authority blocker와 stale evidence 원인을 분리할 때 |
-| `goal-runtime-triage-auditor.toml` | `gpt-5.6-sol` + `xhigh` | goal runtime trial admission, quarantine, next-run repair, readiness blockers를 분류할 때 |
-| `external-report-action-auditor.toml` | `gpt-5.6-sol` + `high` | external report prose, action matrix status/lifecycle, remediation backlog, improvement observations의 구현/보류 상태를 대조할 때 |
+| `provenance-auditor.toml` | `gpt-6.1-sol` + `max` | `Source trace`, raw registry, frontmatter provenance, claim fidelity를 엄격히 감사할 때 |
+| `parity-replay-auditor.toml` | `gpt-6.1-sol` + `max` | `make check`, packaged-copy parity, baseline/candidate replayability를 따질 때 |
+| `benchmark-evidence-analyst.toml` | `gpt-6.1-sol` + `max` | eval/lint/stage2/promotion artifact가 keep/discard를 정당화하는지 판단할 때 |
+| `owner-boundary-mapper.toml` | `gpt-6.1-sol` + `high` | `wiki/`, `system/`, `ops/`, `tests/`, `runs/` 사이의 canonical owner boundary를 잡을 때 |
+| `scope-gate-reviewer.toml` | `gpt-6.1-sol` + `xhigh` | 작업이 public/private/generated/release/runtime 경계를 넘는지 구현 전에 차단하거나 좁힐 때 |
+| `valuation-policy-auditor.toml` | `gpt-6.1-sol` + `max` | same-eval promotion, policy exception, decision-weight 과대평가 여부를 감사할 때 |
+| `release-authority-auditor.toml` | `gpt-6.1-sol` + `max` | release-run/sealed/auto-promotion authority blocker와 stale evidence 원인을 분리할 때 |
+| `goal-runtime-triage-auditor.toml` | `gpt-6.1-sol` + `max` | goal runtime trial admission, quarantine, next-run repair, readiness blockers를 분류할 때 |
+| `external-report-action-auditor.toml` | `gpt-6.1-sol` + `xhigh` | external report prose, action matrix status/lifecycle, remediation backlog, improvement observations의 구현/보류 상태를 대조할 때 |
 
 ### Role boundaries
 
@@ -175,7 +178,7 @@ hand-edit their `tmp/` outputs into public source.
 자동 `system_mechanism` 세션에서는 역할 dispatch가 고정 계약을 따른다.
 
 - `worker`는 항상 실행한다.
-- `validator`는 scope freeze가 runnable이면 항상 실행하되, low/moderate complexity는 rung 2(`high`)에서 시작하고 schema/policy/security/high-score 신호가 있을 때만 rung 3(`xhigh`)로 승격한다.
+- `validator`는 scope freeze가 runnable이면 항상 실행하되, low/moderate complexity는 rung 2(`xhigh`)에서 시작하고 schema/policy/security/high-score 신호가 있으면 rung 3(`max`)로, extreme complexity면 rung 4(Astra `high`)로 승격한다.
 - `reviewer`는 target이 `ops/policies/`, `ops/schemas/`, `system/`을 건드리거나 worker score band가 `high|extreme`면 붙인다.
 - auditor profile은 policy-backed `risk_flag -> role` mapping으로만 sidecar 실행한다.
 

@@ -32,9 +32,10 @@ Package metadata includes `Private :: Do Not Upload`, which
 This classifier does not change the public source license or prevent direct
 wheel installation.
 
-The Release workflow retains the full-vault verification gates and a
-`release-artifacts` job that verifies the source/evidence binding, builds the
-Python distributions, uploads workflow artifacts, and attests their provenance.
+The Release workflow retains the full-vault verification gates and builds the
+Python distributions in `verify-clean-release`. The `release-artifacts` job
+verifies the source, evidence, and distribution bindings, uploads the verified
+workflow artifacts, and attests their provenance.
 Its OIDC permission is used for GitHub artifact attestations. It does not upload
 packages to an index. Wheel installation alone does not provide the repository's
 Make targets, tests, or vault inputs.
@@ -424,6 +425,26 @@ staged authority checks with `make release-run-ready-check`,
 `make release-auto-promotion-ready-check`, and
 `python -m ops.scripts.release.release_live_artifact_attestation verify`.
 
+### Build-once distribution verification
+
+`verify-clean-release` produces the verified source ZIP and evidence bundle,
+extracts the source ZIP into a fresh directory, and builds the wheel and sdist
+once. The build uses the exact `setuptools` and `wheel` versions installed from
+`uv.lock` with `--no-isolation`. `SOURCE_DATE_EPOCH` comes from the verified Git
+revision. The job has only read access to repository contents.
+
+The live attestation binds both distributions by filename, byte size, SHA-256,
+internal package name/version, source ZIP digest, source revision, and source-tree
+fingerprint. The `verified-distributions` workflow artifact carries those exact
+bytes to `release-artifacts`. That job verifies the downloaded distributions
+against the attestation and workflow revision before producing supply-chain
+artifacts and attesting the distributions. It does not rebuild them.
+
+Workflow artifact uploads allow replacement on a retry of the same workflow
+run. They remain workflow transport and do not publish assets to a GitHub Release
+or a package index. The distribution policy above continues to apply to both
+release events and manual dispatches.
+
 ## Auto-Promotion Closeout Runbook
 
 Use this runbook when the goal is to prove unattended release promotion for the
@@ -722,6 +743,15 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `external-report-reference-manifest-settle` writes the current root reference
   set once; added and removed paths are transition diagnostics, not a reason to
   run the same writer a second time.
+  In a full vault, `external-reports/report-line-action-digests.json` binds each
+  reviewed narrative report path to its content SHA and exact actionable-line
+  digests. Exact mappings, explicit unresolved digests, and operator-context
+  exclusions are authoritative for intake; report-wide catalog regex matches
+  remain advisory and cannot establish archive coverage. The action matrix
+  exposes intake status plus candidate, covered, and unresolved counts. A
+  missing, stale, invalid, or unresolved intake keeps the report active. Public
+  tests must exercise this contract with sanitized synthetic lines rather than
+  copying local report prose.
   `ops/reports/external-report-action-matrix.json` separates action lifecycle
   as `resolved`, `historically_true`, `superseded`, or `currently_valid`.
   It also summarizes currently valid actions by source-action availability,
@@ -741,11 +771,12 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   update, and do not mutate tracked source while treating the existing finality
   attestation as current.
   Before a root report is moved to archive, require a per-report absorption
-  check: matched action IDs, evidence status, lifecycle, unmatched
-  recommendation count, and any operator-only rationale must be recorded in
-  private/local evidence. Open task observations for archive reconciliation keep
-  related broad actions `currently_valid`, so archive recommendations cannot rely
-  only on active-report count or implemented totals. Generated-artifact index
+  check: intake status, candidate/covered/unresolved counts, exact matched action
+  IDs, evidence status, lifecycle, unresolved line digests, and any operator-only
+  rationale must be recorded in private/local evidence. Open task observations
+  for archive reconciliation keep related broad actions `currently_valid`, so
+  archive recommendations cannot rely only on active-report count or implemented
+  totals. Generated-artifact index
   `reason` text is display-only for this decision; use structured
   `matched_action_ids`, `unresolved_action_ids`, `unresolved_action_count`,
   `superseded_by`, and matrix `status_reason_details` as the reconciliation

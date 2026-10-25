@@ -30,6 +30,7 @@ from ops.scripts.core.source_tree_fingerprint_runtime import (
 )
 
 from .external_report_inventory_runtime import (
+    RECOMMENDATION_INTAKE_STATUSES,
     REFERENCE_MANIFEST,
     archived_report_paths,
     as_dict,
@@ -37,6 +38,7 @@ from .external_report_inventory_runtime import (
     as_list,
     load_json_object,
 )
+from .release_live_artifact_attestation import distribution_binding_reason_ids
 from .review_archive import (
     CLEAN_SOURCE_COMMAND as REVIEW_ARCHIVE_CLEAN_SOURCE_COMMAND,
     PRODUCER as REVIEW_ARCHIVE_PRODUCER,
@@ -57,6 +59,7 @@ MATRIX_DEFERRED_RELEASE_EVIDENCE_PATHS: dict[str, frozenset[str]] = {
             "ops/reports/release-evidence-dashboard.json",
             "build/release/release-run-manifest.json",
             "build/release/release-sealed-run-manifest.json",
+            "build/release/release-live-attestation.json",
         }
     ),
     "release_evidence_bundle_and_attestation": frozenset(
@@ -68,6 +71,7 @@ MATRIX_DEFERRED_RELEASE_EVIDENCE_PATHS: dict[str, frozenset[str]] = {
             "ops/reports/release-closeout-finality-attestation.json",
             "build/release/release-run-manifest.json",
             "build/release/release-sealed-run-manifest.json",
+            "build/release/release-live-attestation.json",
         }
     ),
     "full_suite_evidence_currentness": frozenset(
@@ -96,6 +100,13 @@ ARCHIVED_REPORT_ACTION_BASIS_REQUIRED_FIELDS = (
     "unresolved_action_ids",
     "unresolved_action_count",
     "unmatched_recommendation_count",
+    "recommendation_intake_status",
+    "recommendation_intake_error_codes",
+    "recommendation_candidate_count",
+    "recommendation_covered_count",
+    "recommendation_unresolved_count",
+    "exact_mapped_action_ids",
+    "unmatched_recommendation_line_sha256",
     "operator_only_rationale",
     "archive_decision_code",
 )
@@ -199,6 +210,16 @@ def _archived_report_basis_record_verified(record: Any) -> bool:
         return False
     matched_action_ids = as_list(record.get("matched_action_ids"))
     unresolved_action_ids = as_list(record.get("unresolved_action_ids"))
+    exact_mapped_action_ids = as_list(record.get("exact_mapped_action_ids"))
+    unmatched_line_digests = as_list(
+        record.get("unmatched_recommendation_line_sha256")
+    )
+    intake_error_codes = as_list(record.get("recommendation_intake_error_codes"))
+    candidate_count = as_int(record.get("recommendation_candidate_count"))
+    covered_count = as_int(record.get("recommendation_covered_count"))
+    recommendation_unresolved_count = as_int(
+        record.get("recommendation_unresolved_count")
+    )
     return (
         bool(str(record.get("path", "")).strip())
         and str(record.get("report_type", "")).strip()
@@ -210,7 +231,23 @@ def _archived_report_basis_record_verified(record: Any) -> bool:
             isinstance(action_id, str) and action_id for action_id in unresolved_action_ids
         )
         and as_int(record.get("unresolved_action_count")) == len(unresolved_action_ids)
-        and as_int(record.get("unmatched_recommendation_count")) >= 0
+        and str(record.get("recommendation_intake_status", ""))
+        in RECOMMENDATION_INTAKE_STATUSES
+        and all(isinstance(code, str) and code for code in intake_error_codes)
+        and candidate_count == covered_count + recommendation_unresolved_count
+        and as_int(record.get("unmatched_recommendation_count"))
+        == recommendation_unresolved_count
+        and all(
+            isinstance(action_id, str) and action_id in matched_action_ids
+            for action_id in exact_mapped_action_ids
+        )
+        and len(set(exact_mapped_action_ids)) == len(exact_mapped_action_ids)
+        and len(unmatched_line_digests) == recommendation_unresolved_count
+        and all(
+            isinstance(digest, str) and SHA256_HEX_RE.fullmatch(digest)
+            for digest in unmatched_line_digests
+        )
+        and len(set(unmatched_line_digests)) == len(unmatched_line_digests)
         and isinstance(record.get("operator_only_rationale", ""), str)
         and bool(str(record.get("archive_decision_code", "")).strip())
     )
@@ -614,8 +651,10 @@ def release_verified_action_reason_ids(vault: Path, action_id: str) -> list[str]
     reasons.extend(_common_release_verified_reason_ids(vault, action_id))
     if action_id == "source_package_distribution_binding":
         reasons.extend(_reference_manifest_distribution_reason_ids(vault))
+        reasons.extend(distribution_binding_reason_ids(vault))
     if action_id == "release_evidence_bundle_and_attestation":
         reasons.extend(_release_evidence_finality_reason_ids(vault))
+        reasons.extend(distribution_binding_reason_ids(vault))
     if action_id == "promotion_truth_ladder":
         reasons.extend(_promotion_truth_ladder_reason_ids(vault))
     return _dedupe_reason_ids(reasons)
@@ -628,6 +667,7 @@ def matrix_observable_release_verified_action_reason_ids(
     if action_id == "source_package_distribution_binding":
         reasons.extend(_source_package_reason_ids(vault))
         reasons.extend(_reference_manifest_distribution_reason_ids(vault))
+        reasons.extend(distribution_binding_reason_ids(vault))
     elif action_id == "full_suite_evidence_currentness":
         reasons.extend(_full_suite_reason_ids(vault))
     return _dedupe_reason_ids(reasons)
@@ -661,6 +701,7 @@ def source_package_distribution_binding_verified(vault: Path) -> bool:
             "release_sealed_run_manifest",
         )
         and not _reference_manifest_distribution_reason_ids(vault)
+        and not distribution_binding_reason_ids(vault)
     )
 
 

@@ -83,13 +83,13 @@ class PolicyRuntimeTest(unittest.TestCase):
             policy["subagent_routing_policy"]["ladder"][0],
             {
                 "rung": 1,
-                "model": "gpt-5.6-sol",
-                "reasoning_effort": "medium",
+                "model": "gpt-6.1-sol",
+                "reasoning_effort": "high",
             },
         )
         self.assertEqual(
             policy["subagent_routing_policy"]["roles"]["worker"]["allowed_rungs"],
-            [1, 2, 3],
+            [1, 2, 3, 4],
         )
         self.assertEqual(
             policy["subagent_routing_policy"]["roles"]["reviewer"]["score_band_rungs"]["high"],
@@ -101,7 +101,7 @@ class PolicyRuntimeTest(unittest.TestCase):
         )
         self.assertEqual(
             policy["subagent_routing_policy"]["roles"]["scope-gate-reviewer"]["allowed_rungs"],
-            [2, 3],
+            [2, 3, 4],
         )
         self.assertEqual(
             policy["system_refactor_policy"]["python_function_review"]["profiles"]["runtime"],

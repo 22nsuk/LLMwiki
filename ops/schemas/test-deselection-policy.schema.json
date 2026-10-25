@@ -28,7 +28,6 @@
       "required": [
         "max_count",
         "risk_owner",
-        "expires_at",
         "count_increase_gate_effect",
         "expiry_gate_effect"
       ],
@@ -65,6 +64,37 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/deselected_test"
+      }
+    }
+  },
+  "if": {
+    "anyOf": [
+      {
+        "properties": {
+          "deselection_budget": {
+            "properties": {
+              "max_count": {
+                "minimum": 1
+              }
+            }
+          }
+        }
+      },
+      {
+        "properties": {
+          "deselected_tests": {
+            "minItems": 1
+          }
+        }
+      }
+    ]
+  },
+  "then": {
+    "properties": {
+      "deselection_budget": {
+        "required": [
+          "expires_at"
+        ]
       }
     }
   },

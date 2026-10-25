@@ -81,8 +81,8 @@ class SubagentProfileSchemaTests(unittest.TestCase):
                 "developer_instructions",
             },
         )
-        self.assertEqual(profile["model"], "gpt-5.6-sol")
-        self.assertEqual(profile["model_reasoning_effort"], "high")
+        self.assertEqual(profile["model"], "gpt-6.1-sol")
+        self.assertEqual(profile["model_reasoning_effort"], "xhigh")
         self.assertEqual(profile["sandbox_mode"], "read-only")
 
         instructions = profile["developer_instructions"]

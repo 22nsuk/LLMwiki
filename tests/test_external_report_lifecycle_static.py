@@ -66,7 +66,40 @@ def test_checked_in_external_report_manifest_and_matrix_cover_active_root_report
         generated_index["summary"]["external_reports_archive_file_count"]
         == len(expected_archive_basis_paths)
     )
-    assert matrix["summary"]["unmatched_active_report_count"] == 0
+    for coverage in matrix["active_report_coverage"]:
+        assert coverage["recommendation_intake_status"] == "reviewed"
+        assert coverage["recommendation_candidate_count"] > 0
+        assert (
+            coverage["recommendation_candidate_count"]
+            == coverage["recommendation_covered_count"]
+            + coverage["recommendation_unresolved_count"]
+        )
+        assert coverage["unmatched_recommendation_count"] == coverage[
+            "recommendation_unresolved_count"
+        ]
+        assert len(coverage["unmatched_recommendation_line_sha256"]) == coverage[
+            "recommendation_unresolved_count"
+        ]
+    assert matrix["summary"]["recommendation_intake_status_counts"]["reviewed"] == len(
+        expected_matrix_paths
+    )
+    assert matrix["summary"]["recommendation_candidate_count"] == sum(
+        int(item["recommendation_candidate_count"])
+        for item in matrix["active_report_coverage"]
+    )
+    assert matrix["summary"]["recommendation_covered_count"] == sum(
+        int(item["recommendation_covered_count"])
+        for item in matrix["active_report_coverage"]
+    )
+    assert matrix["summary"]["recommendation_unresolved_count"] == sum(
+        int(item["recommendation_unresolved_count"])
+        for item in matrix["active_report_coverage"]
+    )
+    assert matrix["summary"]["unmatched_active_report_count"] == sum(
+        1
+        for item in matrix["active_report_coverage"]
+        if int(item["recommendation_unresolved_count"]) > 0
+    )
     assert matrix["summary"]["reference_manifest_alignment_status"] == "current"
     assert matrix["summary"]["reference_manifest_missing_active_report_count"] == 0
     assert matrix["summary"]["reference_manifest_stale_reference_count"] == 0

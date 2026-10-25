@@ -88,4 +88,43 @@ default and selectorless lanes retain independent canonical summaries at
 `ops/reports/public-check-summary.json` and
 `ops/reports/public-check-summary-full.json`, respectively, so one checkpoint
 cannot replace the other's evidence.
+
+Each summary keeps two boundary claims separate. `public_export` and
+`summary.export_git_metadata_absence_status` describe only the materialized
+bundle, including whether its output directory contains `.git` metadata.
+`source_history_scan` independently inspects paths reachable from all source
+repository refs plus `HEAD` using the canonical public-surface exclusion policy.
+Git replacement-object semantics are disabled for both traversal and object-size
+resolution, so a local `refs/replace/*` entry cannot mask the original history.
+Ambient Git variables that can redirect the repository, refs, object store,
+shallow boundary, graft file, or namespace are removed from scanner subprocesses.
+The raw traversal forces `--ignore-submodules=none`, so repository or global
+diff configuration cannot hide an excluded gitlink path.
+Refs that peel directly to trees are expanded with `git ls-tree`, covering
+path-bearing objects that `git log --all` silently ignores.
+An active legacy `.git/info/grafts` file makes the evaluation
+`insufficient_history` rather than allowing a pass, because Git still applies
+grafted ancestry even when replacement objects are disabled.
+Its counts cover distinct reachable leaf-object/path pairs, including every
+alias of a shared object, while `violation_bytes` counts each violating leaf
+object once.
+Its `evaluation_status` (`evaluated`, `insufficient_history`, or
+`not_requested`) is distinct from its predicate `status` (`pass`, `fail`, or
+`unknown`); a shallow or incomplete repository can never establish a pass.
+Summary reuse recomputes a full history-state fingerprint over the sorted
+object/path records and evaluation outcome; matching ref tips alone cannot keep
+a cached pass current after reachable objects become unavailable.
+The scan is diagnostic for public-check execution status but is the only
+history predicate used by external-report lifecycle reconciliation. Lifecycle
+promotion also recomputes the current history scan and requires its full-pass
+fingerprint to match the stored predicate; stale embedded pass fields are not
+release evidence.
+
+History remediation is not a public-check writer action. Rewriting refs requires
+separate human approval after sensitivity classification, backups, and an
+impact plan covering branches, tags, pull-request refs, forks, force-push, and
+fresh-clone cutover. Completion requires a full-ref scan and a fresh clone to
+both report zero forbidden history paths; do not weaken or skip the scanner to
+manufacture that result.
+
 General lane-selection guidance lives in [development.md](development.md).

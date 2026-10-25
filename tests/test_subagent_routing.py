@@ -9,6 +9,7 @@ from ops.scripts.core.artifact_freshness_payload_runtime import (
     ENVELOPE_REQUIRED_FIELDS,
     has_artifact_envelope,
 )
+from ops.scripts.core.codex_exec_execution_request_runtime import codex_exec_argv
 from ops.scripts.core.schema_runtime import load_schema, validate_or_raise
 from ops.scripts.core.select_subagent_rung import main as select_subagent_rung_main
 from tests.cli_test_runtime import invoke_cli_main
@@ -95,8 +96,8 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["complexity_profile"]["complexity_score"], 0)
             self.assertEqual(report["routing_decision"]["score_band"], "low")
             self.assertEqual(report["routing_decision"]["selected_rung"], 1)
-            self.assertEqual(report["routing_decision"]["model"], "gpt-5.6-sol")
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "medium")
+            self.assertEqual(report["routing_decision"]["model"], "gpt-6.1-sol")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
                 "sufficient_for_complexity",
@@ -122,9 +123,9 @@ class SubagentRoutingTest(unittest.TestCase):
             )
 
             self.assertEqual(report["routing_decision"]["score_band"], "low")
-            self.assertEqual(report["routing_decision"]["allowed_rungs"], [1, 2, 3])
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [1, 2, 3, 4])
             self.assertEqual(report["routing_decision"]["selected_rung"], 1)
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "medium")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
             self.assertEqual(report["manual_dispatch"]["contract"], "manual_subagent_dispatch_v1")
             self.assertEqual(report["manual_dispatch"]["selected_rung"], 1)
             self.assertEqual(report["manual_dispatch"]["toml_fallback_role"], "instruction_surface_only")
@@ -132,8 +133,8 @@ class SubagentRoutingTest(unittest.TestCase):
                 report["manual_dispatch"]["launch_parameters"],
                 {
                     "profile_path": ".codex/agents/worker.toml",
-                    "model": "gpt-5.6-sol",
-                    "model_reasoning_effort": "medium",
+                    "model": "gpt-6.1-sol",
+                    "model_reasoning_effort": "high",
                     "sandbox_mode": "workspace-write",
                 },
             )
@@ -145,8 +146,8 @@ class SubagentRoutingTest(unittest.TestCase):
                 report["manual_dispatch"]["fixed_reasoning_surface"],
                 {
                     "compatibility_rule": "exact_model_and_reasoning_effort_match_required",
-                    "required_model": "gpt-5.6-sol",
-                    "required_model_reasoning_effort": "medium",
+                    "required_model": "gpt-6.1-sol",
+                    "required_model_reasoning_effort": "high",
                     "required_selected_rung": 1,
                     "allowed_when": "fixed_values_match_required_model_and_reasoning_effort",
                     "mismatch_action": "use_controllable_launch_parameters",
@@ -173,7 +174,7 @@ class SubagentRoutingTest(unittest.TestCase):
                 )
             )
 
-    def test_worker_escalates_to_rung_three_for_policy_surface(self) -> None:
+    def test_worker_escalates_to_rung_four_for_extreme_policy_surface(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -188,17 +189,17 @@ class SubagentRoutingTest(unittest.TestCase):
                 "ops/policies/wiki-maintainer-policy.yaml",
             )
 
-            self.assertIn(report["routing_decision"]["score_band"], {"high", "extreme"})
-            self.assertEqual(report["routing_decision"]["selected_rung"], 3)
-            self.assertEqual(report["routing_decision"]["model"], "gpt-5.6-sol")
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
+            self.assertEqual(report["routing_decision"]["score_band"], "extreme")
+            self.assertEqual(report["routing_decision"]["selected_rung"], 4)
+            self.assertEqual(report["routing_decision"]["model"], "gpt-6-astra")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
                 "escalated_for_complexity",
             )
             self.assertGreaterEqual(report["complexity_profile"]["dimensions"]["dependency_impact"], 4)
 
-    def test_reviewer_escalates_to_rung_three_for_policy_surface(self) -> None:
+    def test_reviewer_escalates_to_rung_four_for_extreme_policy_surface(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -213,9 +214,10 @@ class SubagentRoutingTest(unittest.TestCase):
                 "ops/policies/wiki-maintainer-policy.yaml",
             )
 
-            self.assertEqual(report["routing_decision"]["selected_rung"], 3)
-            self.assertEqual(report["routing_decision"]["model"], "gpt-5.6-sol")
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
+            self.assertEqual(report["routing_decision"]["score_band"], "extreme")
+            self.assertEqual(report["routing_decision"]["selected_rung"], 4)
+            self.assertEqual(report["routing_decision"]["model"], "gpt-6-astra")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "workspace-write")
             self.assertTrue(
                 any(reason["type"] == "score_band" for reason in report["routing_decision"]["escalation_reasons"])
@@ -239,10 +241,10 @@ class SubagentRoutingTest(unittest.TestCase):
                 "wiki/small-note.md",
             )
 
-            self.assertEqual(report["routing_decision"]["allowed_rungs"], [2, 3])
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [2, 3, 4])
             self.assertEqual(report["routing_decision"]["score_band"], "low")
             self.assertEqual(report["routing_decision"]["selected_rung"], 2)
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "workspace-write")
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
@@ -271,7 +273,7 @@ class SubagentRoutingTest(unittest.TestCase):
             )
 
             self.assertEqual(report["routing_decision"]["selected_rung"], 3)
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "max")
             self.assertTrue(
                 any(
                     reason["type"] == "pressure_override" and reason.get("dimension") == "dependency_impact"
@@ -300,7 +302,7 @@ class SubagentRoutingTest(unittest.TestCase):
             self.assertEqual(report["routing_decision"]["selected_rung"], 3)
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
-                "escalated_for_complexity",
+                "sufficient_for_complexity",
             )
             self.assertTrue(
                 any(
@@ -316,13 +318,13 @@ class SubagentRoutingTest(unittest.TestCase):
             seed_minimal_vault(vault)
             seed_subagent_profiles(vault, ["explorer"])
 
-            report = self.run_selector(vault, "--role", "explorer", "--requested-rung", "3")
+            report = self.run_selector(vault, "--role", "explorer", "--requested-rung", "4")
 
             self.assertEqual(report["routing_decision"]["allowed_rungs"], [1, 2])
-            self.assertEqual(report["routing_decision"]["requested_rung"], 3)
+            self.assertEqual(report["routing_decision"]["requested_rung"], 4)
             self.assertEqual(report["routing_decision"]["selected_rung"], 2)
             self.assertEqual(report["manual_dispatch"]["selected_rung"], 2)
-            self.assertEqual(report["manual_dispatch"]["launch_parameters"]["model_reasoning_effort"], "high")
+            self.assertEqual(report["manual_dispatch"]["launch_parameters"]["model_reasoning_effort"], "xhigh")
             self.assertTrue(
                 any(
                     reason["type"] == "allowed_rung_clamp"
@@ -330,7 +332,52 @@ class SubagentRoutingTest(unittest.TestCase):
                 )
             )
 
-    def test_provenance_auditor_stays_on_fixed_xhigh_rung(self) -> None:
+    def test_manual_rung_four_reaches_astra_in_report_and_executor_command(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["worker", "provenance-auditor"])
+
+            for role in ("worker", "provenance-auditor"):
+                with self.subTest(role=role):
+                    report = self.run_selector(vault, "--role", role, "--requested-rung", "4")
+
+                    self.assertEqual(report["routing_decision"]["selected_rung"], 4)
+                    self.assertEqual(report["routing_decision"]["model"], "gpt-6-astra")
+                    self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
+                    self.assertEqual(
+                        report["routing_decision"]["effort_sufficiency"]["status"],
+                        "escalated_for_complexity",
+                    )
+                    argv = codex_exec_argv(
+                        workspace_root=vault,
+                        routing_report=report,
+                        output_last_message_rel="tmp/last-message.json",
+                    )
+                    self.assertEqual(argv[argv.index("-m") + 1], "gpt-6-astra")
+                    self.assertEqual(argv[argv.index("-c") + 1], 'model_reasoning_effort="high"')
+                    if role == "worker":
+                        self.assertIn("--full-auto", argv)
+                    else:
+                        self.assertEqual(argv[argv.index("-s") + 1], "read-only")
+
+    def test_requested_rung_above_four_is_rejected_without_writing_a_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_subagent_profiles(vault, ["worker"])
+
+            with self.assertRaisesRegex(ValueError, "unsupported requested rung: 5"):
+                invoke_cli_main(
+                    select_subagent_rung_main,
+                    ["--vault", str(vault), "--role", "worker", "--requested-rung", "5"],
+                    cwd=vault,
+                )
+            self.assertFalse((vault / DEFAULT_SELECTOR_REPORT_PATH).exists())
+
+    def test_provenance_auditor_defaults_to_max_rung(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -339,16 +386,16 @@ class SubagentRoutingTest(unittest.TestCase):
 
             report = self.run_selector(vault, "--role", "provenance-auditor")
 
-            self.assertEqual(report["routing_decision"]["allowed_rungs"], [3])
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [3, 4])
             self.assertEqual(report["routing_decision"]["requested_rung"], 3)
             self.assertEqual(report["routing_decision"]["selected_rung"], 3)
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
             self.assertEqual(
                 report["routing_decision"]["effort_sufficiency"]["status"],
-                "fixed_role_floor",
+                "sufficient_for_complexity",
             )
 
-    def test_scope_gate_reviewer_defaults_to_read_only_high_rung(self) -> None:
+    def test_scope_gate_reviewer_defaults_to_read_only_xhigh_rung(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -357,12 +404,12 @@ class SubagentRoutingTest(unittest.TestCase):
 
             report = self.run_selector(vault, "--role", "scope-gate-reviewer")
 
-            self.assertEqual(report["routing_decision"]["allowed_rungs"], [2, 3])
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [2, 3, 4])
             self.assertEqual(report["routing_decision"]["selected_rung"], 2)
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
 
-    def test_release_authority_auditor_stays_on_fixed_xhigh_rung(self) -> None:
+    def test_release_authority_auditor_defaults_to_max_rung(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -371,12 +418,12 @@ class SubagentRoutingTest(unittest.TestCase):
 
             report = self.run_selector(vault, "--role", "release-authority-auditor")
 
-            self.assertEqual(report["routing_decision"]["allowed_rungs"], [3])
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [3, 4])
             self.assertEqual(report["routing_decision"]["selected_rung"], 3)
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "max")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
 
-    def test_goal_runtime_triage_auditor_stays_on_fixed_xhigh_rung(self) -> None:
+    def test_goal_runtime_triage_auditor_defaults_to_max_rung(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -385,12 +432,12 @@ class SubagentRoutingTest(unittest.TestCase):
 
             report = self.run_selector(vault, "--role", "goal-runtime-triage-auditor")
 
-            self.assertEqual(report["routing_decision"]["allowed_rungs"], [3])
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [3, 4])
             self.assertEqual(report["routing_decision"]["selected_rung"], 3)
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "max")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
 
-    def test_external_report_action_auditor_defaults_to_read_only_high_rung(self) -> None:
+    def test_external_report_action_auditor_defaults_to_read_only_xhigh_rung(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -399,9 +446,9 @@ class SubagentRoutingTest(unittest.TestCase):
 
             report = self.run_selector(vault, "--role", "external-report-action-auditor")
 
-            self.assertEqual(report["routing_decision"]["allowed_rungs"], [2, 3])
+            self.assertEqual(report["routing_decision"]["allowed_rungs"], [2, 3, 4])
             self.assertEqual(report["routing_decision"]["selected_rung"], 2)
-            self.assertEqual(report["routing_decision"]["reasoning_effort"], "high")
+            self.assertEqual(report["routing_decision"]["reasoning_effort"], "xhigh")
             self.assertEqual(report["routing_decision"]["sandbox_mode"], "read-only")
 
     def test_explicit_top_level_subagent_report_remains_canonical(self) -> None:

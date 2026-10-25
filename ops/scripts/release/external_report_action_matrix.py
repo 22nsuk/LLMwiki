@@ -31,6 +31,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.release.external_report_inventory_runtime import (
         LOCAL_REPORT_LINE_DIGESTS,
+        RECOMMENDATION_INTAKE_STATUSES,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
@@ -77,6 +78,7 @@ else:
     from .external_report_action_catalog import ACTION_CATALOG, SPRINT_PRIORITIES
     from .external_report_inventory_runtime import (
         LOCAL_REPORT_LINE_DIGESTS,
+        RECOMMENDATION_INTAKE_STATUSES,
         REFERENCE_MANIFEST,
         active_report_paths,
         archived_report_count,
@@ -112,6 +114,7 @@ SOURCE_PATHS = [
     "ops/scripts/release/external_report_action_matrix.py",
     "ops/scripts/release/external_report_action_catalog.py",
     "ops/scripts/release/external_report_inventory_runtime.py",
+    "ops/scripts/release/external_report_lifecycle_profile_runtime.py",
     "ops/scripts/release/external_report_lifecycle_runtime.py",
     "ops/scripts/release/external_report_reference_manifest.py",
     "ops/scripts/release/external_report_release_verification_runtime.py",
@@ -608,6 +611,15 @@ def _summary(
     gate_effect_action_counts: dict[str, int] = dict.fromkeys(GATE_EFFECTS, 0)
     blocking_scope_action_counts: dict[str, int] = {}
     sprint_backlog: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
+    recommendation_intake_status_counts: dict[str, int] = dict.fromkeys(
+        RECOMMENDATION_INTAKE_STATUSES,
+        0,
+    )
+    for item in coverage:
+        intake_status = str(item.get("recommendation_intake_status", "legacy"))
+        if intake_status not in recommendation_intake_status_counts:
+            recommendation_intake_status_counts[intake_status] = 0
+        recommendation_intake_status_counts[intake_status] += 1
     for action in actions:
         status = str(action["current_status"])
         status_counts[status] = status_counts.get(status, 0) + 1
@@ -654,8 +666,24 @@ def _summary(
         ),
         "gate_effect_action_counts": gate_effect_action_counts,
         "blocking_scope_action_counts": blocking_scope_action_counts,
+        "recommendation_intake_status_counts": recommendation_intake_status_counts,
+        "recommendation_candidate_count": sum(
+            int(item.get("recommendation_candidate_count") or 0) for item in coverage
+        ),
+        "recommendation_covered_count": sum(
+            int(item.get("recommendation_covered_count") or 0) for item in coverage
+        ),
+        "recommendation_unresolved_count": sum(
+            int(item.get("recommendation_unresolved_count") or 0) for item in coverage
+        ),
         "unmatched_active_report_count": sum(
-            1 for item in coverage if int(item["matched_action_count"]) == 0
+            1
+            for item in coverage
+            if (
+                str(item.get("recommendation_intake_status", "legacy"))
+                in {"missing", "stale", "invalid", "unreadable"}
+                or int(item.get("recommendation_unresolved_count") or 0) > 0
+            )
         ),
         "reference_manifest_alignment_status": manifest_alignment["status"],
         "reference_manifest_missing_active_report_count": len(

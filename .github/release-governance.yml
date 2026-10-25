@@ -91,6 +91,7 @@ release_evidence:
   release_assets:
     - verified-source-zip
     - verified-evidence-bundle
+    - verified-distributions
     - verified-release-attestation
   attestation_paths:
     - build/release/release-live-attestation.json

@@ -48,6 +48,7 @@ jobs:
           name: trusted-ci-full-suite-evidence
           path: build/trusted-ci/test-execution-summary-full-evidence.zip
           if-no-files-found: error
+          overwrite: true
 
   attest-trusted-ci-full-suite-evidence:
     name: attest trusted CI full-suite evidence
@@ -112,6 +113,7 @@ jobs:
             tmp/release-closeout-post-check-finalizer-recommended-targets.txt
             tmp/release-closeout-post-check-finalizer-plan.json
           if-no-files-found: error
+          overwrite: true
 
       - name: Materialize post-seal release sidecar
         run: make release-post-seal-attestation RELEASE_POST_SEAL_ATTESTATION_SOURCE_ZIP=build/release/live-source.zip
@@ -119,12 +121,77 @@ jobs:
       - name: Materialize verified evidence bundle
         run: make release-audit-pack RELEASE_AUDIT_PACK_OUT=build/release/release-evidence-bundle.zip
 
+      - name: Clean extract verified source zip
+        id: extract
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import shutil
+          import stat
+          import zipfile
+          from pathlib import Path, PurePosixPath
+
+          archive_path = Path("build/release/live-source.zip")
+          extract_parent = Path("build/release/clean-source")
+          shutil.rmtree(extract_parent, ignore_errors=True)
+          extract_parent.mkdir(parents=True)
+          with zipfile.ZipFile(archive_path) as archive:
+              roots = set()
+              for member in archive.infolist():
+                  path = PurePosixPath(member.filename)
+                  if (
+                      path.is_absolute()
+                      or ".." in path.parts
+                      or "\\" in member.filename
+                      or not path.parts
+                      or ":" in path.parts[0]
+                  ):
+                      raise SystemExit(f"unsafe source ZIP member: {member.filename}")
+                  if stat.S_ISLNK(member.external_attr >> 16):
+                      raise SystemExit(f"source ZIP symlink rejected: {member.filename}")
+                  roots.add(path.parts[0])
+              if len(roots) != 1:
+                  raise SystemExit("verified source ZIP must contain exactly one root")
+              root_name = next(iter(roots))
+              if re.fullmatch(r"[A-Za-z0-9._-]+", root_name) is None:
+                  raise SystemExit("verified source ZIP root name is unsafe")
+              archive.extractall(extract_parent)
+          source_root = (extract_parent / root_name).resolve()
+          if not (source_root / "pyproject.toml").is_file():
+              raise SystemExit("verified source ZIP root is missing pyproject.toml")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"source-root={source_root}\n")
+          PY
+
+      - name: Resolve deterministic source epoch
+        id: source_epoch
+        shell: bash
+        run: |
+          set -euo pipefail
+          verified_sha=$(git rev-parse --verify "$GITHUB_SHA^{commit}")
+          test "$verified_sha" = "$GITHUB_SHA"
+          source_date_epoch=$(git show -s --format=%ct "$verified_sha")
+          [[ "$source_date_epoch" =~ ^[0-9]+$ ]]
+          echo "value=$source_date_epoch" >> "$GITHUB_OUTPUT"
+
+      - name: Build wheel and sdist once
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.source_epoch.outputs.value }}
+        run: >-
+          python -m build --no-isolation --sdist --wheel
+          --outdir "$GITHUB_WORKSPACE/dist"
+          "${{ steps.extract.outputs.source-root }}"
+
       - name: Bind live release artifacts
         run: |
           python -m ops.scripts.release.release_live_artifact_attestation build \
             --vault . \
             --source-zip-path build/release/live-source.zip \
             --evidence-bundle-path build/release/release-evidence-bundle.zip \
+            --dist-dir dist \
+            --expected-source-revision "$GITHUB_SHA" \
             --out build/release/release-live-attestation.json
 
       - name: Upload verified source zip
@@ -134,6 +201,7 @@ jobs:
           path: |
             build/release/live-source.zip
           if-no-files-found: error
+          overwrite: true
 
       - name: Upload verified evidence bundle
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -148,6 +216,15 @@ jobs:
             ops/operator/operator-release-summary.json
             build/release/release-post-seal-attestation.json
           if-no-files-found: error
+          overwrite: true
+
+      - name: Upload verified distributions
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verified-distributions
+          path: dist/
+          if-no-files-found: error
+          overwrite: true
 
       - name: Upload verified release attestation
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -155,6 +232,7 @@ jobs:
           name: verified-release-attestation
           path: build/release/release-live-attestation.json
           if-no-files-found: error
+          overwrite: true
 
   release-artifacts:
     name: release artifacts / py3.12
@@ -192,6 +270,12 @@ jobs:
           name: verified-release-attestation
           path: tmp/live-release/attestation
 
+      - name: Download verified distributions
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: verified-distributions
+          path: dist
+
       - name: Verify live release authority
         run: |
           SOURCE_ZIP=$(find tmp/live-release/source -type f -name 'live-source.zip' -print -quit)
@@ -207,10 +291,9 @@ jobs:
             --evidence-bundle-path "$EVIDENCE_BUNDLE" \
             --closeout-summary-path "$CLOSEOUT_SUMMARY" \
             --batch-manifest-path "$BATCH_MANIFEST" \
-            --self-check-path "$SELF_CHECK"
-
-      - name: Build distributions
-        run: python -m build
+            --self-check-path "$SELF_CHECK" \
+            --dist-dir dist \
+            --expected-source-revision "$GITHUB_SHA"
 
       - name: Generate supply-chain artifacts
         run: |
@@ -236,6 +319,7 @@ jobs:
             ops/reports/sigstore-bundle-verification.json
             ops/reports/supply-chain-benchmark.json
           if-no-files-found: error
+          overwrite: true
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
