@@ -67,12 +67,27 @@ class RawRegistryShardPolicySyncTests(unittest.TestCase):
             vault = Path(temp_dir)
             seed_minimal_vault(vault)
 
-            write_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
+            public_path = vault / "ops/policies/wiki-maintainer-policy.yaml"
+            original = public_path.read_bytes()
+            written = write_policy(vault, "ops/policies/wiki-maintainer-policy.yaml")
+            self.assertEqual(written, vault / "ops/policies/wiki-maintainer-policy.local.yaml")
+            self.assertEqual(public_path.read_bytes(), original)
             report = build_report(vault, context=fixed_context())
 
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["summary"]["drift_count"], 0)
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+    def test_custom_policy_write_preserves_explicit_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            custom = vault / "custom-policy.yaml"
+            shutil.copy2(vault / "ops/policies/wiki-maintainer-policy.yaml", custom)
+            self.assertEqual(write_policy(vault, "custom-policy.yaml"), custom)
+            self.assertFalse((vault / "ops/policies/wiki-maintainer-policy.local.yaml").exists())
+            report = build_report(vault, policy_path="custom-policy.yaml", context=fixed_context())
+            self.assertEqual(report["status"], "pass")
 
     def test_new_shard_without_policy_surfaces_is_reported_as_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

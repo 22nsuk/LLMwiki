@@ -31,6 +31,7 @@ else:
     from ops.scripts.core.schema_constants_runtime import WIKI_MANIFEST_SCHEMA_PATH
 
 DEFAULT_EXCLUDED_PREFIXES = (
+    "ops/policies/.wiki-maintainer-policy.local.yaml.",
     ".agents/",
     "ops/reports/",
     "ops/operator/",
@@ -76,6 +77,7 @@ DEFAULT_EXCLUDED_SUFFIXES = (
 )
 DEFAULT_EXCLUDED_FILES = {
     "AGENTS.local.md",
+    "ops/policies/wiki-maintainer-policy.local.yaml",
     "ops/manifest.json",
     "ops/raw-registry.json",
     "ops/script-output-surfaces.json",

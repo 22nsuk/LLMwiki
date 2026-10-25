@@ -610,6 +610,26 @@ def test_derivation_rejects_parent_and_input_digest_drift(tmp_path: Path) -> Non
         )
 
 
+def test_derivation_preserves_and_checks_local_policy_inputs(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    (vault / "ops/policies/wiki-maintainer-policy.local.yaml").write_text(
+        "schema_version: 1\noverrides: {}\n", encoding="utf-8"
+    )
+    derived, full_summary, full_manifest, selected_manifest = _derived_fixture(vault)
+    expected = full_summary["input_fingerprints"]["local_corpus_policy"]
+    assert derived["input_fingerprints"]["local_corpus_policy"] == expected
+    junit = parse_junit_testcases(_junit_xml(), expected_nodeids=full_manifest["nodeids"])
+    exact = derive_subset_summary(full_summary, junit, full_manifest, selected_manifest["nodeids"])
+    assert exact["input_fingerprints"]["local_corpus_policy"] == expected
+    for fingerprints in ({}, {"local_corpus_policy": "stale"}):
+        drifted = deepcopy(selected_manifest)
+        drifted["input_fingerprints"] = fingerprints
+        with pytest.raises(ValueError, match="local corpus policy drift"):
+            derive_subset_summary(full_summary, junit, full_manifest, drifted)
+
+
 def test_derivation_fails_closed_across_authority_boundaries(tmp_path: Path) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()

@@ -43,6 +43,42 @@ The public mirror excludes:
 - `ops/reports/`
 - `tmp/`
 - private inventory files such as `ops/manifest.json` and `ops/raw-registry.json`
+- `ops/policies/wiki-maintainer-policy.local.yaml` and its atomic-write staging files
+
+## Local Corpus Settings
+
+Keep the tracked `ops/policies/wiki-maintainer-policy.yaml` public-safe.
+Full vaults can store their corpus-specific additions in the ignored
+`ops/policies/wiki-maintainer-policy.local.yaml`. The default policy loader
+automatically applies this file, including when the default policy path is
+passed explicitly. A different explicit policy path remains self-contained.
+
+The local file uses `schema_version: 1` and an `overrides` mapping, validated by
+`ops/schemas/local-corpus-policy.schema.json`. Only special-page section rules,
+special-page frontmatter rules, raw-registry shard pages, and shard-to-corpus
+assignments can be overridden. Mappings merge recursively, `null` removes a
+mapping entry, and lists replace the corresponding public list. The complete
+effective policy still passes the normal schema and safety checks. Unrelated
+public runtime and routing updates continue to apply.
+
+`make raw-registry-shard-policy-sync-write` writes these differences to the
+local file without rewriting the tracked default policy. With an explicit
+custom `--policy` destination, the CLI continues to write that destination.
+For an existing locally edited policy, retain its loaded policy object, restore
+the public base, and use `write_local_corpus_policy(vault, effective_policy)`
+to produce the local overlay; it rejects changes outside the four corpus
+surfaces. Verify `load_policy(vault)` equals the retained effective policy.
+
+Canonical report input fingerprints include `local_corpus_policy` whenever the
+default policy has a local overlay. The `policy` fingerprint binds both files,
+and cached test summaries and collection manifests are invalidated when the
+overlay changes or is removed.
+Public source fingerprints, Git tracking, public exports, wheels, and sdists
+exclude the local file.
+Full and sparse candidate workspaces retain the overlay whenever they copy the
+default policy, so local validation uses the same effective corpus settings.
+Tests and examples must use synthetic corpus names; never copy an operator's local inventory into
+public fixtures or documentation.
 
 The full-vault root `.gitignore` applies the same ownership boundary within
 `.agents/`: operator-local siblings are ignored while `.agents/skills/**`

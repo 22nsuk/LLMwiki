@@ -6,7 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .policy_runtime import report_path
+from .policy_runtime import (
+    LOCAL_CORPUS_POLICY_PATH,
+    local_corpus_policy_path,
+    report_path,
+)
 from .source_revision_runtime import resolve_source_revision
 from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
@@ -165,7 +169,27 @@ def artifact_input_fingerprints(
         fingerprints[str(name)] = _fingerprint_paths(vault, [str(item) for item in rel_paths])
     for name, text in sorted((text_inputs or {}).items()):
         fingerprints[str(name)] = _sha256_text(str(text))
+    local_policy = local_corpus_policy_path(vault, resolved_policy_path)
+    if local_policy is not None and local_policy.exists():
+        local_digest = _sha256_file(local_policy)
+        fingerprints["local_corpus_policy"] = local_digest
+        fingerprints["policy"] = _sha256_text(
+            f"{_sha256_file(resolved_policy_path)}\n{local_digest}"
+        )
+    elif local_policy is None:
+        fingerprints["custom_policy_path"] = _sha256_text(report_path(vault, resolved_policy_path))
     return fingerprints
+
+
+def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bool:
+    fingerprints = report.get("input_fingerprints", {})
+    if not isinstance(fingerprints, dict):
+        return False
+    if "custom_policy_path" in fingerprints:
+        return True
+    local_policy = vault / LOCAL_CORPUS_POLICY_PATH
+    current = _sha256_file(local_policy) if local_policy.exists() else None
+    return fingerprints.get("local_corpus_policy") == current
 
 
 def build_canonical_report_envelope(

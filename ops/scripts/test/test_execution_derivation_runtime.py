@@ -9,6 +9,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_envelope_runtime import local_corpus_policy_is_current
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
@@ -195,6 +196,8 @@ def load_collection_manifest_digest(
         raise ValueError("; ".join(blockers))
     if manifest.get("source_tree_fingerprint") != release_source_tree_fingerprint(vault):
         raise ValueError("collection manifest source_tree_fingerprint drift")
+    if not local_corpus_policy_is_current(vault, manifest):
+        raise ValueError("collection manifest local corpus policy drift")
     if manifest.get("source_revision") != resolve_source_revision(vault).revision:
         raise ValueError("collection manifest source_revision drift")
     if manifest.get("suite") != expected_suite:
@@ -349,6 +352,7 @@ def _collection_manifest_reference(
         return None
     matches = (
         not validate_collection_manifest_payload(manifest)
+        and local_corpus_policy_is_current(vault, manifest)
         and sha256_file(path) == digest.get("manifest_sha256")
         and manifest.get("source_tree_fingerprint")
         == digest.get("source_tree_fingerprint")
@@ -752,7 +756,7 @@ def _derived_input_fingerprints(
     collection_manifest: dict[str, Any],
     selected_manifest: dict[str, Any],
 ) -> dict[str, str]:
-    return {
+    fingerprints = {
         "parent_summary": canonical_json_sha256(full_summary),
         "junit_xml": str(junit_evidence["sha256"]),
         "full_collection_manifest": canonical_json_sha256(collection_manifest),
@@ -761,6 +765,11 @@ def _derived_input_fingerprints(
             selected_manifest["semantic_command_sha256"]
         ),
     }
+    for key in ("local_corpus_policy", "custom_policy_path"):
+        value = full_summary.get("input_fingerprints", {}).get(key)
+        if value is not None:
+            fingerprints[key] = str(value)
+    return fingerprints
 
 
 def _build_validated_subset_summary(
@@ -924,6 +933,14 @@ def derive_subset_summary(
             "deselected_tests": [],
             "deselection_lifecycle": deepcopy(full_summary.get("deselection_lifecycle", {})),
         }
+    if not isinstance(selected_nodeids, dict):
+        policy_inputs = {
+            key: value
+            for key, value in full_summary.get("input_fingerprints", {}).items()
+            if key in {"local_corpus_policy", "custom_policy_path"}
+        }
+        if policy_inputs:
+            selected_manifest["input_fingerprints"] = policy_inputs
     blockers = [
         *validate_collection_manifest_payload(collection_manifest),
         *validate_collection_manifest_payload(selected_manifest),
@@ -946,6 +963,8 @@ def derive_subset_summary(
         ("full", collection_manifest),
         ("selected", selected_manifest),
     ):
+        if manifest.get("input_fingerprints", {}).get("local_corpus_policy") != full_summary.get("input_fingerprints", {}).get("local_corpus_policy"):
+            raise ValueError(f"{label} collection local corpus policy drift")
         if manifest.get("source_tree_fingerprint") != full_summary.get(
             "source_tree_fingerprint"
         ):

@@ -14,6 +14,9 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.artifact_envelope_runtime import (
+        local_corpus_policy_is_current,
+    )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -104,6 +107,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         suite_scope_for_key as _suite_scope_for_key,
     )
 else:
+    from ops.scripts.core.artifact_envelope_runtime import (
+        local_corpus_policy_is_current,
+    )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -768,7 +774,9 @@ def reuse_currentness_diagnostics(
         vault=vault,
         deselection_policy_path=deselection_policy_path,
     )
-    policy, _ = load_policy(vault)
+    policy_metadata = existing.get("policy", {})
+    policy_path = policy_metadata.get("path") if isinstance(policy_metadata, dict) else None
+    policy, _ = load_policy(vault, str(policy_path) if policy_path else None)
     generated_at = RuntimeContext.from_policy(policy).isoformat_z()
     current_lifecycle = _deselection_lifecycle(
         current_deselected_tests,
@@ -790,6 +798,7 @@ def reuse_currentness_diagnostics(
             current_deselection_lifecycle=current_lifecycle,
             collect_nodeids=collect_nodeids,
             collect_nodeid_digest=collect_nodeid_digest,
+            local_corpus_policy_current=local_corpus_policy_is_current(vault, existing),
         )
     )
 

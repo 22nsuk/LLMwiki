@@ -36,6 +36,7 @@
 !/uv.lock
 # Re-ignore local/private state opened by the allowlisted prefixes above.
 AGENTS.local.md
+ops/policies/wiki-maintainer-policy.local.yaml
 ops/manifest.json
 ops/raw-registry.json
 ops/operator/
@@ -53,6 +54,7 @@ ops/reports/**
 .venv
 .vscode
 __pycache__
+.wiki-maintainer-policy.local.yaml.*.tmp
 *.pyc
 *.pyo
 *.pyd

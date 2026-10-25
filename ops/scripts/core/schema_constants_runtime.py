@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 POLICY_SCHEMA_PATH = "ops/schemas/wiki-maintainer-policy.schema.json"
+LOCAL_CORPUS_POLICY_SCHEMA_PATH = "ops/schemas/local-corpus-policy.schema.json"
 EXTERNAL_REPORT_REFERENCE_MANIFEST_SCHEMA_PATH = "ops/schemas/external-report-reference-manifest.schema.json"
 EXTERNAL_REPORT_ACTION_MATRIX_SCHEMA_PATH = "ops/schemas/external-report-action-matrix.schema.json"
 STRICT_LINT_INVENTORY_SCHEMA_PATH = "ops/schemas/strict-lint-inventory.schema.json"

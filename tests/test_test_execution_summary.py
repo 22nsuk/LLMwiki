@@ -29,6 +29,8 @@ from ops.scripts.test.test_execution_derivation_runtime import (
     build_collection_manifest,
     collection_manifest_reference_is_current,
     collection_manifest_reference_is_rebindable,
+    load_collection_manifest_digest,
+    rebind_collection_manifest_reference,
     write_collection_manifest,
 )
 from ops.scripts.test.test_execution_summary import (
@@ -572,6 +574,86 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(diagnostics["reason"], REUSE_MISMATCH_SOURCE_TREE)
             self.assertEqual(diagnostics["observed_source_tree_fingerprint"], "stale-fingerprint")
             self.assertTrue(diagnostics["current_source_tree_fingerprint"])
+
+    def test_local_policy_creation_edit_and_removal_invalidate_reuse(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            command = ["python", "-m", "pytest"]
+            local = vault / "ops/policies/wiki-maintainer-policy.local.yaml"
+            for update in ("create", "edit", "remove"):
+                with self.subTest(update=update):
+                    existing = build_report(
+                        vault, command=command, suite="unit", duration_ms=1,
+                        result=_result(returncode=0, stdout="1 passed in 0.01s"),
+                        context=_fixed_context(),
+                    )
+                    kwargs = {"vault": vault, "command": command, "suite": "unit", "collect_nodeids": False, "collect_nodeid_digest": None}
+                    self.assertTrue(reuse_currentness_diagnostics(existing, **kwargs)["reusable"])
+                    if update == "remove":
+                        local.unlink()
+                    else:
+                        local.write_text(f"schema_version: 1\noverrides: {{}}\n# {update}\n", encoding="utf-8")
+                    result = reuse_currentness_diagnostics(existing, **kwargs)
+                    self.assertFalse(result["reusable"])
+                    self.assertFalse(result["result_reusable"])
+                    self.assertTrue(result["checks"]["source_tree_fingerprint"])
+                    self.assertFalse(result["checks"]["local_corpus_policy"])
+
+    def test_local_policy_drift_blocks_collection_rebind_and_aggregate_reuse(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            local = vault / "ops/policies/wiki-maintainer-policy.local.yaml"
+            local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+            summary = build_report(
+                vault, command=["python", "-m", "pytest"], suite="unit", duration_ms=1,
+                result=_result(returncode=0, stdout="1 passed in 0.01s"), context=_fixed_context(),
+            )
+            shard_path = "ops/reports/local-policy-shard.json"
+            (vault / shard_path).parent.mkdir(parents=True, exist_ok=True)
+            (vault / shard_path).write_text(json.dumps(summary), encoding="utf-8")
+            aggregate = build_aggregate_report(vault, shard_paths=[shard_path], suite="unit", context=_fixed_context())
+            aggregate_path = "ops/reports/local-policy-aggregate.json"
+            (vault / aggregate_path).write_text(json.dumps(aggregate), encoding="utf-8")
+            self.assertTrue(reusable_aggregate_summary_diagnostics(vault, aggregate_path, suite="unit")["reusable"])
+            manifest = build_collection_manifest(
+                vault, suite="unit", semantic_command="-m pytest", nodeids=["tests/test_sample.py::test_ok"],
+                selection_kind="selector_subset", deselected_tests=[],
+                deselection_lifecycle=summary["deselection_lifecycle"], context=_fixed_context(),
+            )
+            collection_path = "tmp/local-policy-collection.json"
+            write_collection_manifest(vault, manifest, collection_path)
+            digest = load_collection_manifest_digest(vault, collection_path, expected_suite="unit", expected_semantic_command="-m pytest")
+            self.assertTrue(collection_manifest_reference_is_current(vault, digest))
+            local.write_text(local.read_text() + "# changed\n", encoding="utf-8")
+            self.assertFalse(collection_manifest_reference_is_current(vault, digest))
+            self.assertFalse(collection_manifest_reference_is_rebindable(vault, digest))
+            with self.assertRaisesRegex(ValueError, "local corpus policy"):
+                load_collection_manifest_digest(vault, collection_path, expected_suite="unit", expected_semantic_command="-m pytest")
+            with self.assertRaisesRegex(ValueError, "not same-tree rebindable"):
+                rebind_collection_manifest_reference(vault, digest)
+            self.assertFalse(reusable_aggregate_summary_diagnostics(vault, aggregate_path, suite="unit")["reusable"])
+            rebuilt = build_aggregate_report(vault, shard_paths=[shard_path], suite="unit", context=_fixed_context())
+            self.assertEqual(rebuilt["status"], "fail")
+
+    def test_custom_policy_reuse_ignores_default_local_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            custom = vault / "custom-policy.yaml"
+            custom.write_bytes((vault / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
+            (vault / "ops/policies/wiki-maintainer-policy.local.yaml").write_text("invalid: [", encoding="utf-8")
+            command = ["python", "-m", "pytest"]
+            existing = build_report(
+                vault, command=command, suite="unit", duration_ms=1,
+                result=_result(returncode=0, stdout="1 passed in 0.01s"),
+                policy_path="custom-policy.yaml", context=_fixed_context(),
+            )
+            self.assertTrue(reuse_currentness_diagnostics(
+                existing, vault=vault, command=command, suite="unit",
+                collect_nodeids=False, collect_nodeid_digest=None,
+            )["reusable"])
 
     def test_reuse_diagnostics_report_revision_mismatch_as_result_reusable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

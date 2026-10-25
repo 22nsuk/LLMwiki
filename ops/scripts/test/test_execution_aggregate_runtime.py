@@ -7,6 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_envelope_runtime import local_corpus_policy_is_current
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.policy_runtime import load_policy, report_path
 from ops.scripts.core.runtime_context import RuntimeContext
@@ -105,6 +106,8 @@ def reusable_aggregate_summary_diagnostics(
             or collection_manifest_current
         ),
     }
+    if not local_corpus_policy_is_current(vault, existing):
+        checks["local_corpus_policy"] = False
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         diagnostics["reason"] = f"not_current:{','.join(failed)}"
@@ -393,6 +396,8 @@ def build_aggregate_report(
     statuses = [str(shard.get("status", "fail")) for shard in shards]
     status = aggregate_status(statuses) if shards else "fail"
     if aggregate_shard_source_tree_status(vault, shards) != "pass":
+        status = "fail"
+    if any(not local_corpus_policy_is_current(vault, shard) for shard in shards):
         status = "fail"
     counts = aggregate_counts(shards)
     command = "aggregate test execution summary shards"

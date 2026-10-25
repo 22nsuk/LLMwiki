@@ -35,6 +35,7 @@ PUBLIC_INCLUDE_PREFIXES = (
 
 PUBLIC_EXCLUDED_FILES = (
     "AGENTS.local.md",
+    "ops/policies/wiki-maintainer-policy.local.yaml",
     "ops/manifest.json",
     "ops/raw-registry.json",
 )
@@ -69,6 +70,7 @@ PUBLIC_EXCLUDED_SEGMENTS = (
 )
 
 PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS = (
+    ".wiki-maintainer-policy.local.yaml.*.tmp",
     "*.pyc",
     "*.pyo",
     "*.pyd",
