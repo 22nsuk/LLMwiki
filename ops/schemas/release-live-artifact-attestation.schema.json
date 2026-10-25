@@ -22,6 +22,7 @@
     "status",
     "source_zip",
     "evidence_bundle",
+    "distribution_manifest",
     "reports",
     "audit_pack_manifest",
     "bindings",
@@ -72,6 +73,7 @@
     "status": { "type": "string", "enum": ["pass", "fail"] },
     "source_zip": { "$ref": "#/$defs/file_identity" },
     "evidence_bundle": { "$ref": "#/$defs/file_identity" },
+    "distribution_manifest": { "$ref": "#/$defs/distribution_manifest" },
     "reports": {
       "type": "object",
       "additionalProperties": false,
@@ -130,7 +132,11 @@
         "release_evidence_closeout_self_check_sha256",
         "source_tree_fingerprint",
         "evidence_set_digest",
-        "audit_pack_evidence_set_digest"
+        "audit_pack_evidence_set_digest",
+        "distribution_manifest_sha256",
+        "distribution_package_name",
+        "distribution_package_version",
+        "distribution_source_revision"
       ],
       "properties": {
         "source_zip_sha256": { "$ref": "#/$defs/sha256_or_empty" },
@@ -143,7 +149,11 @@
         "release_evidence_closeout_self_check_sha256": { "$ref": "#/$defs/sha256_or_empty" },
         "source_tree_fingerprint": { "type": "string" },
         "evidence_set_digest": { "$ref": "#/$defs/sha256_or_empty" },
-        "audit_pack_evidence_set_digest": { "$ref": "#/$defs/sha256_or_empty" }
+        "audit_pack_evidence_set_digest": { "$ref": "#/$defs/sha256_or_empty" },
+        "distribution_manifest_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "distribution_package_name": { "type": "string" },
+        "distribution_package_version": { "type": "string" },
+        "distribution_source_revision": { "type": "string" }
       }
     },
     "release_authority": {
@@ -206,6 +216,69 @@
         "exists": { "type": "boolean" },
         "size_bytes": { "type": "integer", "minimum": 0 },
         "sha256": { "$ref": "#/$defs/sha256_or_empty" }
+      }
+    },
+    "distribution_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "failures",
+        "package_name",
+        "package_version",
+        "source_zip_sha256",
+        "source_revision",
+        "source_tree_fingerprint",
+        "file_count",
+        "unexpected_files",
+        "files"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["pass", "fail"] },
+        "failures": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "package_name": { "type": "string" },
+        "package_version": { "type": "string" },
+        "source_zip_sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "source_revision": { "type": "string" },
+        "source_tree_fingerprint": { "type": "string" },
+        "file_count": { "type": "integer", "minimum": 0 },
+        "unexpected_files": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "files": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/distribution_file" }
+        }
+      }
+    },
+    "distribution_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filename",
+        "distribution_type",
+        "size_bytes",
+        "sha256",
+        "package_name",
+        "package_version"
+      ],
+      "properties": {
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^/\\\\]+$"
+        },
+        "distribution_type": { "type": "string", "enum": ["wheel", "sdist"] },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256_or_empty" },
+        "package_name": { "type": "string" },
+        "package_version": { "type": "string" }
       }
     },
     "report_identity": {

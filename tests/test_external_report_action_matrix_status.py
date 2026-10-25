@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import unittest
+from unittest.mock import patch
 
 import pytest
 
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
+)
+from ops.scripts.release.external_report_lifecycle_status_decision_runtime import (
+    repo_boundary_history_hygiene_status,
 )
 from ops.scripts.release.external_report_release_verification_runtime import (
     release_verified_action_reason_ids,
@@ -158,8 +163,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "partially_automated",
         )
 
-        self._write_json("ops/reports/release-workflow-order-guard.json", {"status": "pass"})
-        self._write_json("ops/reports/workflow-dependency-planner.json", {"status": "pass"})
+        self._write_json(
+            "ops/reports/release-workflow-order-guard.json", {"status": "pass"}
+        )
+        self._write_json(
+            "ops/reports/workflow-dependency-planner.json", {"status": "pass"}
+        )
 
         self.assertEqual(
             action_statuses(self.vault)["release_writer_dependency_single_source"],
@@ -191,7 +200,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "planned",
         )
 
-    def test_active_summary_prioritizes_source_action_targets_over_freshness(self) -> None:
+    def test_active_summary_prioritizes_source_action_targets_over_freshness(
+        self,
+    ) -> None:
         summary = _active_action_resolution_summary(
             [
                 {
@@ -200,7 +211,11 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                     "verification_readiness_status": "artifact_freshness_pending",
                     "recommended_target": "artifact-freshness-refresh-check",
                     "status_reason_details": [
-                        {"recommended_targets": ["external-report-reference-manifest-settle"]}
+                        {
+                            "recommended_targets": [
+                                "external-report-reference-manifest-settle"
+                            ]
+                        }
                     ],
                 },
                 {
@@ -217,9 +232,13 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         self.assertEqual(summary["status"], "source_action_available")
         self.assertEqual(summary["recommended_lane"], "source-action")
-        self.assertEqual(summary["recommended_targets"], ["external-report-action-matrix"])
+        self.assertEqual(
+            summary["recommended_targets"], ["external-report-action-matrix"]
+        )
 
-    def test_active_report_followup_actions_are_implemented_by_source_tokens(self) -> None:
+    def test_active_report_followup_actions_are_implemented_by_source_tokens(
+        self,
+    ) -> None:
         for rel_path, text in {
             "ops/scripts/core/codex_exec_dependency_preflight_runtime.py": (
                 "def trusted_dependency_preflight_python():\n"
@@ -248,8 +267,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "def test_run_trusted_candidate_command_blocks_trusted_python_symlink_swap(): pass\n"
             ),
             "ops/scripts/core/bootstrap_preflight.py": (
-                "DEV_DEPENDENCIES = {}\n"
-                "importlib.metadata.version('pytest')\n"
+                "DEV_DEPENDENCIES = {}\nimportlib.metadata.version('pytest')\n"
             ),
             "mk/core.mk": (
                 "DEV_INSTALL_ROLLBACK_DIR := .venv.previous\n"
@@ -286,9 +304,13 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "implemented",
         )
         self.assertEqual(statuses["bootstrap_dev_install_hardening"], "implemented")
-        self.assertEqual(statuses["release_manifest_path_classification"], "implemented")
+        self.assertEqual(
+            statuses["release_manifest_path_classification"], "implemented"
+        )
 
-    def test_generated_artifact_policy_status_requires_tracking_policy_envelope(self) -> None:
+    def test_generated_artifact_policy_status_requires_tracking_policy_envelope(
+        self,
+    ) -> None:
         for rel_path, text in {
             "ops/scripts/core/generated_artifact_index.py": (
                 "def tracking_policy():\n"
@@ -360,9 +382,19 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             action_statuses(self.vault)["generated_artifact_tracking_policy"],
             "implemented",
         )
+
     def test_review_bundle_closeout_closes_mtime_normalization_gap_with_timestamp_evidence(
         self,
     ) -> None:
+        current_fingerprint = "c" * 64
+        current_source_history = {
+            "evaluation_status": "evaluated",
+            "status": "pass",
+            "ref_scope": "all_refs_and_head",
+            "shallow_repository": False,
+            "violation_count": 0,
+            "history_state_fingerprint": current_fingerprint,
+        }
         self._write_clean_review_archive_report()
         (self.external / "review-bundle.md").write_text(
             "# Review Bundle\n\n"
@@ -376,8 +408,16 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "status": "pass",
                 "summary": {
                     "physical_repo_split_status": "pass",
-                    "private_surface_history_absence_status": "pass",
+                    "export_git_metadata_absence_status": "pass",
                     "negative_assertion_fail_count": 0,
+                },
+                "source_history_scan": {
+                    **current_source_history,
+                },
+                "input_fingerprints": {
+                    "source_history_state": hashlib.sha256(
+                        current_fingerprint.encode("utf-8")
+                    ).hexdigest(),
                 },
             },
         )
@@ -425,7 +465,11 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             ]
         )
 
-        report = build_report(self.vault, context=fixed_context())
+        with patch(
+            "ops.scripts.release.external_report_lifecycle_status_decision_runtime.scan_source_history",
+            return_value=current_source_history,
+        ):
+            report = build_report(self.vault, context=fixed_context())
 
         actions = {item["action_id"]: item for item in report["action_items"]}
         self.assertEqual(
@@ -454,7 +498,111 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["windows_path_and_archive_alias_parity"]["status_reason_ids"],
         )
 
-    def test_mtime_normalization_observation_stays_active_without_timestamp_evidence(self) -> None:
+    def test_repo_boundary_history_hygiene_consumes_only_source_history_predicate(
+        self,
+    ) -> None:
+        current_fingerprint = "a" * 64
+        current_source_history = {
+            "evaluation_status": "evaluated",
+            "status": "pass",
+            "ref_scope": "all_refs_and_head",
+            "shallow_repository": False,
+            "violation_count": 0,
+            "history_state_fingerprint": current_fingerprint,
+        }
+        self._write_json(
+            "ops/reports/public-check-summary.json",
+            {
+                "status": "pass",
+                "summary": {
+                    "physical_repo_split_status": "pass",
+                    "private_surface_history_absence_status": "pass",
+                    "negative_assertion_fail_count": 0,
+                },
+            },
+        )
+        self.assertEqual(
+            repo_boundary_history_hygiene_status(self.vault, 1, 1),
+            "partially_automated",
+        )
+
+        self._write_json(
+            "ops/reports/public-check-summary.json",
+            {
+                "status": "fail",
+                "summary": {
+                    "physical_repo_split_status": "fail",
+                    "export_git_metadata_absence_status": "fail",
+                    "negative_assertion_fail_count": 9,
+                },
+                "source_history_scan": {
+                    "evaluation_status": "evaluated",
+                    "status": "pass",
+                    "ref_scope": "all_refs_and_head",
+                    "shallow_repository": False,
+                    "violation_count": 0,
+                    "history_state_fingerprint": current_fingerprint,
+                },
+                "input_fingerprints": {
+                    "source_history_state": hashlib.sha256(
+                        current_fingerprint.encode("utf-8")
+                    ).hexdigest(),
+                },
+            },
+        )
+        with patch(
+            "ops.scripts.release.external_report_lifecycle_status_decision_runtime.scan_source_history",
+            return_value=current_source_history,
+        ):
+            self.assertEqual(
+                repo_boundary_history_hygiene_status(self.vault, 1, 1),
+                "implemented",
+            )
+
+        stale_fingerprint = "b" * 64
+        self._write_json(
+            "ops/reports/public-check-summary.json",
+            {
+                "source_history_scan": {
+                    **current_source_history,
+                    "history_state_fingerprint": stale_fingerprint,
+                },
+                "input_fingerprints": {
+                    "source_history_state": hashlib.sha256(
+                        stale_fingerprint.encode("utf-8")
+                    ).hexdigest(),
+                },
+            },
+        )
+        with patch(
+            "ops.scripts.release.external_report_lifecycle_status_decision_runtime.scan_source_history",
+            return_value=current_source_history,
+        ):
+            self.assertEqual(
+                repo_boundary_history_hygiene_status(self.vault, 1, 1),
+                "partially_automated",
+            )
+
+        self._write_json(
+            "ops/reports/public-check-summary.json",
+            {
+                "source_history_scan": {
+                    "evaluation_status": "evaluated",
+                    "status": "fail",
+                    "ref_scope": "all_refs_and_head",
+                    "shallow_repository": False,
+                    "violation_count": 1,
+                }
+            },
+        )
+        self.assertEqual(
+            repo_boundary_history_hygiene_status(self.vault, 1, 1),
+            "partially_automated",
+        )
+
+    def test_mtime_normalization_observation_stays_active_without_timestamp_evidence(
+        self,
+    ) -> None:
         self._write_schema_invalid_clean_review_archive_report()
         self._write_task_observations(
             [
@@ -476,6 +624,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "full_vault_archive_mtime_normalization_gap",
             actions["windows_path_and_archive_alias_parity"]["status_reason_ids"],
         )
+
     def test_broad_actions_do_not_complete_from_surface_only_evidence(self) -> None:
         self._write_json(
             "ops/reports/function-budget-refactor-proposals.json",
@@ -491,8 +640,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 },
             },
         )
-        self._write_json("ops/reports/supply-chain-gate-report.json", {"status": "pass"})
-        self._write_json("ops/reports/sbom-readiness-gate-report.json", {"status": "pass"})
+        self._write_json(
+            "ops/reports/supply-chain-gate-report.json", {"status": "pass"}
+        )
+        self._write_json(
+            "ops/reports/sbom-readiness-gate-report.json", {"status": "pass"}
+        )
         self._write_json(
             "ops/reports/in-toto-statement.json",
             {"predicateType": "https://slsa.dev/provenance/v1"},
@@ -523,7 +676,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
         self._write_task_observations(
-            [{"observation_id": "broad_action_completion_threshold_gap", "status": "open"}]
+            [
+                {
+                    "observation_id": "broad_action_completion_threshold_gap",
+                    "status": "open",
+                }
+            ]
         )
 
         report = build_report(self.vault, context=fixed_context())
@@ -549,7 +707,8 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             maintainability_action["status_reason_ids"],
         )
         maintainability_details = {
-            detail["reason_id"]: detail for detail in maintainability_action["status_reason_details"]
+            detail["reason_id"]: detail
+            for detail in maintainability_action["status_reason_details"]
         }
         self.assertEqual(
             maintainability_details[
@@ -585,10 +744,13 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             supply_chain_action["status_reason_ids"],
         )
         supply_chain_details = {
-            detail["reason_id"]: detail for detail in supply_chain_action["status_reason_details"]
+            detail["reason_id"]: detail
+            for detail in supply_chain_action["status_reason_details"]
         }
         self.assertEqual(
-            supply_chain_details["supply_chain_sigstore_local_integrity_only"]["blocking_scope"],
+            supply_chain_details["supply_chain_sigstore_local_integrity_only"][
+                "blocking_scope"
+            ],
             "supply_chain_external_verification",
         )
         self.assertNotIn("action_matrix", supply_chain_action["blocking_scopes"])
@@ -617,6 +779,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "collaboration_governance_codeowners_review_owner_missing",
             actions["collaboration_governance_surface"]["status_reason_ids"],
         )
+
     def test_maintainability_and_supply_chain_reason_details_require_exact_mapping(
         self,
     ) -> None:
@@ -649,7 +812,11 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ]
 
         details = action_status_reason_details(
-            [*maintainability_reasons, *supply_chain_gate_reasons, *supply_chain_bundle_reasons],
+            [
+                *maintainability_reasons,
+                *supply_chain_gate_reasons,
+                *supply_chain_bundle_reasons,
+            ],
             fallback_target="external-report-action-matrix",
         )
 
@@ -660,7 +827,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 detail_by_reason[reason_id]["blocking_scope"],
                 "maintainability_hotspot",
             )
-            self.assertNotEqual(detail_by_reason[reason_id]["blocking_scope"], "action_matrix")
+            self.assertNotEqual(
+                detail_by_reason[reason_id]["blocking_scope"], "action_matrix"
+            )
             self.assertEqual(
                 detail_by_reason[reason_id]["recommended_targets"],
                 ["function-budget-refactor-proposals"],
@@ -671,7 +840,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 detail_by_reason[reason_id]["blocking_scope"],
                 "supply_chain_external_verification",
             )
-            self.assertNotEqual(detail_by_reason[reason_id]["blocking_scope"], "supply_chain")
+            self.assertNotEqual(
+                detail_by_reason[reason_id]["blocking_scope"], "supply_chain"
+            )
             self.assertEqual(
                 detail_by_reason[reason_id]["recommended_targets"],
                 ["supply-chain-check"],
@@ -682,7 +853,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 detail_by_reason[reason_id]["blocking_scope"],
                 "supply_chain_external_verification",
             )
-            self.assertNotEqual(detail_by_reason[reason_id]["blocking_scope"], "supply_chain")
+            self.assertNotEqual(
+                detail_by_reason[reason_id]["blocking_scope"], "supply_chain"
+            )
             self.assertEqual(
                 detail_by_reason[reason_id]["recommended_targets"],
                 [
@@ -703,7 +876,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             [detail["blocking_scope"] for detail in unmapped_details],
             ["action_matrix", "action_matrix"],
         )
-    def test_collaboration_governance_surface_requires_real_static_surfaces(self) -> None:
+
+    def test_collaboration_governance_surface_requires_real_static_surfaces(
+        self,
+    ) -> None:
         for rel_path, text in {
             ".github/CODEOWNERS": "# * @maintainers\n",
             ".github/pull_request_template.md": (
@@ -778,18 +954,26 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         real_report = build_report(self.vault, context=fixed_context())
 
-        real_action = {
-            item["action_id"]: item for item in real_report["action_items"]
-        }["collaboration_governance_surface"]
+        real_action = {item["action_id"]: item for item in real_report["action_items"]}[
+            "collaboration_governance_surface"
+        ]
         self.assertEqual(real_action["current_status"], "implemented")
         self.assertEqual(real_action["status_reason_ids"], [])
+
     def test_checked_in_collaboration_governance_surface_is_strictly_implemented(
         self,
     ) -> None:
         self.assertEqual(collaboration_governance_surface_reason_ids(REPO_ROOT), [])
-    def test_supply_chain_external_verification_requires_real_workflow_uses_entries(self) -> None:
-        self._write_json("ops/reports/supply-chain-gate-report.json", {"status": "pass"})
-        self._write_json("ops/reports/sbom-readiness-gate-report.json", {"status": "pass"})
+
+    def test_supply_chain_external_verification_requires_real_workflow_uses_entries(
+        self,
+    ) -> None:
+        self._write_json(
+            "ops/reports/supply-chain-gate-report.json", {"status": "pass"}
+        )
+        self._write_json(
+            "ops/reports/sbom-readiness-gate-report.json", {"status": "pass"}
+        )
         self._write_json(
             "ops/reports/in-toto-statement.json",
             {"predicateType": "https://slsa.dev/provenance/v1"},
@@ -819,9 +1003,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         report = build_report(self.vault, context=fixed_context())
 
-        action = {
-            item["action_id"]: item for item in report["action_items"]
-        }["supply_chain_external_verification"]
+        action = {item["action_id"]: item for item in report["action_items"]}[
+            "supply_chain_external_verification"
+        ]
         self.assertEqual(action["current_status"], "partially_automated")
         self.assertEqual(action["source_action_status"], "implemented")
         self.assertEqual(action["verification_readiness_status"], "operator_pending")
@@ -849,6 +1033,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "supply_chain_external_bundle_not_observed",
             action["status_reason_ids"],
         )
+
     def test_matrix_reflects_latest_artifact_freshness_currentness_input(self) -> None:
         (self.external / "release.md").write_text(
             "# Release Review\n\nexternal report lifecycle.\n",
@@ -900,7 +1085,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 operational_attention_artifact_count=2,
             ),
         )
-        self.assertEqual(validate_with_schema(refreshed_report, load_schema(SCHEMA_PATH)), [])
+        self.assertEqual(
+            validate_with_schema(refreshed_report, load_schema(SCHEMA_PATH)), []
+        )
+
     def test_matrix_ignores_stale_artifact_freshness_currentness_input(self) -> None:
         (self.external / "release.md").write_text(
             "# Release Review\n\nexternal report lifecycle.\n",
@@ -933,6 +1121,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             ),
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_matrix_ignores_artifact_freshness_source_identity_mismatch(self) -> None:
         (self.external / "release.md").write_text(
             "# Release Review\n\nexternal report lifecycle.\n",
@@ -966,7 +1155,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             ),
         )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
-    def test_source_revision_unknown_is_explicit_partial_until_canonical_reports_are_refreshed(self) -> None:
+
+    def test_source_revision_unknown_is_explicit_partial_until_canonical_reports_are_refreshed(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/scripts/core/source_revision_runtime.py",
             "ops/scripts/core/artifact_freshness_runtime.py",
@@ -1006,7 +1198,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         actions = {item["action_id"]: item for item in report["action_items"]}
         action = actions["source_revision_unknown_canonical_reports"]
         self.assertEqual(action["current_status"], "partially_automated")
-        self.assertIn("external-reports/source-revision.md", action["source_report_paths"])
+        self.assertIn(
+            "external-reports/source-revision.md", action["source_report_paths"]
+        )
 
         self._write_json(
             "ops/reports/legacy-canonical-report.json",
@@ -1014,12 +1208,19 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         )
 
         refreshed_report = build_report(self.vault, context=fixed_context())
-        refreshed_actions = {item["action_id"]: item for item in refreshed_report["action_items"]}
+        refreshed_actions = {
+            item["action_id"]: item for item in refreshed_report["action_items"]
+        }
         self.assertEqual(
-            refreshed_actions["source_revision_unknown_canonical_reports"]["current_status"],
+            refreshed_actions["source_revision_unknown_canonical_reports"][
+                "current_status"
+            ],
             "implemented",
         )
-    def test_source_revision_unknown_release_authority_reports_require_release_verification(self) -> None:
+
+    def test_source_revision_unknown_release_authority_reports_require_release_verification(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/scripts/core/source_revision_runtime.py",
             "ops/scripts/core/artifact_freshness_runtime.py",
@@ -1063,12 +1264,13 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["source_revision_unknown_canonical_reports"]["current_status"],
             "requires_release_run_verification",
         )
-    def test_reassessment_actions_are_classified_from_current_source_contracts(self) -> None:
+
+    def test_reassessment_actions_are_classified_from_current_source_contracts(
+        self,
+    ) -> None:
         for rel_path, text in {
             "ops/scripts/mechanism/auto_improve_iteration_persistence_runtime.py": (
-                "from .set_mechanism_run_history import (\n"
-                "    MechanismRunRecord,\n"
-                ")\n"
+                "from .set_mechanism_run_history import (\n    MechanismRunRecord,\n)\n"
             ),
             "tools/ruff_strict_preview.py": "def main(): pass\n",
             "ops/scripts/release/release_source_ready_commit.py": (
@@ -1096,17 +1298,16 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "RUFF_STRICT_PREVIEW_TARGETS ?= ops/scripts tests tools\n"
                 "STRICT_PREVIEW_AUDIT_TARGETS ?= ops/scripts tests tools\n"
                 "ruff-strict-preview:\n"
-                "\tpython tools/ruff_strict_preview.py --targets \"$(RUFF_STRICT_PREVIEW_TARGETS)\"\n"
+                '\tpython tools/ruff_strict_preview.py --targets "$(RUFF_STRICT_PREVIEW_TARGETS)"\n'
                 "strict-preview-audit:\n"
-                "\tpython tools/strict_preview_audit.py --targets \"$(STRICT_PREVIEW_AUDIT_TARGETS)\"\n"
+                '\tpython tools/strict_preview_audit.py --targets "$(STRICT_PREVIEW_AUDIT_TARGETS)"\n'
             ),
             "tools/strict_preview_audit.py": (
                 "def build_report():\n"
                 "    return {'artifact_kind': 'strict_preview_audit'}\n"
             ),
             "tests/test_strict_preview_audit.py": (
-                "def test_targets():\n"
-                "    assert 'ops/scripts tests tools'\n"
+                "def test_targets():\n    assert 'ops/scripts tests tools'\n"
             ),
         }.items():
             path = self.vault / rel_path
@@ -1137,12 +1338,15 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "operator_entrypoint_index",
             "strict_preview_all_target_audit",
         ):
-            self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
+            self.assertEqual(
+                actions[action_id]["current_status"], "implemented", action_id
+            )
             self.assertIn(
                 "external-reports/reassessment.md",
                 actions[action_id]["source_report_paths"],
             )
         self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
     def test_p2_service_layer_requires_symbols_and_consumer_imports(self) -> None:
         for rel_path, text in {
             "ops/scripts/core/release_authority_state_runtime.py": (
@@ -1241,7 +1445,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["release_mechanism_service_layer_extraction"]["current_status"],
             "implemented",
         )
-    def test_self_improvement_strategy_actions_remain_open_until_canonical_evidence(self) -> None:
+
+    def test_self_improvement_strategy_actions_remain_open_until_canonical_evidence(
+        self,
+    ) -> None:
         for rel_path, text in {
             "ops/scripts/core/artifact_freshness_runtime.py": "def build_report(): pass\n",
             "tests/test_artifact_freshness_runtime.py": "def test_placeholder(): pass\n",
@@ -1277,14 +1484,21 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         )
         self._write_json(
             "ops/reports/function-budget-refactor-proposals.json",
-            {"status": "pass", "summary": {"function_budget_candidate_count": 3, "proposal_count": 2}},
+            {
+                "status": "pass",
+                "summary": {"function_budget_candidate_count": 3, "proposal_count": 2},
+            },
         )
         self._write_json(
             "ops/reports/generated-artifact-index.json",
             {"status": "pass", "summary": {"archive_candidate_count": 1}},
         )
-        self._write_json("ops/reports/supply-chain-gate-report.json", {"status": "pass"})
-        self._write_json("ops/reports/sbom-readiness-gate-report.json", {"status": "pass"})
+        self._write_json(
+            "ops/reports/supply-chain-gate-report.json", {"status": "pass"}
+        )
+        self._write_json(
+            "ops/reports/sbom-readiness-gate-report.json", {"status": "pass"}
+        )
         self._write_json(
             "ops/reports/in-toto-statement.json",
             {"predicateType": "https://slsa.dev/provenance/v1"},
@@ -1325,7 +1539,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "supply_chain_external_verification",
             "collaboration_governance_surface",
         ):
-            self.assertEqual(actions[action_id]["current_status"], "partially_automated", action_id)
+            self.assertEqual(
+                actions[action_id]["current_status"], "partially_automated", action_id
+            )
             self.assertIn(
                 "external-reports/self-improvement.md",
                 actions[action_id]["source_report_paths"],
@@ -1344,15 +1560,21 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             generated_tracking["status_reason_ids"],
             ["matrix_downstream_evidence_deferred"],
         )
-        profiles = report_lifecycle_profiles(self.vault, [self.external / "self-improvement.md"])
+        profiles = report_lifecycle_profiles(
+            self.vault, [self.external / "self-improvement.md"]
+        )
         decision = lifecycle_decision(
             profiles[0],
             profiles=profiles,
             statuses=action_statuses(self.vault),
         )
         self.assertFalse(decision["archive_recommended"])
-        self.assertIn("maintainability_hotspot_refactor_backlog", decision["unresolved_action_ids"])
+        self.assertIn(
+            "maintainability_hotspot_refactor_backlog",
+            decision["unresolved_action_ids"],
+        )
         self.assertGreater(decision["unresolved_action_count"], 0)
+
     def test_artifact_freshness_stable_contract_debt_has_backfill_target(self) -> None:
         for rel_path, text in {
             "ops/scripts/core/artifact_freshness_runtime.py": (
@@ -1397,7 +1619,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             action["verification_readiness_status"],
             "artifact_freshness_pending",
         )
-        self.assertEqual(action["status_reason_ids"], ["artifact_freshness_stable_contract_debt"])
+        self.assertEqual(
+            action["status_reason_ids"], ["artifact_freshness_stable_contract_debt"]
+        )
         self.assertEqual(action["blocking_scopes"], ["artifact_freshness"])
         self.assertEqual(action["gate_effects"], ["advisory"])
         self.assertEqual(action["strongest_gate_effect"], "advisory")
@@ -1410,7 +1634,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             detail["recommended_targets"],
         )
         self.assertIn("artifact-freshness-refresh-check", detail["recommended_targets"])
-    def test_artifact_freshness_operational_attention_does_not_claim_canonical_stale(self) -> None:
+
+    def test_artifact_freshness_operational_attention_does_not_claim_canonical_stale(
+        self,
+    ) -> None:
         for rel_path, text in {
             "ops/scripts/core/artifact_freshness_runtime.py": (
                 "class ArtifactFreshnessContext: pass\n"
@@ -1446,13 +1673,17 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         report = build_report(self.vault, context=fixed_context())
 
-        action = {
-            item["action_id"]: item for item in report["action_items"]
-        }["artifact_freshness_performance_observability"]
-        self.assertEqual(action["status_reason_ids"], ["artifact_freshness_operational_attention"])
+        action = {item["action_id"]: item for item in report["action_items"]}[
+            "artifact_freshness_performance_observability"
+        ]
+        self.assertEqual(
+            action["status_reason_ids"], ["artifact_freshness_operational_attention"]
+        )
         self.assertEqual(action["gate_effects"], ["advisory"])
 
-    def test_artifact_freshness_source_identity_resettle_prefers_narrow_lane(self) -> None:
+    def test_artifact_freshness_source_identity_resettle_prefers_narrow_lane(
+        self,
+    ) -> None:
         for rel_path, text in {
             "ops/scripts/core/artifact_freshness_runtime.py": (
                 "class ArtifactFreshnessContext: pass\n"
@@ -1521,11 +1752,15 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         report = build_report(self.vault, context=fixed_context())
 
-        action = {
-            item["action_id"]: item for item in report["action_items"]
-        }["artifact_freshness_performance_observability"]
-        self.assertEqual(action["status_reason_ids"], ["artifact_freshness_source_identity_resettle"])
-        self.assertEqual(action["recommended_target"], "freshness-source-identity-converge")
+        action = {item["action_id"]: item for item in report["action_items"]}[
+            "artifact_freshness_performance_observability"
+        ]
+        self.assertEqual(
+            action["status_reason_ids"], ["artifact_freshness_source_identity_resettle"]
+        )
+        self.assertEqual(
+            action["recommended_target"], "freshness-source-identity-converge"
+        )
         detail = action["status_reason_details"][0]
         self.assertEqual(detail["owning_stage"], "artifact_freshness")
         self.assertEqual(detail["blocking_scope"], "artifact_freshness")
@@ -1586,6 +1821,31 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["release_writer_dependency_single_source"]["current_status"],
             "partially_automated",
         )
+
+    def test_source_package_binding_rejects_mutated_release_distribution(self) -> None:
+        self._write_release_verification_reports()
+        wheel = next((self.vault / "dist").glob("*.whl"))
+        wheel.write_bytes(wheel.read_bytes() + b"tampered")
+
+        reasons = release_verified_action_reason_ids(
+            self.vault,
+            "source_package_distribution_binding",
+        )
+        details = action_status_reason_details(
+            reasons,
+            fallback_target="release-source-package-check",
+        )
+
+        self.assertIn("release_live_distribution_file_sha256_mismatch", reasons)
+        matching = next(
+            item
+            for item in details
+            if item["reason_id"]
+            == "release_live_distribution_file_sha256_mismatch"
+        )
+        self.assertEqual(matching["owning_stage"], "release_publish_authorization")
+        self.assertEqual(matching["blocking_scope"], "published_distribution")
+
     def test_finality_report_failure_is_deferred_from_matrix_semantics(self) -> None:
         self._write_release_verification_reports()
         finality_path = self.vault / FINALITY_ATTESTATION_PATH
@@ -1642,12 +1902,18 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         matrix_path = "ops/reports/external-report-action-matrix.json"
         self._write_json(
             matrix_path,
-            {"artifact_kind": "external_report_action_matrix", "status": "pre_finality"},
+            {
+                "artifact_kind": "external_report_action_matrix",
+                "status": "pre_finality",
+            },
         )
         self._write_release_verification_reports()
         self._write_json(
             matrix_path,
-            {"artifact_kind": "external_report_action_matrix", "status": "rewritten_by_matrix"},
+            {
+                "artifact_kind": "external_report_action_matrix",
+                "status": "rewritten_by_matrix",
+            },
         )
         (self.external / "release.md").write_text(
             "# Release Review\n\nsource package, evidence bundle, full-suite, promotion_blockers.\n",
@@ -1673,7 +1939,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "release_finality_attestation_verification_failed",
                 actions[action_id]["status_reason_ids"],
             )
-    def test_evidence_bundle_attestation_explains_manifest_dependency_mismatch(self) -> None:
+
+    def test_evidence_bundle_attestation_explains_manifest_dependency_mismatch(
+        self,
+    ) -> None:
         self._write_release_verification_reports()
         self._write_json(
             "build/release/release-run-manifest.json",
@@ -1708,7 +1977,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         actions = {item["action_id"]: item for item in report["action_items"]}
         evidence_bundle = actions["release_evidence_bundle_and_attestation"]
-        self.assertEqual(evidence_bundle["current_status"], "requires_release_run_verification")
+        self.assertEqual(
+            evidence_bundle["current_status"], "requires_release_run_verification"
+        )
         self.assertIn(
             "release_run_manifest_source_tree_fingerprint_mismatch",
             resolved_reasons,
@@ -1728,6 +1999,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         }
         self.assertIn("release-run-ready-plan-check", detail_targets)
         self.assertIn("release-sealed-run-ready-plan", detail_targets)
+
     def test_release_verified_actions_explain_manifest_revision_mismatch(self) -> None:
         self._write_release_verification_reports()
         current_source_tree_fingerprint = release_source_tree_fingerprint(self.vault)
@@ -1768,13 +2040,14 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "release_run_manifest_source_revision_mismatch",
             resolved_reasons,
         )
-        detail = {
-            item["reason_id"]: item for item in resolved_details
-        }["release_run_manifest_source_revision_mismatch"]
+        detail = {item["reason_id"]: item for item in resolved_details}[
+            "release_run_manifest_source_revision_mismatch"
+        ]
         self.assertEqual(detail["owning_stage"], "release_run_ready")
         self.assertEqual(detail["blocking_scope"], "release_run")
         self.assertEqual(detail["gate_effect"], "blocks_promotion")
         self.assertIn("release-run-ready", detail["recommended_targets"])
+
     def test_promotion_truth_ladder_rejects_ready_manifest_revision_stale(self) -> None:
         self._write_release_verification_reports()
         ready = json.loads(
@@ -1783,7 +2056,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             ).read_text(encoding="utf-8")
         )
         ready["source_revision"] = "old-revision"
-        self._write_json("build/release/release-auto-promotion-ready-manifest.json", ready)
+        self._write_json(
+            "build/release/release-auto-promotion-ready-manifest.json", ready
+        )
         (self.external / "release.md").write_text(
             "# Release Review\n\npromotion_blockers.\n",
             encoding="utf-8",
@@ -1815,14 +2090,17 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "release_auto_promotion_ready_manifest_source_revision_mismatch",
             resolved_reasons,
         )
-        detail = {
-            item["reason_id"]: item for item in resolved_details
-        }["release_auto_promotion_ready_manifest_source_revision_mismatch"]
+        detail = {item["reason_id"]: item for item in resolved_details}[
+            "release_auto_promotion_ready_manifest_source_revision_mismatch"
+        ]
         self.assertEqual(detail["owning_stage"], "release_auto_promotion_ready")
         self.assertEqual(detail["blocking_scope"], "unattended_promotion")
         self.assertEqual(detail["gate_effect"], "blocks_promotion")
         self.assertIn("release-auto-promotion-ready", detail["recommended_targets"])
-    def test_command_heartbeat_requires_source_package_heartbeat_capability(self) -> None:
+
+    def test_command_heartbeat_requires_source_package_heartbeat_capability(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/scripts/core/command_runtime.py",
             "ops/schemas/executor-report.schema.json",
@@ -1833,7 +2111,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         self._write_json(
             "ops/reports/source-package-clean-extract.json",
             {
@@ -1858,7 +2141,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["command_heartbeat_observability"]["current_status"],
             "implemented",
         )
-    def test_command_heartbeat_blocks_when_source_package_commands_bypass_heartbeat_runtime(self) -> None:
+
+    def test_command_heartbeat_blocks_when_source_package_commands_bypass_heartbeat_runtime(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/scripts/core/command_runtime.py",
             "ops/schemas/executor-report.schema.json",
@@ -1870,7 +2156,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         self._write_json(
             "ops/reports/source-package-clean-extract.json",
             {
@@ -1895,6 +2186,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["command_heartbeat_observability"]["current_status"],
             "requires_release_run_verification",
         )
+
     def test_sealed_preflight_canonicalization_requires_canonical_report(self) -> None:
         for rel_path in (
             "mk/release.mk",
@@ -1907,7 +2199,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         self._write_json(
             "ops/reports/release-closeout-sealed-rehearsal-check.json",
             {
@@ -1935,26 +2232,33 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["sealed_preflight_canonicalization"]["current_status"],
             "implemented",
         )
+
     def _write_public_placeholder_files(self, rel_paths: tuple[str, ...]) -> None:
         for rel_path in rel_paths:
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(
-                "{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n",
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
                 encoding="utf-8",
             )
+
     def _write_goal_native_support_surfaces(self) -> None:
         self._write_public_placeholder_files(_GOAL_NATIVE_PLACEHOLDER_PATHS)
         mechanism_makefile = self.vault / "mk/mechanism.mk"
         mechanism_makefile.parent.mkdir(parents=True, exist_ok=True)
         mechanism_makefile.write_text(_GOAL_NATIVE_MAKEFILE, encoding="utf-8")
+
     def _goal_contract_payload(self, status: str = "active") -> dict:
         return {
             "$schema": "ops/schemas/codex-goal-contract.schema.json",
             "schema_version": 1,
             "contract_id": "auto-improve-goal",
             "objective": "Run bounded auto-improve only after the loop certificate is durable.",
-            "non_goals": ["Do not claim sustained runtime before certificate verification."],
+            "non_goals": [
+                "Do not claim sustained runtime before certificate verification."
+            ],
             "allowed_roots": [{"path": "ops/", "purpose": "runtime contracts"}],
             "budgets": {
                 "max_wall_clock_seconds": 21600,
@@ -2000,6 +2304,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "no_sustained_claim_before_certificate_verified": True,
             },
         }
+
     def _write_goal_contract_bundle(self, contract: dict) -> str:
         contract_digest = _canonical_json_digest(contract)
         self._write_json("ops/reports/codex-goal-contract.json", contract)
@@ -2022,6 +2327,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             },
         )
         return contract_digest
+
     def _write_goal_run_status_report(self, contract_digest: str) -> None:
         self._write_json(
             "ops/reports/goal-run-status.json",
@@ -2062,6 +2368,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 },
             },
         )
+
     def _write_goal_runtime_certificate_report(self) -> None:
         self._write_json(
             "ops/reports/goal-runtime-certificate.json",
@@ -2085,6 +2392,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "blockers": [],
             },
         )
+
     def _write_goal_currentness_reports(self) -> None:
         self._write_json(
             "ops/reports/test-execution-summary.json",
@@ -2104,6 +2412,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "promotion_blockers": [],
             },
         )
+
     def _write_goal_worktree_guard_report(self) -> None:
         self._write_json(
             "ops/reports/goal-worktree-guard.json",
@@ -2120,6 +2429,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 "blockers": [{"blocker_id": "git_worktree_dirty"}],
             },
         )
+
     def _write_goal_runtime_transient_reports(self) -> None:
         self._write_json(
             "tmp/goal-runtime-clean-transient.json",
@@ -2166,6 +2476,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 },
             },
         )
+
     def _write_goal_review_trigger_report(self) -> None:
         (self.external / "goal.md").write_text(
             "# Goal Review\n\ngoal contract, set_goal, codex_goal_prompt, --goal-contract, "
@@ -2176,6 +2487,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "long-run-preflight-clean.\n",
             encoding="utf-8",
         )
+
     def _write_goal_native_active_reports(self) -> dict:
         self._write_goal_native_support_surfaces()
         contract = self._goal_contract_payload()
@@ -2187,7 +2499,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self._write_goal_runtime_transient_reports()
         self._write_goal_review_trigger_report()
         return contract
-    def test_goal_native_actions_require_current_canonical_runtime_reports(self) -> None:
+
+    def test_goal_native_actions_require_current_canonical_runtime_reports(
+        self,
+    ) -> None:
         self._write_goal_native_active_reports()
 
         resolved_statuses = action_statuses(self.vault)
@@ -2195,7 +2510,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         actions = {item["action_id"]: item for item in report["action_items"]}
         for action_id in _GOAL_NATIVE_IMPLEMENTED_ACTION_IDS:
-            self.assertEqual(actions[action_id]["current_status"], "implemented", action_id)
+            self.assertEqual(
+                actions[action_id]["current_status"], "implemented", action_id
+            )
         selected_contract = actions["selected_contract_currentness_gate"]
         self.assertEqual(
             resolved_statuses["selected_contract_currentness_gate"],
@@ -2210,26 +2527,42 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             selected_contract["status_reason_ids"],
             ["matrix_downstream_evidence_deferred"],
         )
-        cleanup_gate_evidence = actions["goal_runtime_transient_cleanup_gate"]["evidence"]
+        cleanup_gate_evidence = actions["goal_runtime_transient_cleanup_gate"][
+            "evidence"
+        ]
         self.assertFalse(
-            any(item["path"].startswith("tmp/goal-runtime-") for item in cleanup_gate_evidence),
+            any(
+                item["path"].startswith("tmp/goal-runtime-")
+                for item in cleanup_gate_evidence
+            ),
             "active report completion should depend on durable cleanup/admission surfaces, not transient tmp reports",
         )
         worktree_guard_evidence = actions["git_worktree_goal_guard"]["evidence"]
         self.assertFalse(
-            any(item["path"] == "ops/reports/goal-worktree-guard.json" for item in worktree_guard_evidence),
+            any(
+                item["path"] == "ops/reports/goal-worktree-guard.json"
+                for item in worktree_guard_evidence
+            ),
             "active report completion should depend on durable worktree guard surfaces, not transient tmp reports",
         )
+
     def test_goal_contract_actions_accept_completed_contract(self) -> None:
         contract = self._write_goal_native_active_reports()
         contract["status"] = "completed"
         self._write_goal_contract_bundle(contract)
 
         completed_report = build_report(self.vault, context=fixed_context())
-        completed_actions = {item["action_id"]: item for item in completed_report["action_items"]}
+        completed_actions = {
+            item["action_id"]: item for item in completed_report["action_items"]
+        }
         for action_id in _GOAL_NATIVE_COMPLETED_CONTRACT_ACTION_IDS:
-            self.assertEqual(completed_actions[action_id]["current_status"], "implemented", action_id)
-    def test_selected_contract_gate_accepts_attention_freshness_with_current_contract(self) -> None:
+            self.assertEqual(
+                completed_actions[action_id]["current_status"], "implemented", action_id
+            )
+
+    def test_selected_contract_gate_accepts_attention_freshness_with_current_contract(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/scripts/mechanism/auto_improve_readiness_release_authority_runtime.py",
             "tests/test_auto_improve_readiness_release_authority_runtime.py",
@@ -2260,7 +2593,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             action_statuses(self.vault)["selected_contract_currentness_gate"],
             "implemented",
         )
-    def test_goal_certificate_action_requires_verified_clean_certificate_report(self) -> None:
+
+    def test_goal_certificate_action_requires_verified_clean_certificate_report(
+        self,
+    ) -> None:
         for rel_path in (
             "mk/mechanism.mk",
             "ops/schemas/codex-goal-contract.schema.json",
@@ -2272,7 +2608,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         self._write_json(
             "ops/reports/goal-runtime-certificate.json",
             {
@@ -2312,12 +2653,16 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             "implemented",
         )
         self.assertEqual(
-            actions["goal_execution_runtime_certificate"]["verification_readiness_status"],
+            actions["goal_execution_runtime_certificate"][
+                "verification_readiness_status"
+            ],
             "certificate_pending",
         )
         goal_detail_targets = {
             target
-            for item in actions["goal_execution_runtime_certificate"]["status_reason_details"]
+            for item in actions["goal_execution_runtime_certificate"][
+                "status_reason_details"
+            ]
             for target in item["recommended_targets"]
         }
         self.assertIn(
@@ -2340,7 +2685,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["goal_execution_runtime_certificate"]["strongest_gate_effect"],
             "claim_blocker",
         )
-        for detail in actions["goal_execution_runtime_certificate"]["status_reason_details"]:
+        for detail in actions["goal_execution_runtime_certificate"][
+            "status_reason_details"
+        ]:
             self.assertEqual(detail["blocking_scope"], "unattended_promotion")
             self.assertEqual(detail["gate_effect"], "claim_blocker")
         self.assertEqual(
@@ -2381,9 +2728,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         report = build_report(self.vault, context=fixed_context())
 
-        action = {
-            item["action_id"]: item for item in report["action_items"]
-        }["goal_execution_runtime_certificate"]
+        action = {item["action_id"]: item for item in report["action_items"]}[
+            "goal_execution_runtime_certificate"
+        ]
         self.assertEqual(action["current_status"], "requires_release_run_verification")
         self.assertEqual(action["source_action_status"], "implemented")
         self.assertEqual(
@@ -2408,7 +2755,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(
-                "{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n",
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
                 encoding="utf-8",
             )
         run_id = "goal-auto-improve-clean"
@@ -2493,9 +2842,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
 
         report = build_report(self.vault, context=fixed_context())
 
-        action = {
-            item["action_id"]: item for item in report["action_items"]
-        }["goal_run_status_audit_resume"]
+        action = {item["action_id"]: item for item in report["action_items"]}[
+            "goal_run_status_audit_resume"
+        ]
         self.assertEqual(action["current_status"], "implemented")
         self.assertEqual(action["verification_readiness_status"], "ready")
         self.assertNotIn(
@@ -2503,7 +2852,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             action["status_reason_ids"],
         )
 
-    def test_goal_prompt_action_accepts_verified_promotion_prompt_without_ban(self) -> None:
+    def test_goal_prompt_action_accepts_verified_promotion_prompt_without_ban(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/scripts/mechanism/codex_goal_prompt.py",
             "ops/schemas/codex-goal-prompt.schema.json",
@@ -2511,7 +2862,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         contract = {
             "$schema": "ops/schemas/codex-goal-contract.schema.json",
             "contract_id": "auto-improve-goal",
@@ -2564,7 +2920,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["codex_goal_prompt_generator"]["current_status"],
             "implemented",
         )
-    def test_goal_status_audit_resume_action_accepts_failed_runtime_status(self) -> None:
+
+    def test_goal_status_audit_resume_action_accepts_failed_runtime_status(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/schemas/goal-run-status.schema.json",
             "ops/scripts/mechanism/auto_improve_loop.py",
@@ -2576,7 +2935,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         contract = {
             "$schema": "ops/schemas/codex-goal-contract.schema.json",
             "contract_id": "auto-improve-goal",
@@ -2636,7 +3000,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["goal_run_status_audit_resume"]["current_status"],
             "implemented",
         )
-    def test_goal_status_audit_resume_action_accepts_missing_command_heartbeat(self) -> None:
+
+    def test_goal_status_audit_resume_action_accepts_missing_command_heartbeat(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/schemas/goal-run-status.schema.json",
             "ops/scripts/mechanism/auto_improve_loop.py",
@@ -2648,7 +3015,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         contract = {
             "$schema": "ops/schemas/codex-goal-contract.schema.json",
             "contract_id": "auto-improve-goal",
@@ -2708,6 +3080,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["goal_run_status_audit_resume"]["current_status"],
             "implemented",
         )
+
     def test_goal_status_audit_resume_uses_run_local_contract_digest(self) -> None:
         for rel_path in (
             "ops/schemas/goal-run-status.schema.json",
@@ -2720,7 +3093,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         global_contract = {
             "$schema": "ops/schemas/codex-goal-contract.schema.json",
             "contract_id": "auto-improve-goal",
@@ -2741,7 +3119,9 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 }
             ],
         }
-        run_contract_path = "runs/goal-auto-improve-trial/state/codex-goal-contract.json"
+        run_contract_path = (
+            "runs/goal-auto-improve-trial/state/codex-goal-contract.json"
+        )
         run_contract_digest = _canonical_json_digest(run_contract)
         self._write_json("ops/reports/codex-goal-contract.json", global_contract)
         self._write_json(run_contract_path, run_contract)
@@ -2820,9 +3200,14 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         )
         self.assertIn(
             "goal_run_status_contract_digest_mismatch",
-            missing_contract_actions["goal_run_status_audit_resume"]["status_reason_ids"],
+            missing_contract_actions["goal_run_status_audit_resume"][
+                "status_reason_ids"
+            ],
         )
-    def test_goal_status_audit_resume_action_accepts_verified_completed_runtime_status(self) -> None:
+
+    def test_goal_status_audit_resume_action_accepts_verified_completed_runtime_status(
+        self,
+    ) -> None:
         for rel_path in (
             "ops/schemas/goal-run-status.schema.json",
             "ops/scripts/mechanism/auto_improve_loop.py",
@@ -2834,7 +3219,12 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         ):
             path = self.vault / rel_path
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("{}\n" if rel_path.endswith(".json") else "def test_placeholder(): pass\n", encoding="utf-8")
+            path.write_text(
+                "{}\n"
+                if rel_path.endswith(".json")
+                else "def test_placeholder(): pass\n",
+                encoding="utf-8",
+            )
         contract = {
             "$schema": "ops/schemas/codex-goal-contract.schema.json",
             "contract_id": "auto-improve-goal",
@@ -2900,7 +3290,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["goal_run_status_audit_resume"]["current_status"],
             "implemented",
         )
-    def test_release_verified_actions_accept_conditional_status_v2_authority(self) -> None:
+
+    def test_release_verified_actions_accept_conditional_status_v2_authority(
+        self,
+    ) -> None:
         self._write_release_verification_reports()
         self._write_json(
             "ops/reports/release-closeout-summary.json",
@@ -2939,6 +3332,7 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self._assert_matrix_defers_release_verification(report)
         for action_id in _RELEASE_VERIFIED_ACTION_IDS:
             self.assertEqual(resolved_statuses[action_id], "implemented")
+
     def test_release_verified_actions_follow_blocked_status_v2_authority(self) -> None:
         self._write_release_verification_reports()
         self._write_json(
@@ -3000,8 +3394,13 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                     fallback_target="release-evidence-dashboard",
                 )
             }["release_authority_blocker:machine_release_not_allowed"]
-            self.assertEqual(blocker_detail["owning_stage"], "release_auto_promotion_preseal")
-            self.assertIn("release-evidence-dashboard", blocker_detail["recommended_targets"])
+            self.assertEqual(
+                blocker_detail["owning_stage"], "release_auto_promotion_preseal"
+            )
+            self.assertIn(
+                "release-evidence-dashboard", blocker_detail["recommended_targets"]
+            )
+
     def test_release_verified_actions_allow_advisory_dashboard_attention(self) -> None:
         self._write_release_verification_reports()
         self._write_json(
@@ -3037,7 +3436,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             actions["release_writer_dependency_single_source"]["current_status"],
             "partially_automated",
         )
-    def test_release_verified_actions_allow_non_authoritative_learning_dashboard_fail(self) -> None:
+
+    def test_release_verified_actions_allow_non_authoritative_learning_dashboard_fail(
+        self,
+    ) -> None:
         self._write_release_verification_reports()
         self._write_json(
             "ops/reports/release-evidence-dashboard.json",
@@ -3068,7 +3470,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
         self._assert_matrix_defers_release_verification(report)
         for action_id in _RELEASE_VERIFIED_ACTION_IDS:
             self.assertEqual(resolved_statuses[action_id], "implemented")
-    def test_release_verified_actions_block_authoritative_dashboard_not_run(self) -> None:
+
+    def test_release_verified_actions_block_authoritative_dashboard_not_run(
+        self,
+    ) -> None:
         self._write_release_verification_reports()
         self._write_json(
             "ops/reports/release-evidence-dashboard.json",
@@ -3118,7 +3523,10 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
                 )
             }["release_dashboard_authoritative_live_rerun_not_run"]
             self.assertEqual(detail["owning_stage"], "release_auto_promotion_preseal")
-            self.assertIn("release-auto-promotion-preseal", detail["recommended_targets"])
+            self.assertIn(
+                "release-auto-promotion-preseal", detail["recommended_targets"]
+            )
+
     def test_release_verified_actions_block_authoritative_dashboard_fail(self) -> None:
         self._write_release_verification_reports()
         self._write_json(
@@ -3170,8 +3578,6 @@ class ExternalReportActionMatrixStatusTests(ExternalReportActionMatrixTestBase):
             }["release_dashboard_authoritative_live_rerun_fail"]
             self.assertEqual(detail["owning_stage"], "release_auto_promotion_preseal")
             self.assertIn("release-evidence-dashboard", detail["recommended_targets"])
-
-
 
 
 if __name__ == "__main__":

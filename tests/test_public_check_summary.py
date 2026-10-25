@@ -4,6 +4,9 @@ import datetime as dt
 import hashlib
 import io
 import json
+import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 from collections.abc import Mapping, Sequence
@@ -27,12 +30,32 @@ from ops.scripts.public.public_check_summary import (
     reusable_summary_diagnostics,
     write_report,
 )
+from ops.scripts.public.source_history_scan_runtime import scan_source_history
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "public-check-summary.schema.json"
-PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH = Path("ops/reports/test-execution-summary-public.json")
+PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH = Path(
+    "ops/reports/test-execution-summary-public.json"
+)
+
+
+def _git(vault: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=vault,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def _initialize_git_repository(vault: Path) -> None:
+    _git(vault, "init", "-q")
+    _git(vault, "config", "user.email", "public-history@example.test")
+    _git(vault, "config", "user.name", "Public History Test")
 
 
 def fixed_context() -> RuntimeContext:
@@ -74,7 +97,9 @@ def write_public_pytest_summary(
     )
 
 
-def fake_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) -> TimedProcessResult:
+def fake_runner(
+    argv: Sequence[str], cwd: Path, timeout_seconds: int
+) -> TimedProcessResult:
     module = argv[2] if len(argv) > 2 else ""
     stdout = ""
     if module == "ops.scripts.test_execution_summary":
@@ -90,7 +115,9 @@ def fake_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) -> TimedPr
     )
 
 
-def failing_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) -> TimedProcessResult:
+def failing_pytest_runner(
+    argv: Sequence[str], cwd: Path, timeout_seconds: int
+) -> TimedProcessResult:
     module = argv[2] if len(argv) > 2 else ""
     if module == "ops.scripts.test_execution_summary":
         write_public_pytest_summary(cwd, passed=216, failed=1, errors=0, skipped=0)
@@ -105,7 +132,9 @@ def failing_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) 
     )
 
 
-def timeout_pytest_runner(argv: Sequence[str], cwd: Path, timeout_seconds: int) -> TimedProcessResult:
+def timeout_pytest_runner(
+    argv: Sequence[str], cwd: Path, timeout_seconds: int
+) -> TimedProcessResult:
     module = argv[2] if len(argv) > 2 else ""
     timed_out = module == "ops.scripts.test_execution_summary"
     return TimedProcessResult(
@@ -150,7 +179,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             command_runner=fake_runner,
         )
 
-    def test_default_runner_exports_public_python_for_nested_make_entrypoints(self) -> None:
+    def test_default_runner_exports_public_python_for_nested_make_entrypoints(
+        self,
+    ) -> None:
         captured_env: dict[str, str] = {}
 
         def fake_run_with_timeout(
@@ -174,7 +205,10 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 heartbeat_interval_seconds=heartbeat_interval_seconds or 0,
             )
 
-        with patch("ops.scripts.public.public_check_summary.run_with_timeout", fake_run_with_timeout):
+        with patch(
+            "ops.scripts.public.public_check_summary.run_with_timeout",
+            fake_run_with_timeout,
+        ):
             _default_command_runner(
                 ["python", "-m", "pytest"],
                 Path(),
@@ -186,7 +220,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
         self.assertEqual(captured_env["PYTHON"], "/workspace/.venv/bin/python")
         self.assertEqual(captured_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"], "1")
 
-    def test_build_report_default_runner_exports_resolved_public_python_to_all_commands(self) -> None:
+    def test_build_report_default_runner_exports_resolved_public_python_to_all_commands(
+        self,
+    ) -> None:
         captured_envs: list[dict[str, str]] = []
 
         def fake_run_with_timeout(
@@ -201,7 +237,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             captured_envs.append(dict(env or {}))
             module = argv[2] if len(argv) > 2 else ""
             if module == "ops.scripts.test_execution_summary":
-                write_public_pytest_summary(cwd, passed=3, failed=0, errors=0, skipped=0)
+                write_public_pytest_summary(
+                    cwd, passed=3, failed=0, errors=0, skipped=0
+                )
             return TimedProcessResult(
                 args=[str(item) for item in argv],
                 returncode=0,
@@ -219,7 +257,10 @@ class PublicCheckSummaryTests(unittest.TestCase):
             seed_minimal_vault(vault)
             seed_public_policy_file(vault)
 
-            with patch("ops.scripts.public.public_check_summary.run_with_timeout", fake_run_with_timeout):
+            with patch(
+                "ops.scripts.public.public_check_summary.run_with_timeout",
+                fake_run_with_timeout,
+            ):
                 report = build_report(
                     vault,
                     PublicCheckRequest(
@@ -233,9 +274,13 @@ class PublicCheckSummaryTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(len(captured_envs), 3)
         self.assertEqual({env["PYTHON"] for env in captured_envs}, {expected_python})
-        self.assertEqual({env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] for env in captured_envs}, {"1"})
+        self.assertEqual(
+            {env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] for env in captured_envs}, {"1"}
+        )
 
-    def test_public_check_summary_schema_passes_and_records_export_fingerprint(self) -> None:
+    def test_public_check_summary_schema_passes_and_records_export_fingerprint(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -260,7 +305,21 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["summary"]["public_check_status"], "pass")
             self.assertEqual(report["summary"]["negative_assertion_fail_count"], 0)
             self.assertEqual(report["summary"]["physical_repo_split_status"], "pass")
-            self.assertEqual(report["summary"]["private_surface_history_absence_status"], "pass")
+            self.assertEqual(
+                report["summary"]["export_git_metadata_absence_status"], "pass"
+            )
+            self.assertFalse(report["public_export"]["git_metadata_present"])
+            self.assertEqual(
+                report["summary"]["source_history_evaluation_status"],
+                "insufficient_history",
+            )
+            self.assertEqual(report["summary"]["source_history_status"], "unknown")
+            self.assertEqual(report["summary"]["source_history_violation_count"], 0)
+            self.assertEqual(
+                report["source_history_scan"]["ref_scope"],
+                "all_refs_and_head",
+            )
+            self.assertIsNone(report["source_history_scan"]["shallow_repository"])
             self.assertEqual(report["summary"]["pytest_passed"], 217)
             self.assertEqual(report["summary"]["pytest_skipped"], 5)
             self.assertEqual(report["summary"]["timeout_command_count"], 0)
@@ -268,26 +327,41 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["summary"]["max_command_quiet_seconds"], 0)
             self.assertEqual(report["summary"]["public_pytest_heartbeat_count"], 0)
             self.assertEqual(report["summary"]["public_pytest_quiet_seconds"], 0)
-            self.assertEqual(report["summary"]["public_pytest_termination_reason"], "completed")
+            self.assertEqual(
+                report["summary"]["public_pytest_termination_reason"], "completed"
+            )
             self.assertEqual(report["summary"]["public_pytest_signal_sent"], "none")
-            self.assertEqual(report["summary"]["public_pytest_final_state_observed"], "unknown")
+            self.assertEqual(
+                report["summary"]["public_pytest_final_state_observed"], "unknown"
+            )
             self.assertEqual(
                 {command["observation_mode"] for command in report["commands"]},
                 {"communicate"},
             )
             self.assertEqual(
-                {command["heartbeat_interval_seconds"] for command in report["commands"]},
+                {
+                    command["heartbeat_interval_seconds"]
+                    for command in report["commands"]
+                },
                 {0},
             )
-            self.assertIn("ops.scripts.test_execution_summary", report["commands"][-1]["command"])
+            self.assertIn(
+                "ops.scripts.test_execution_summary", report["commands"][-1]["command"]
+            )
             self.assertIn("--reuse-if-current", report["commands"][-1]["command"])
-            self.assertEqual({command["signal_sent"] for command in report["commands"]}, {"none"})
+            self.assertEqual(
+                {command["signal_sent"] for command in report["commands"]}, {"none"}
+            )
             self.assertEqual(
                 {command["final_state_observed"] for command in report["commands"]},
                 {"unknown"},
             )
-            self.assertRegex(report["summary"]["export_root_fingerprint"], r"^[a-f0-9]{64}$")
-            self.assertRegex(report["summary"]["public_surface_policy_sha256"], r"^[a-f0-9]{64}$")
+            self.assertRegex(
+                report["summary"]["export_root_fingerprint"], r"^[a-f0-9]{64}$"
+            )
+            self.assertRegex(
+                report["summary"]["public_surface_policy_sha256"], r"^[a-f0-9]{64}$"
+            )
             self.assertRegex(
                 report["summary"]["public_check_config_fingerprint"],
                 r"^[a-f0-9]{64}$",
@@ -296,24 +370,475 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 report["summary"]["public_check_config_fingerprint"],
                 report["input_fingerprints"]["public_check_config"],
             )
-            self.assertEqual(report["source_command"], "python -m ops.scripts.public_check_summary --vault .")
+            self.assertEqual(
+                report["source_command"],
+                "python -m ops.scripts.public_check_summary --vault .",
+            )
             self.assertTrue(report["public_export"]["output_dir"].startswith("<tmp>/"))
-            self.assertTrue(report["public_export"]["output_dir"].endswith(f"/{public_out.name}"))
+            self.assertTrue(
+                report["public_export"]["output_dir"].endswith(f"/{public_out.name}")
+            )
             self.assertTrue(_public_pytest_summary_cache_path().exists())
-            self.assertFalse((public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).exists())
+            self.assertFalse(
+                (public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).exists()
+            )
             self.assertEqual(
-                report["public_export_negative_assertions"]["excluded_prefix_absence"]["status"],
+                report["public_export_negative_assertions"]["excluded_prefix_absence"][
+                    "status"
+                ],
                 "pass",
             )
             self.assertEqual(
-                report["public_export_negative_assertions"]["local_path_absence"]["status"],
+                report["public_export_negative_assertions"]["local_path_absence"][
+                    "status"
+                ],
                 "pass",
             )
             self.assertEqual(
-                report["public_export_negative_assertions"]["private_pattern_absence"]["status"],
+                report["public_export_negative_assertions"]["private_pattern_absence"][
+                    "status"
+                ],
                 "pass",
             )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+
+            legacy = json.loads(json.dumps(report))
+            legacy["summary"]["private_surface_history_absence_status"] = legacy[
+                "summary"
+            ].pop("export_git_metadata_absence_status")
+            self.assertNotEqual(
+                validate_with_schema(legacy, load_schema(SCHEMA_PATH)),
+                [],
+            )
+
+            not_requested = json.loads(json.dumps(report))
+            not_requested["source_history_scan"] = scan_source_history(
+                vault,
+                requested=False,
+            )
+            not_requested["summary"]["source_history_evaluation_status"] = (
+                "not_requested"
+            )
+            not_requested["summary"]["source_history_status"] = "unknown"
+            self.assertEqual(
+                validate_with_schema(not_requested, load_schema(SCHEMA_PATH)),
+                [],
+            )
+
+            contradictory_evaluated = json.loads(json.dumps(report))
+            contradictory_evaluated["source_history_scan"].update(
+                {
+                    "evaluation_status": "evaluated",
+                    "status": "pass",
+                    "head_present": True,
+                    "shallow_repository": False,
+                    "legacy_grafts_present": False,
+                    "object_enumeration_complete": True,
+                    "missing_object_count": 1,
+                    "scan_command": (
+                        "git --no-replace-objects log --format= --raw --root "
+                        "--no-renames --ignore-submodules=none -m -r -z "
+                        "--no-abbrev --all HEAD"
+                    ),
+                }
+            )
+            self.assertNotEqual(
+                validate_with_schema(
+                    contradictory_evaluated,
+                    load_schema(SCHEMA_PATH),
+                ),
+                [],
+            )
+
+            contradictory_not_requested = json.loads(json.dumps(not_requested))
+            contradictory_not_requested["source_history_scan"]["ref_count"] = 1
+            self.assertNotEqual(
+                validate_with_schema(
+                    contradictory_not_requested,
+                    load_schema(SCHEMA_PATH),
+                ),
+                [],
+            )
+
+    def test_source_history_scan_fails_for_deleted_private_path_in_reachable_commit(
+        self,
+    ) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _initialize_git_repository(vault)
+            (vault / "README.md").write_text("# Public\n", encoding="utf-8")
+            _git(vault, "add", "README.md")
+            _git(vault, "commit", "-m", "public baseline")
+
+            private_path = vault / "raw" / "private.txt"
+            private_path.parent.mkdir()
+            private_payload = "private payload retained only in history\n"
+            private_path.write_text(private_payload, encoding="utf-8")
+            _git(vault, "add", "raw/private.txt")
+            _git(vault, "commit", "-m", "add private history")
+            _git(vault, "rm", "raw/private.txt")
+            _git(vault, "commit", "-m", "delete private path")
+            self.assertFalse(private_path.exists())
+
+            scan = scan_source_history(vault)
+
+        self.assertEqual(scan["evaluation_status"], "evaluated")
+        self.assertEqual(scan["status"], "fail")
+        self.assertFalse(scan["shallow_repository"])
+        self.assertGreater(scan["violation_count"], 0)
+        self.assertGreaterEqual(
+            scan["violation_bytes"], len(private_payload.encode("utf-8"))
+        )
+        self.assertIn("raw/private.txt", scan["sample_paths"])
+
+    def test_source_history_scan_preserves_excluded_alias_for_shared_blob(
+        self,
+    ) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _initialize_git_repository(vault)
+            shared_payload = "same bytes at public and private paths\n"
+            (vault / "README.md").write_text(shared_payload, encoding="utf-8")
+            private_path = vault / "ops" / "manifest.json"
+            private_path.parent.mkdir()
+            private_path.write_text(shared_payload, encoding="utf-8")
+            _git(vault, "add", "README.md", "ops/manifest.json")
+            _git(vault, "commit", "-m", "add aliased private history")
+            _git(vault, "rm", "ops/manifest.json")
+            _git(vault, "commit", "-m", "delete private alias")
+            self.assertFalse(private_path.exists())
+
+            scan = scan_source_history(vault)
+
+        self.assertEqual(scan["evaluation_status"], "evaluated")
+        self.assertEqual(scan["status"], "fail")
+        self.assertEqual(scan["violation_count"], 1)
+        self.assertGreaterEqual(
+            scan["violation_bytes"],
+            len(shared_payload.encode("utf-8")),
+        )
+        self.assertIn("ops/manifest.json", scan["sample_paths"])
+
+    def test_source_history_scan_ignores_git_replacement_objects(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _initialize_git_repository(vault)
+            (vault / "README.md").write_text("# Public\n", encoding="utf-8")
+            _git(vault, "add", "README.md")
+            _git(vault, "commit", "-m", "clean public baseline")
+            clean_commit = _git(vault, "rev-parse", "HEAD")
+
+            private_path = vault / "raw" / "private.txt"
+            private_path.parent.mkdir()
+            private_path.write_text("private replacement payload\n", encoding="utf-8")
+            _git(vault, "add", "raw/private.txt")
+            _git(vault, "commit", "-m", "add private history")
+            private_commit = _git(vault, "rev-parse", "HEAD")
+            _git(vault, "replace", private_commit, clean_commit)
+
+            scan = scan_source_history(vault)
+
+        self.assertEqual(scan["evaluation_status"], "evaluated")
+        self.assertEqual(scan["status"], "fail")
+        self.assertIn("raw/private.txt", scan["sample_paths"])
+        self.assertTrue(scan["scan_command"].startswith("git --no-replace-objects "))
+
+    def test_source_history_scan_never_passes_with_legacy_grafts(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _initialize_git_repository(vault)
+            (vault / "README.md").write_text("# Public\n", encoding="utf-8")
+            _git(vault, "add", "README.md")
+            _git(vault, "commit", "-m", "clean public baseline")
+
+            private_path = vault / "raw" / "private.txt"
+            private_path.parent.mkdir()
+            private_path.write_text("private graft payload\n", encoding="utf-8")
+            _git(vault, "add", "raw/private.txt")
+            _git(vault, "commit", "-m", "add private history")
+            _git(vault, "rm", "raw/private.txt")
+            _git(vault, "commit", "-m", "delete private path")
+
+            graft_path_text = _git(vault, "rev-parse", "--git-path", "info/grafts")
+            graft_path = Path(graft_path_text)
+            if not graft_path.is_absolute():
+                graft_path = vault / graft_path
+            graft_path.parent.mkdir(parents=True, exist_ok=True)
+            graft_path.write_text(_git(vault, "rev-parse", "HEAD") + "\n")
+
+            grafted_scan = scan_source_history(vault)
+            graft_path.unlink()
+            ungrafted_scan = scan_source_history(vault)
+
+        self.assertTrue(grafted_scan["legacy_grafts_present"])
+        self.assertEqual(
+            grafted_scan["evaluation_status"],
+            "insufficient_history",
+        )
+        self.assertEqual(grafted_scan["status"], "unknown")
+        self.assertEqual(grafted_scan["reason"], "legacy_grafts_present")
+        self.assertNotEqual(
+            grafted_scan["ref_fingerprint"],
+            ungrafted_scan["ref_fingerprint"],
+        )
+        self.assertFalse(ungrafted_scan["legacy_grafts_present"])
+        self.assertEqual(ungrafted_scan["evaluation_status"], "evaluated")
+        self.assertEqual(ungrafted_scan["status"], "fail")
+        self.assertIn("raw/private.txt", ungrafted_scan["sample_paths"])
+
+    def test_source_history_scan_ignores_ambient_repository_overrides(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _initialize_git_repository(vault)
+            private_path = vault / "raw" / "private.txt"
+            private_path.parent.mkdir()
+            private_path.write_text("private environment payload\n", encoding="utf-8")
+            _git(vault, "add", "raw/private.txt")
+            _git(vault, "commit", "-m", "add private history")
+
+            clean_repo = Path(temp_dir) / "clean"
+            clean_repo.mkdir()
+            _initialize_git_repository(clean_repo)
+            (clean_repo / "README.md").write_text("# Clean\n", encoding="utf-8")
+            _git(clean_repo, "add", "README.md")
+            _git(clean_repo, "commit", "-m", "clean baseline")
+
+            with patch.dict(
+                os.environ,
+                {
+                    "GIT_DIR": str(clean_repo / ".git"),
+                    "GIT_WORK_TREE": str(vault),
+                },
+            ):
+                scan = scan_source_history(vault)
+
+        self.assertEqual(scan["evaluation_status"], "evaluated")
+        self.assertEqual(scan["status"], "fail")
+        self.assertIn("raw/private.txt", scan["sample_paths"])
+
+    def test_source_history_scan_includes_gitlinks_ignored_by_config(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _initialize_git_repository(vault)
+            _git(vault, "commit", "--allow-empty", "-m", "public baseline")
+            target_oid = _git(vault, "rev-parse", "HEAD")
+            _git(
+                vault,
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                f"160000,{target_oid},raw/private-link",
+            )
+            _git(vault, "commit", "-m", "add private gitlink")
+
+            _git(vault, "config", "diff.ignoreSubmodules", "all")
+            local_config_scan = scan_source_history(vault)
+            _git(vault, "config", "--unset", "diff.ignoreSubmodules")
+
+            global_config = Path(temp_dir) / "global.gitconfig"
+            global_config.write_text(
+                "[diff]\n\tignoreSubmodules = all\n",
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {"GIT_CONFIG_GLOBAL": str(global_config)},
+            ):
+                ambient_config_scan = scan_source_history(vault)
+
+        for scan in (local_config_scan, ambient_config_scan):
+            self.assertEqual(scan["evaluation_status"], "evaluated")
+            self.assertEqual(scan["status"], "fail")
+            self.assertEqual(scan["violation_count"], 1)
+            self.assertIn("raw/private-link", scan["sample_paths"])
+            self.assertIn("--ignore-submodules=none", scan["scan_command"])
+
+    def test_source_history_scan_enumerates_direct_tree_refs(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            _initialize_git_repository(vault)
+            (vault / "README.md").write_text("# Public\n", encoding="utf-8")
+            _git(vault, "add", "README.md")
+            _git(vault, "commit", "-m", "clean public baseline")
+
+            private_path = vault / "raw" / "private.txt"
+            private_path.parent.mkdir()
+            private_path.write_text("private tree-ref payload\n", encoding="utf-8")
+            private_blob_oid = _git(vault, "hash-object", "-w", "raw/private.txt")
+
+            def write_tree(specification: str) -> str:
+                result = subprocess.run(
+                    ["git", "mktree"],
+                    cwd=vault,
+                    input=specification,
+                    text=True,
+                    capture_output=True,
+                    check=True,
+                )
+                return result.stdout.strip()
+
+            raw_tree_oid = write_tree(f"100644 blob {private_blob_oid}\tprivate.txt\n")
+            root_tree_oid = write_tree(f"040000 tree {raw_tree_oid}\traw\n")
+            _git(vault, "update-ref", "refs/tags/private-tree", root_tree_oid)
+            private_path.unlink()
+            private_path.parent.rmdir()
+
+            scan = scan_source_history(vault)
+
+        self.assertEqual(scan["evaluation_status"], "evaluated")
+        self.assertEqual(scan["status"], "fail")
+        self.assertEqual(scan["violation_count"], 1)
+        self.assertIn("raw/private.txt", scan["sample_paths"])
+        self.assertIn("ls-tree", scan["scan_command"])
+
+    def test_source_history_scan_checks_non_head_refs_and_invalidates_reuse(
+        self,
+    ) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            _initialize_git_repository(vault)
+            _git(vault, "add", ".")
+            _git(vault, "commit", "-m", "clean public baseline")
+            primary_branch = _git(vault, "branch", "--show-current")
+            request = PublicCheckRequest(
+                public_out=str(Path(temp_dir) / "public"),
+                public_python="python",
+                pytest_flags="-q",
+            )
+            report = build_report(
+                vault,
+                request,
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+            stored = Path(temp_dir) / "public-check-summary.json"
+            stored.write_text(json.dumps(report), encoding="utf-8")
+            self.assertTrue(
+                reusable_summary_diagnostics(vault, stored, request)["reusable"]
+            )
+
+            _git(vault, "switch", "-q", "-c", "private-history")
+            private_path = vault / "external-reports" / "review.md"
+            private_path.parent.mkdir()
+            private_path.write_text("private review\n", encoding="utf-8")
+            _git(vault, "add", "-f", "external-reports/review.md")
+            _git(vault, "commit", "-m", "private non-head history")
+            _git(vault, "switch", "-q", primary_branch)
+
+            scan = scan_source_history(vault)
+            reuse = reusable_summary_diagnostics(vault, stored, request)
+
+        self.assertEqual(scan["status"], "fail")
+        self.assertIn("external-reports/review.md", scan["sample_paths"])
+        self.assertFalse(reuse["reusable"])
+        self.assertIn("source_history_state", reuse["reason"])
+
+    def test_source_history_reuse_rechecks_object_graph_completeness(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            vault.mkdir()
+            seed_minimal_vault(vault)
+            seed_public_policy_file(vault)
+            _initialize_git_repository(vault)
+            _git(vault, "add", ".")
+            _git(vault, "commit", "-m", "clean public baseline")
+            (vault / "PUBLIC.md").write_text("public tip\n", encoding="utf-8")
+            _git(vault, "add", "PUBLIC.md")
+            _git(vault, "commit", "-m", "public tip")
+            request = PublicCheckRequest(
+                public_out=str(Path(temp_dir) / "public"),
+                public_python="python",
+                pytest_flags="-q",
+            )
+            report = build_report(
+                vault,
+                request,
+                context=fixed_context(),
+                command_runner=fake_runner,
+            )
+            stored = Path(temp_dir) / "public-check-summary.json"
+            stored.write_text(json.dumps(report), encoding="utf-8")
+            self.assertTrue(
+                reusable_summary_diagnostics(vault, stored, request)["reusable"]
+            )
+
+            before_scan = scan_source_history(vault)
+            parent_oid = _git(vault, "rev-parse", "HEAD^")
+            parent_object = vault / ".git" / "objects" / parent_oid[:2] / parent_oid[2:]
+            self.assertTrue(parent_object.exists())
+            parent_object.unlink()
+
+            after_scan = scan_source_history(vault)
+            reuse = reusable_summary_diagnostics(vault, stored, request)
+
+        self.assertEqual(after_scan["evaluation_status"], "insufficient_history")
+        self.assertEqual(after_scan["status"], "unknown")
+        self.assertEqual(
+            before_scan["ref_fingerprint"],
+            after_scan["ref_fingerprint"],
+        )
+        self.assertNotEqual(
+            before_scan["history_state_fingerprint"],
+            after_scan["history_state_fingerprint"],
+        )
+        self.assertFalse(reuse["reusable"])
+        self.assertIn("source_history_state", reuse["reason"])
+
+    def test_source_history_scan_distinguishes_shallow_and_not_requested(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is required for source history probes")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "source"
+            source.mkdir()
+            _initialize_git_repository(source)
+            (source / "README.md").write_text("# Public\n", encoding="utf-8")
+            _git(source, "add", "README.md")
+            _git(source, "commit", "-m", "clean public baseline")
+            shallow = Path(temp_dir) / "shallow"
+            subprocess.run(
+                ["git", "clone", "-q", "--depth=1", source.as_uri(), str(shallow)],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            shallow_scan = scan_source_history(shallow)
+            skipped_scan = scan_source_history(source, requested=False)
+
+        self.assertTrue(shallow_scan["shallow_repository"])
+        self.assertEqual(shallow_scan["evaluation_status"], "insufficient_history")
+        self.assertEqual(shallow_scan["status"], "unknown")
+        self.assertEqual(skipped_scan["evaluation_status"], "not_requested")
+        self.assertEqual(skipped_scan["status"], "unknown")
+        self.assertEqual(skipped_scan["ref_scope"], "none")
 
     def test_public_check_summary_fails_on_exported_local_path_leak(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -340,11 +865,15 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["status"], "fail")
             self.assertEqual(report["summary"]["negative_assertion_fail_count"], 1)
             self.assertEqual(
-                report["public_export_negative_assertions"]["local_path_absence"]["status"],
+                report["public_export_negative_assertions"]["local_path_absence"][
+                    "status"
+                ],
                 "fail",
             )
             self.assertEqual(
-                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                report["public_export_negative_assertions"]["local_path_absence"][
+                    "violations"
+                ],
                 ["README.md"],
             )
             self.assertEqual(
@@ -357,7 +886,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_public_check_summary_fails_on_exported_foreign_local_path_leak(self) -> None:
+    def test_public_check_summary_fails_on_exported_foreign_local_path_leak(
+        self,
+    ) -> None:
         for leaked_path in (
             "/workspace/LLMwiki/repo",
             "/Users/alice/work/repo",
@@ -371,7 +902,10 @@ class PublicCheckSummaryTests(unittest.TestCase):
             "c" + r":\temp\repo",
             "d" + ":/a/project",
         ):
-            with self.subTest(leaked_path=leaked_path), tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                self.subTest(leaked_path=leaked_path),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
                 report = self._build_report_with_exported_text(
                     temp_dir,
                     "README.md",
@@ -380,7 +914,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
 
                 self.assertEqual(report["status"], "fail")
                 self.assertEqual(
-                    report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                    report["public_export_negative_assertions"]["local_path_absence"][
+                        "violations"
+                    ],
                     ["README.md"],
                 )
 
@@ -394,11 +930,15 @@ class PublicCheckSummaryTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "pass")
             self.assertEqual(
-                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                report["public_export_negative_assertions"]["local_path_absence"][
+                    "violations"
+                ],
                 [],
             )
 
-    def test_public_check_summary_allows_url_containing_current_vault_text(self) -> None:
+    def test_public_check_summary_allows_url_containing_current_vault_text(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             public_out = Path(temp_dir) / "public"
             rel_path = "tests/test_public_surface_policy.py"
@@ -429,7 +969,10 @@ class PublicCheckSummaryTests(unittest.TestCase):
             "tests/leak.py",
             "tools/leak.py",
         ):
-            with self.subTest(rel_path=rel_path), tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                self.subTest(rel_path=rel_path),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
                 report = self._build_report_with_exported_text(
                     temp_dir,
                     rel_path,
@@ -438,7 +981,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
 
                 self.assertEqual(report["status"], "fail")
                 self.assertEqual(
-                    report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                    report["public_export_negative_assertions"]["local_path_absence"][
+                        "violations"
+                    ],
                     [rel_path],
                 )
 
@@ -452,7 +997,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "pass")
             self.assertEqual(
-                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                report["public_export_negative_assertions"]["local_path_absence"][
+                    "violations"
+                ],
                 [],
             )
 
@@ -467,7 +1014,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "fail")
             self.assertEqual(
-                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                report["public_export_negative_assertions"]["local_path_absence"][
+                    "violations"
+                ],
                 ["tests/test_public_check_summary.py"],
             )
 
@@ -504,13 +1053,14 @@ class PublicCheckSummaryTests(unittest.TestCase):
             report = self._build_report_with_exported_text(
                 temp_dir,
                 "tests/test_public_check_summary.py",
-                f'FIXTURE_ROOT = "{allowed_fixture}"\n'
-                f'DEV_ROOT = "{unexpected_path}"\n',
+                f'FIXTURE_ROOT = "{allowed_fixture}"\nDEV_ROOT = "{unexpected_path}"\n',
             )
 
             self.assertEqual(report["status"], "fail")
             self.assertEqual(
-                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                report["public_export_negative_assertions"]["local_path_absence"][
+                    "violations"
+                ],
                 ["tests/test_public_check_summary.py"],
             )
 
@@ -527,11 +1077,15 @@ class PublicCheckSummaryTests(unittest.TestCase):
 
             self.assertEqual(report["status"], "fail")
             self.assertEqual(
-                report["public_export_negative_assertions"]["local_path_absence"]["violations"],
+                report["public_export_negative_assertions"]["local_path_absence"][
+                    "violations"
+                ],
                 ["tests/leak.py"],
             )
 
-    def test_generated_report_files_are_excluded_without_private_export_violations(self) -> None:
+    def test_generated_report_files_are_excluded_without_private_export_violations(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -561,11 +1115,15 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["status"], "pass")
             self.assertEqual(report["summary"]["negative_assertion_fail_count"], 0)
             self.assertEqual(
-                report["public_export_negative_assertions"]["excluded_prefix_absence"]["violations"],
+                report["public_export_negative_assertions"]["excluded_prefix_absence"][
+                    "violations"
+                ],
                 [],
             )
             self.assertEqual(
-                report["public_export_negative_assertions"]["private_pattern_absence"]["violations"],
+                report["public_export_negative_assertions"]["private_pattern_absence"][
+                    "violations"
+                ],
                 [],
             )
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
@@ -622,7 +1180,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             ],
         }
 
-        def fake_write_report(vault: Path, report: dict[str, object], out_path: str) -> Path:
+        def fake_write_report(
+            vault: Path, report: dict[str, object], out_path: str
+        ) -> Path:
             destination = vault / out_path
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(json.dumps(report), encoding="utf-8")
@@ -635,7 +1195,11 @@ class PublicCheckSummaryTests(unittest.TestCase):
             launcher.mkdir()
 
             with (
-                patch.object(public_check_summary_module, "build_report", return_value=fake_report),
+                patch.object(
+                    public_check_summary_module,
+                    "build_report",
+                    return_value=fake_report,
+                ),
                 patch.object(
                     public_check_summary_module,
                     "write_report",
@@ -659,7 +1223,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
         self.assertEqual(payload["status"], "fail")
         self.assertEqual(payload["failure_causes"][0]["id"], "command:pytest_public")
 
-    def test_public_check_summary_exposes_public_pytest_timeout_cleanup_diagnostics(self) -> None:
+    def test_public_check_summary_exposes_public_pytest_timeout_cleanup_diagnostics(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -687,9 +1253,15 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["summary"]["max_command_quiet_seconds"], 30)
             self.assertEqual(report["summary"]["public_pytest_heartbeat_count"], 3)
             self.assertEqual(report["summary"]["public_pytest_quiet_seconds"], 30)
-            self.assertEqual(report["summary"]["public_pytest_termination_reason"], "execution_timeout")
+            self.assertEqual(
+                report["summary"]["public_pytest_termination_reason"],
+                "execution_timeout",
+            )
             self.assertEqual(report["summary"]["public_pytest_signal_sent"], "sigkill")
-            self.assertEqual(report["summary"]["public_pytest_final_state_observed"], "drain_after_kill")
+            self.assertEqual(
+                report["summary"]["public_pytest_final_state_observed"],
+                "drain_after_kill",
+            )
             self.assertTrue(pytest_command["timed_out"])
             self.assertEqual(pytest_command["signal_sent"], "sigkill")
             self.assertEqual(pytest_command["final_state_observed"], "drain_after_kill")
@@ -697,12 +1269,16 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(pytest_command["quiet_seconds"], 30)
             self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
 
-    def test_public_check_summary_reuses_external_public_pytest_cache_without_exporting_it(self) -> None:
+    def test_public_check_summary_reuses_external_public_pytest_cache_without_exporting_it(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache_path = Path(temp_dir) / "cache" / "test-execution-summary-public.json"
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             cache_path.write_text(
-                json.dumps({"counts": {"passed": 9, "failed": 0, "errors": 0, "skipped": 1}}),
+                json.dumps(
+                    {"counts": {"passed": 9, "failed": 0, "errors": 0, "skipped": 1}}
+                ),
                 encoding="utf-8",
             )
             vault = Path(temp_dir) / "vault"
@@ -721,7 +1297,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
                     self.assertIn("--reuse-if-current", argv)
                     self.assertIn("--reuse-from", argv)
                     self.assertIn(cache_path.as_posix(), argv)
-                    write_public_pytest_summary(cwd, passed=9, failed=0, errors=0, skipped=1)
+                    write_public_pytest_summary(
+                        cwd, passed=9, failed=0, errors=0, skipped=1
+                    )
                 return TimedProcessResult(
                     args=[str(item) for item in argv],
                     returncode=0,
@@ -749,7 +1327,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertEqual(report["status"], "pass")
             self.assertEqual(report["summary"]["pytest_passed"], 9)
             self.assertEqual(report["summary"]["pytest_skipped"], 1)
-            self.assertFalse((public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).exists())
+            self.assertFalse(
+                (public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).exists()
+            )
 
     def test_reusable_summary_requires_current_source_tree_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -774,17 +1354,23 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertTrue(reusable["reusable"])
             self.assertEqual(reusable["reason"], "current_passing_public_check_summary")
 
-            (vault / "README.md").write_text("# Test\n\nChanged after public check.\n", encoding="utf-8")
+            (vault / "README.md").write_text(
+                "# Test\n\nChanged after public check.\n", encoding="utf-8"
+            )
             stale = reusable_summary_diagnostics(vault, destination)
 
             self.assertFalse(stale["reusable"])
             self.assertIn("source_tree_fingerprint", stale["reason"])
             self.assertNotEqual(
                 stale["current_source_tree_fingerprint"],
-                json.loads(destination.read_text(encoding="utf-8"))["source_tree_fingerprint"],
+                json.loads(destination.read_text(encoding="utf-8"))[
+                    "source_tree_fingerprint"
+                ],
             )
 
-    def test_reusable_summary_requires_matching_public_check_config_fingerprint(self) -> None:
+    def test_reusable_summary_requires_matching_public_check_config_fingerprint(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -809,7 +1395,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             )
             destination = write_report(vault, report)
 
-            matching = reusable_summary_diagnostics(vault, destination, original_request)
+            matching = reusable_summary_diagnostics(
+                vault, destination, original_request
+            )
             self.assertTrue(matching["reusable"])
             self.assertEqual(
                 matching["public_check_config_fingerprint"],
@@ -888,7 +1476,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertFalse(mismatched_ruff["reusable"])
             self.assertIn("public_check_config", mismatched_ruff["reason"])
 
-    def test_public_check_config_fingerprint_excludes_internal_pytest_cache_path(self) -> None:
+    def test_public_check_config_fingerprint_excludes_internal_pytest_cache_path(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -900,13 +1490,17 @@ class PublicCheckSummaryTests(unittest.TestCase):
 
             with patch(
                 "ops.scripts.public.public_check_summary._public_pytest_summary_cache_path",
-                return_value=Path(temp_dir) / "cache-a" / "test-execution-summary-public.json",
+                return_value=Path(temp_dir)
+                / "cache-a"
+                / "test-execution-summary-public.json",
             ):
                 left = _public_check_config_fingerprint(vault, request)
 
             with patch(
                 "ops.scripts.public.public_check_summary._public_pytest_summary_cache_path",
-                return_value=Path(temp_dir) / "cache-b" / "test-execution-summary-public.json",
+                return_value=Path(temp_dir)
+                / "cache-b"
+                / "test-execution-summary-public.json",
             ):
                 right = _public_check_config_fingerprint(vault, request)
 
@@ -977,20 +1571,29 @@ class PublicCheckSummaryTests(unittest.TestCase):
             with redirect_stdout(stdout):
                 exit_code = public_check_summary_module.main(
                     [
-                        "--vault", str(vault),
-                        "--reuse-only", "--reuse-from", str(destination),
-                        "--public-out", str(public_out),
-                        "--public-python", "python",
+                        "--vault",
+                        str(vault),
+                        "--reuse-only",
+                        "--reuse-from",
+                        str(destination),
+                        "--public-out",
+                        str(public_out),
+                        "--public-python",
+                        "python",
                         "--pytest-flags=-q",
                     ]
                 )
 
             self.assertEqual(exit_code, 0)
             self.assertEqual(json.loads(stdout.getvalue())["summary_mode"], "reused")
-            self.assertEqual(hashlib.sha256(destination.read_bytes()).hexdigest(), before_sha256)
+            self.assertEqual(
+                hashlib.sha256(destination.read_bytes()).hexdigest(), before_sha256
+            )
             self.assertEqual(destination.stat().st_mtime_ns, before_mtime_ns)
 
-    def test_default_then_full_execution_preserves_both_canonical_artifacts(self) -> None:
+    def test_default_then_full_execution_preserves_both_canonical_artifacts(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -1022,7 +1625,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
 
             self.assertTrue(default_path.is_file())
             self.assertTrue(full_path.is_file())
-            self.assertEqual(hashlib.sha256(default_path.read_bytes()).hexdigest(), default_sha256)
+            self.assertEqual(
+                hashlib.sha256(default_path.read_bytes()).hexdigest(), default_sha256
+            )
             self.assertEqual(
                 json.loads(full_path.read_text(encoding="utf-8"))["source_command"],
                 "python -m ops.scripts.public_check_summary --vault . --mode full",
@@ -1031,6 +1636,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
     def test_cli_mode_defaults_make_full_selectorless(self) -> None:
         default_args = public_check_summary_module.parse_args([])
         full_args = public_check_summary_module.parse_args(["--mode", "full"])
+        skipped_history_args = public_check_summary_module.parse_args(
+            ["--skip-source-history-scan"]
+        )
         explicit_empty = public_check_summary_module.parse_args(
             ["--mode", "full", "--pytest-mark-expr", ""]
         )
@@ -1038,18 +1646,23 @@ class PublicCheckSummaryTests(unittest.TestCase):
         self.assertEqual(default_args.pytest_mark_expr, "public")
         self.assertEqual(full_args.pytest_mark_expr, "")
         self.assertEqual(explicit_empty.pytest_mark_expr, "")
+        self.assertTrue(skipped_history_args.skip_source_history_scan)
         with self.assertRaises(SystemExit):
             public_check_summary_module.parse_args(
                 ["--mode", "full", "--pytest-mark-expr", "public"]
             )
 
-    def test_programmatic_full_mode_is_selectorless_and_rejects_marker_filters(self) -> None:
+    def test_programmatic_full_mode_is_selectorless_and_rejects_marker_filters(
+        self,
+    ) -> None:
         request = PublicCheckRequest(mode="full")
 
-        command, _summary_path = public_check_summary_module._pytest_public_summary_command(
-            public_python="python",
-            request=request,
-            reuse_from=Path("ops/reports/test-execution-summary-public.json"),
+        command, _summary_path = (
+            public_check_summary_module._pytest_public_summary_command(
+                public_python="python",
+                request=request,
+                reuse_from=Path("ops/reports/test-execution-summary-public.json"),
+            )
         )
 
         self.assertEqual(request.pytest_mark_expr, "")
@@ -1088,7 +1701,10 @@ class PublicCheckSummaryTests(unittest.TestCase):
                     vault, report, f"ops/reports/public-check-summary{suffix}.json"
                 )
 
-            for expected_mode, artifact_mode in (("default", "full"), ("full", "default")):
+            for expected_mode, artifact_mode in (
+                ("default", "full"),
+                ("full", "default"),
+            ):
                 diagnostics = reusable_summary_diagnostics(
                     vault, paths[artifact_mode], requests[expected_mode]
                 )
@@ -1096,7 +1712,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 self.assertIn("source_command", diagnostics["reason"])
                 self.assertIn("public_check_config", diagnostics["reason"])
 
-    def test_script_output_surfaces_refresh_does_not_stale_public_summary_without_source_drift(self) -> None:
+    def test_script_output_surfaces_refresh_does_not_stale_public_summary_without_source_drift(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -1124,16 +1742,17 @@ class PublicCheckSummaryTests(unittest.TestCase):
                         "producer": "ops.scripts.script_output_surfaces",
                         "source_tree_scope": {
                             "mode": "include_prefixes",
-                            "include_prefixes": ["ops/scripts"]
+                            "include_prefixes": ["ops/scripts"],
                         },
                         "version": 1,
                         "description": "test fixture",
                         "classification_values": ["repo_artifact"],
-                        "surfaces": []
+                        "surfaces": [],
                     },
                     ensure_ascii=False,
                     indent=2,
-                ) + "\n",
+                )
+                + "\n",
                 encoding="utf-8",
             )
 
@@ -1183,7 +1802,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
 
-            with patch.object(Path, "expanduser", side_effect=RuntimeError("home unavailable")):
+            with patch.object(
+                Path, "expanduser", side_effect=RuntimeError("home unavailable")
+            ):
                 resolved = _resolve_public_python(vault, "~/bin/python")
 
             self.assertEqual(resolved, str((vault / "~/bin/python").absolute()))

@@ -15,10 +15,9 @@ from .external_report_inventory_runtime import (
     coverage_markers,
     matched_actions,
     priority_counts,
-    report_line_digest_policy,
+    report_recommendation_intake,
     report_text,
     report_type_for_path,
-    unmatched_recommendation_count,
 )
 
 
@@ -26,8 +25,18 @@ def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
     rel_path = report_path(vault, path)
     text = report_text(path)
     report_type = report_type_for_path(path)
-    line_action_digests, operator_context_line_digests = report_line_digest_policy(vault)
+    report_digest = content_sha256(path)
     operator_only_rationale = ""
+    advisory_action_ids: list[str] = []
+    intake: dict[str, Any] = {
+        "recommendation_intake_status": "not_applicable",
+        "recommendation_intake_error_codes": [],
+        "recommendation_candidate_count": 0,
+        "recommendation_covered_count": 0,
+        "recommendation_unresolved_count": 0,
+        "exact_mapped_action_ids": [],
+        "unmatched_recommendation_line_sha256": [],
+    }
     if report_type == "binary_report":
         action_ids = ["operator_only_external_report_binary"]
         operator_only_rationale = "binary_report_requires_operator_review"
@@ -37,21 +46,31 @@ def report_coverage_item(vault: Path, path: Path) -> dict[str, Any]:
     elif not text:
         action_ids = ["external_report_lifecycle"]
         operator_only_rationale = "unreadable_narrative_report"
+        intake["recommendation_intake_status"] = "unreadable"
     else:
-        action_ids = matched_actions(text, line_action_digests=line_action_digests)
+        advisory_action_ids = matched_actions(text, line_action_digests={})
+        intake_record = report_recommendation_intake(
+            vault,
+            path=path,
+            text=text,
+            report_content_sha256=report_digest,
+        )
+        action_ids = [str(item) for item in intake_record.pop("matched_action_ids")]
+        intake.update(intake_record)
     if path.name == Path(REFERENCE_MANIFEST).name:
         action_ids = sorted(set(action_ids) | {"active_report_manifest_freshness"})
     return {
         "path": rel_path,
         "report_type": report_type,
-        "content_sha256": content_sha256(path),
+        "content_sha256": report_digest,
         "coverage_markers": coverage_markers(path, text),
         "priority_mentions": priority_counts(text),
-        "unmatched_recommendation_count": unmatched_recommendation_count(
-            text,
-            line_action_digests=line_action_digests,
-            operator_context_line_digests=operator_context_line_digests,
+        **intake,
+        "unmatched_recommendation_count": int(
+            intake["recommendation_unresolved_count"]
         ),
+        "advisory_matched_action_ids": advisory_action_ids,
+        "advisory_matched_action_count": len(advisory_action_ids),
         "matched_action_ids": action_ids,
         "matched_action_count": len(action_ids),
         "operator_only_rationale": operator_only_rationale,
@@ -106,6 +125,28 @@ def coverage_action_basis(profile: dict[str, Any], statuses: dict[str, str]) -> 
         "unmatched_recommendation_count": int(
             profile.get("unmatched_recommendation_count") or 0
         ),
+        "recommendation_intake_status": str(
+            profile.get("recommendation_intake_status", "legacy")
+        ),
+        "recommendation_intake_error_codes": [
+            str(item) for item in profile.get("recommendation_intake_error_codes", [])
+        ],
+        "recommendation_candidate_count": int(
+            profile.get("recommendation_candidate_count") or 0
+        ),
+        "recommendation_covered_count": int(
+            profile.get("recommendation_covered_count") or 0
+        ),
+        "recommendation_unresolved_count": int(
+            profile.get("recommendation_unresolved_count") or 0
+        ),
+        "exact_mapped_action_ids": [
+            str(item) for item in profile.get("exact_mapped_action_ids", [])
+        ],
+        "unmatched_recommendation_line_sha256": [
+            str(item)
+            for item in profile.get("unmatched_recommendation_line_sha256", [])
+        ],
         "operator_only_rationale": str(profile.get("operator_only_rationale", "")).strip(),
     }
 
@@ -117,6 +158,8 @@ def coverage_archive_decision_code(
 ) -> str:
     if action_basis["operator_only_rationale"]:
         return str(action_basis["operator_only_rationale"])
+    if action_basis["recommendation_intake_status"] in {"missing", "stale", "invalid"}:
+        return "recommendation_intake_requires_operator_review"
     if int(action_basis["unmatched_recommendation_count"]) > 0:
         return "unmatched_recommendations_require_operator_review"
     if int(action_basis["unresolved_action_count"]) > 0:

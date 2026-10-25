@@ -18,6 +18,15 @@ REFERENCE_MANIFEST_EXTENSIONS = {".md", ".pdf", ".docx"}
 REPORT_EXTENSIONS = REFERENCE_MANIFEST_EXTENSIONS
 NARRATIVE_REPORT_EXTENSIONS = {".md"}
 BINARY_REPORT_EXTENSIONS = REPORT_EXTENSIONS - NARRATIVE_REPORT_EXTENSIONS
+RECOMMENDATION_INTAKE_STATUSES = (
+    "reviewed",
+    "legacy",
+    "missing",
+    "stale",
+    "invalid",
+    "not_applicable",
+    "unreadable",
+)
 
 ARCHIVE_STATUS_RE = re.compile(
     r"(?im)^\s*(?:archive_status|lifecycle_status|report_status)\s*[:=]\s*"
@@ -33,6 +42,7 @@ PRIORITY_NOTATION_META_RE = re.compile(
     r"not\s+a\s+cvss"
     r")"
 )
+SHA256_HEX_RE = re.compile(r"^[a-f0-9]{64}$")
 
 COVERAGE_MARKER_PATTERNS: tuple[tuple[str, str], ...] = (
     ("actual_file_crosscheck", r"actual[-_ ]file|실제\s*파일|파일\s*대조"),
@@ -208,6 +218,189 @@ def report_line_digest_policy(
     return action_line_sha256, operator_context_line_sha256
 
 
+def _empty_recommendation_intake(
+    status: str,
+    *,
+    error_codes: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    return {
+        "recommendation_intake_status": status,
+        "recommendation_intake_error_codes": list(error_codes),
+        "recommendation_candidate_count": 0,
+        "recommendation_covered_count": 0,
+        "recommendation_unresolved_count": 0,
+        "exact_mapped_action_ids": [],
+        "unmatched_recommendation_line_sha256": [],
+        "matched_action_ids": [],
+    }
+
+
+def _legacy_recommendation_intake(
+    text: str,
+    *,
+    line_action_digests: Mapping[str, tuple[str, ...]],
+    operator_context_line_digests: frozenset[str],
+) -> dict[str, Any]:
+    candidate_digests: set[str] = set()
+    covered_digests: set[str] = set()
+    unresolved_digests: set[str] = set()
+    for line in text.splitlines():
+        if not is_recommendation_candidate_line(
+            line,
+            line_action_digests=line_action_digests,
+            operator_context_line_digests=operator_context_line_digests,
+        ):
+            continue
+        digest = line_sha256(line)
+        candidate_digests.add(digest)
+        if matched_actions(line, line_action_digests=line_action_digests):
+            covered_digests.add(digest)
+        else:
+            unresolved_digests.add(digest)
+    return {
+        "recommendation_intake_status": "legacy",
+        "recommendation_intake_error_codes": [],
+        "recommendation_candidate_count": len(candidate_digests),
+        "recommendation_covered_count": len(covered_digests),
+        "recommendation_unresolved_count": len(unresolved_digests),
+        "exact_mapped_action_ids": [],
+        "unmatched_recommendation_line_sha256": sorted(unresolved_digests),
+        "matched_action_ids": matched_actions(
+            text,
+            line_action_digests=line_action_digests,
+        ),
+    }
+
+
+def _uses_archived_report_namespace(vault: Path, path: Path) -> bool:
+    try:
+        rel_path = path.resolve().relative_to((vault / "external-reports").resolve())
+    except ValueError:
+        return False
+    return bool(rel_path.parts) and rel_path.parts[0] in {"archive", "archived"}
+
+
+def report_recommendation_intake(
+    vault: Path,
+    *,
+    path: Path,
+    text: str,
+    report_content_sha256: str,
+) -> dict[str, Any]:
+    payload = load_json_object(vault / LOCAL_REPORT_LINE_DIGESTS)
+    if "report_intakes" not in payload:
+        line_action_digests, operator_context_line_digests = report_line_digest_policy(
+            vault
+        )
+        return _legacy_recommendation_intake(
+            text,
+            line_action_digests=line_action_digests,
+            operator_context_line_digests=operator_context_line_digests,
+        )
+
+    raw_intakes = payload.get("report_intakes")
+    if not isinstance(raw_intakes, dict):
+        return _empty_recommendation_intake(
+            "invalid",
+            error_codes=("invalid_report_intake_registry",),
+        )
+    rel_path = report_path(vault, path)
+    raw_record = raw_intakes.get(rel_path)
+    if raw_record is None:
+        if _uses_archived_report_namespace(vault, path):
+            line_action_digests, operator_context_line_digests = (
+                report_line_digest_policy(vault)
+            )
+            return _legacy_recommendation_intake(
+                text,
+                line_action_digests=line_action_digests,
+                operator_context_line_digests=operator_context_line_digests,
+            )
+        return _empty_recommendation_intake(
+            "missing",
+            error_codes=("missing_report_intake",),
+        )
+    if not isinstance(raw_record, dict):
+        return _empty_recommendation_intake(
+            "invalid",
+            error_codes=("invalid_report_intake_record",),
+        )
+    if raw_record.get("content_sha256") != report_content_sha256:
+        return _empty_recommendation_intake(
+            "stale",
+            error_codes=("report_content_sha256_mismatch",),
+        )
+
+    errors: list[str] = []
+    catalog_action_ids = {str(action["action_id"]) for action in ACTION_CATALOG}
+    raw_action_lines = raw_record.get("action_line_sha256")
+    action_lines: dict[str, tuple[str, ...]] = {}
+    if not isinstance(raw_action_lines, dict):
+        errors.append("invalid_action_line_mapping")
+    else:
+        for digest, raw_action_ids in raw_action_lines.items():
+            action_ids = as_str_tuple(raw_action_ids)
+            if not isinstance(digest, str) or not SHA256_HEX_RE.fullmatch(digest):
+                errors.append("invalid_line_sha256")
+                continue
+            if not action_ids or any(
+                action_id not in catalog_action_ids for action_id in action_ids
+            ):
+                errors.append("invalid_action_id")
+                continue
+            action_lines[digest] = tuple(dict.fromkeys(action_ids))
+
+    def digest_set(field: str) -> set[str]:
+        raw_value = raw_record.get(field)
+        if not isinstance(raw_value, list):
+            errors.append(f"invalid_{field}")
+            return set()
+        values = {item for item in raw_value if isinstance(item, str)}
+        if len(values) != len(raw_value) or any(
+            not SHA256_HEX_RE.fullmatch(item) for item in values
+        ):
+            errors.append("invalid_line_sha256")
+        return {item for item in values if SHA256_HEX_RE.fullmatch(item)}
+
+    operator_context_digests = digest_set("operator_context_line_sha256")
+    unresolved_digests = digest_set("unmatched_recommendation_line_sha256")
+    action_digests = set(action_lines)
+    if (
+        action_digests.intersection(operator_context_digests)
+        or action_digests.intersection(unresolved_digests)
+        or operator_context_digests.intersection(unresolved_digests)
+    ):
+        errors.append("overlapping_line_classification")
+    report_line_digests = {line_sha256(line) for line in text.splitlines()}
+    classified_digests = action_digests | operator_context_digests | unresolved_digests
+    if classified_digests - report_line_digests:
+        errors.append("line_digest_not_in_report")
+    if errors:
+        return _empty_recommendation_intake(
+            "invalid",
+            error_codes=tuple(dict.fromkeys(errors)),
+        )
+
+    exact_action_ids = [
+        str(action["action_id"])
+        for action in ACTION_CATALOG
+        if any(
+            str(action["action_id"]) in action_ids
+            for action_ids in action_lines.values()
+        )
+    ]
+    return {
+        "recommendation_intake_status": "reviewed",
+        "recommendation_intake_error_codes": [],
+        "recommendation_candidate_count": len(action_digests | unresolved_digests),
+        "recommendation_covered_count": len(action_digests),
+        "recommendation_unresolved_count": len(unresolved_digests),
+        "exact_mapped_action_ids": exact_action_ids,
+        "unmatched_recommendation_line_sha256": sorted(unresolved_digests),
+        "matched_action_ids": exact_action_ids,
+    }
+
+
 def _append_unique(items: list[str], item: str) -> None:
     if item not in items:
         items.append(item)
@@ -231,7 +424,7 @@ def matched_actions(
     return matches
 
 
-def is_unmatched_recommendation_line(
+def is_recommendation_candidate_line(
     line: str,
     *,
     line_action_digests: Mapping[str, tuple[str, ...]] | None = None,
@@ -249,13 +442,36 @@ def is_unmatched_recommendation_line(
     if not stripped:
         return False
     digest = line_sha256(line)
+    if digest in operator_context_line_digests:
+        return False
+    if digest in line_action_digests:
+        return True
     if not re.search(r"\bP[0-2]\b", line):
         return False
     if HEADING_LINE_RE.match(line):
         return False
-    if PRIORITY_NOTATION_META_RE.search(line):
-        return False
-    if digest in operator_context_line_digests:
+    return not PRIORITY_NOTATION_META_RE.search(line)
+
+
+def is_unmatched_recommendation_line(
+    line: str,
+    *,
+    line_action_digests: Mapping[str, tuple[str, ...]] | None = None,
+    operator_context_line_digests: frozenset[str] | None = None,
+) -> bool:
+    if line_action_digests is None or operator_context_line_digests is None:
+        default_line_action_digests, default_operator_context_line_digests = (
+            report_line_digest_policy()
+        )
+        if line_action_digests is None:
+            line_action_digests = default_line_action_digests
+        if operator_context_line_digests is None:
+            operator_context_line_digests = default_operator_context_line_digests
+    if not is_recommendation_candidate_line(
+        line,
+        line_action_digests=line_action_digests,
+        operator_context_line_digests=operator_context_line_digests,
+    ):
         return False
     return not matched_actions(line, line_action_digests=line_action_digests)
 

@@ -2716,6 +2716,15 @@
       "replacement": "make review-surface-manifest"
     },
     {
+      "canonical_module": "ops.scripts.public.source_history_scan_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.public.source_history_scan_runtime"
+    },
+    {
       "canonical_module": "ops.scripts.public.sync_public_surface_gitignore",
       "console_scripts": [],
       "install_state": "not_installed",

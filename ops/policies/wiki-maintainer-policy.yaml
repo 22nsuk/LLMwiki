@@ -1277,14 +1277,17 @@ subagent_routing_policy:
   enabled: true
   ladder:
   - rung: 1
-    model: gpt-5.6-sol
-    reasoning_effort: medium
-  - rung: 2
-    model: gpt-5.6-sol
+    model: gpt-6.1-sol
     reasoning_effort: high
-  - rung: 3
-    model: gpt-5.6-sol
+  - rung: 2
+    model: gpt-6.1-sol
     reasoning_effort: xhigh
+  - rung: 3
+    model: gpt-6.1-sol
+    reasoning_effort: max
+  - rung: 4
+    model: gpt-6-astra
+    reasoning_effort: high
   score_bands:
     low:
       max_score: 24
@@ -1344,11 +1347,12 @@ subagent_routing_policy:
       - 1
       - 2
       - 3
+      - 4
       score_band_rungs:
         low: 1
         moderate: 2
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides:
         change_surface:
           threshold: 3
@@ -1368,11 +1372,12 @@ subagent_routing_policy:
       allowed_rungs:
       - 2
       - 3
+      - 4
       score_band_rungs:
         low: 2
         moderate: 2
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides:
         dependency_impact:
           threshold: 4
@@ -1389,11 +1394,12 @@ subagent_routing_policy:
       allowed_rungs:
       - 2
       - 3
+      - 4
       score_band_rungs:
         low: 2
         moderate: 2
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides:
         dependency_impact:
           threshold: 4
@@ -1409,11 +1415,12 @@ subagent_routing_policy:
       default_rung: 3
       allowed_rungs:
       - 3
+      - 4
       score_band_rungs:
         low: 3
         moderate: 3
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides: {}
     scope-gate-reviewer:
       sandbox_mode: read-only
@@ -1421,11 +1428,12 @@ subagent_routing_policy:
       allowed_rungs:
       - 2
       - 3
+      - 4
       score_band_rungs:
         low: 2
         moderate: 2
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides:
         change_surface:
           threshold: 3
@@ -1444,11 +1452,12 @@ subagent_routing_policy:
       default_rung: 3
       allowed_rungs:
       - 3
+      - 4
       score_band_rungs:
         low: 3
         moderate: 3
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides:
         dependency_impact:
           threshold: 4
@@ -1464,44 +1473,48 @@ subagent_routing_policy:
       default_rung: 3
       allowed_rungs:
       - 3
+      - 4
       score_band_rungs:
         low: 3
         moderate: 3
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides: {}
     valuation-policy-auditor:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
       - 3
+      - 4
       score_band_rungs:
         low: 3
         moderate: 3
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides: {}
     release-authority-auditor:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
       - 3
+      - 4
       score_band_rungs:
         low: 3
         moderate: 3
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides: {}
     goal-runtime-triage-auditor:
       sandbox_mode: read-only
       default_rung: 3
       allowed_rungs:
       - 3
+      - 4
       score_band_rungs:
         low: 3
         moderate: 3
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides: {}
     external-report-action-auditor:
       sandbox_mode: read-only
@@ -1509,11 +1522,12 @@ subagent_routing_policy:
       allowed_rungs:
       - 2
       - 3
+      - 4
       score_band_rungs:
         low: 2
         moderate: 2
         high: 3
-        extreme: 3
+        extreme: 4
       pressure_overrides:
         artifact_heterogeneity:
           threshold: 3

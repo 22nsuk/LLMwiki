@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Callable
 from pathlib import Path
 
 from ops.scripts.core.policy_runtime import report_path
+from ops.scripts.public.source_history_scan_runtime import scan_source_history
 
 from .external_report_action_catalog import SOURCE_REVISION_RELEASE_AUTHORITY_REPORTS
 from .external_report_inventory_runtime import (
@@ -219,7 +221,9 @@ def sealed_summary_vocabulary_demotion_status(vault: Path) -> str:
         )
     )
     has_pre_distribution = "pre_distribution_package_binding_status" in surface_text
-    has_source_closeout_axis = "source_closeout_distribution_binding_status" in surface_text
+    has_source_closeout_axis = (
+        "source_closeout_distribution_binding_status" in surface_text
+    )
     if has_pre_distribution and has_source_closeout_axis:
         return "implemented"
     if has_pre_distribution or has_source_closeout_axis:
@@ -236,7 +240,9 @@ def selector_marker_scope_parity_status(vault: Path) -> str:
         "test-report-contract-core:",
         "test-report-contract-all:",
     )
-    present_make_target_count = sum(1 for target in required_make_targets if target in makefile_text)
+    present_make_target_count = sum(
+        1 for target in required_make_targets if target in makefile_text
+    )
     registered_target_count = sum(
         1
         for target in (
@@ -247,12 +253,15 @@ def selector_marker_scope_parity_status(vault: Path) -> str:
         )
         if target in registry_text
     )
-    if (
-        present_make_target_count == len(required_make_targets)
-        and registered_target_count == len(required_make_targets)
-    ):
+    if present_make_target_count == len(
+        required_make_targets
+    ) and registered_target_count == len(required_make_targets):
         return "implemented"
-    if present_make_target_count or registered_target_count or "tests/test_release_status_v2.py" in makefile_text:
+    if (
+        present_make_target_count
+        or registered_target_count
+        or "tests/test_release_status_v2.py" in makefile_text
+    ):
         return "partially_automated"
     return "planned"
 
@@ -313,7 +322,9 @@ def release_source_ready_deindex_hardening_status(
     return "requires_release_run_verification"
 
 
-def uv_lock_canonical_policy_status(vault: Path, existing_count: int, expected_count: int) -> str:
+def uv_lock_canonical_policy_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
     status = all_evidence_status(existing_count, expected_count)
     if status:
         return status
@@ -362,7 +373,9 @@ def goal_contract_schema_status(
     return "requires_release_run_verification"
 
 
-def codex_goal_adapter_status(vault: Path, existing_count: int, expected_count: int) -> str:
+def codex_goal_adapter_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
     status = all_evidence_status(existing_count, expected_count)
     if status:
         return status
@@ -456,9 +469,12 @@ def goal_run_status_audit_resume_status(
     runtime_certificate = as_dict(report.get("runtime_certificate"))
     contract_digest = goal_status_contract_digest(vault, goal)
     status_report_path = str(artifacts.get("status_report_path", "")).strip()
-    status_report_path_valid = status_report_path == "ops/reports/goal-run-status.json" or (
-        status_report_path.startswith("runs/goal-")
-        and status_report_path.endswith("/state/goal-run-status.json")
+    status_report_path_valid = (
+        status_report_path == "ops/reports/goal-run-status.json"
+        or (
+            status_report_path.startswith("runs/goal-")
+            and status_report_path.endswith("/state/goal-run-status.json")
+        )
     )
     artifact_paths = {
         "status_markdown_path": "runs/goal-",
@@ -505,7 +521,8 @@ def goal_run_status_audit_resume_status(
         and paths_valid
         and health.get("heartbeat_status") in {"current", "stale"}
         and health.get("checkpoint_status") in {"current", "stale"}
-        and health.get("command_heartbeat_status") in {"current", "stale", "not_recorded"}
+        and health.get("command_heartbeat_status")
+        in {"current", "stale", "not_recorded"}
         and health.get("backoff_status") in {"inactive", "active", "expired"}
         and health.get("resume_status") in {"not_requested", "ready"}
         and (
@@ -585,14 +602,16 @@ def selected_contract_currentness_gate_status(
     if status:
         return status
     readiness = load_json_object(vault / "ops/reports/auto-improve-readiness.json")
-    selected_contract = as_dict(as_dict(readiness.get("diagnostics")).get("selected_contract_summary"))
-    artifact_freshness = as_dict(as_dict(readiness.get("diagnostics")).get("artifact_freshness_summary"))
+    selected_contract = as_dict(
+        as_dict(readiness.get("diagnostics")).get("selected_contract_summary")
+    )
+    artifact_freshness = as_dict(
+        as_dict(readiness.get("diagnostics")).get("artifact_freshness_summary")
+    )
     test_summary = load_json_object(vault / "ops/reports/test-execution-summary.json")
     blockers = as_list(readiness.get("promotion_blockers"))
     blocker_ids = {
-        str(item.get("id", "")).strip()
-        for item in blockers
-        if isinstance(item, dict)
+        str(item.get("id", "")).strip() for item in blockers if isinstance(item, dict)
     }
     selected_status = str(selected_contract.get("status", "")).strip()
     artifact_freshness_status = str(artifact_freshness.get("status", "")).strip()
@@ -622,10 +641,11 @@ def git_worktree_goal_guard_status(
     except OSError:
         makefile_text = ""
     if (
-        "auto-improve-goal-preflight: goal-runtime-lock-check goal-runtime-python-preflight" in makefile_text
+        "auto-improve-goal-preflight: goal-runtime-lock-check goal-runtime-python-preflight"
+        in makefile_text
         and "ops.scripts.goal_worktree_guard" in makefile_text
-        and "--requested-mode \"$(GOAL_WORKTREE_MODE)\"" in makefile_text
-        and "--out \"$(GOAL_WORKTREE_GUARD_OUT)\"" in makefile_text
+        and '--requested-mode "$(GOAL_WORKTREE_MODE)"' in makefile_text
+        and '--out "$(GOAL_WORKTREE_GUARD_OUT)"' in makefile_text
         and "goal-worktree-guard: auto-improve-goal-preflight" in makefile_text
     ):
         return "implemented"
@@ -645,14 +665,17 @@ def goal_runtime_transient_cleanup_gate_status(
     if (
         "goal-runtime-clean-transient:" in makefile_text
         and "goal-runtime-run-admission-local-refresh:" in makefile_text
-        and "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh" in makefile_text
+        and "goal-runtime-run-admission: goal-runtime-run-admission-local-refresh"
+        in makefile_text
         and "goal-runtime-run-admission-converge:" in makefile_text
         and "$(MAKE) goal-runtime-clean-transient" in makefile_text
         and "$(MAKE) goal-runtime-quarantine-preflight" in makefile_text
-        and "--readiness-report \"$(GOAL_LOCAL_READINESS_OUT)\"" in makefile_text
-        and "--remediation-backlog-report \"$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)\"" in makefile_text
+        and '--readiness-report "$(GOAL_LOCAL_READINESS_OUT)"' in makefile_text
+        and '--remediation-backlog-report "$(GOAL_LOCAL_REMEDIATION_BACKLOG_OUT)"'
+        in makefile_text
         and "long-run-preflight-clean:" in makefile_text
-        and "long-run-preflight-clean: goal-runtime-run-admission-converge" in makefile_text
+        and "long-run-preflight-clean: goal-runtime-run-admission-converge"
+        in makefile_text
     ):
         return "implemented"
     return "requires_release_run_verification"
@@ -720,7 +743,8 @@ def artifact_freshness_performance_observability_reason_ids(
         )
     )
     checks = {
-        "artifact_freshness_context_missing": "ArtifactFreshnessContext" not in surface_text,
+        "artifact_freshness_context_missing": "ArtifactFreshnessContext"
+        not in surface_text,
         "artifact_freshness_schema_cache_missing": not any(
             token in surface_text
             for token in (
@@ -729,7 +753,9 @@ def artifact_freshness_performance_observability_reason_ids(
                 "compiled_validator_cache",
             )
         ),
-        "artifact_freshness_jsonl_progress_missing": not ("--progress" in surface_text and "jsonl" in surface_text),
+        "artifact_freshness_jsonl_progress_missing": not (
+            "--progress" in surface_text and "jsonl" in surface_text
+        ),
         "artifact_freshness_phase_timing_missing": not any(
             token in surface_text
             for token in (
@@ -763,12 +789,50 @@ def artifact_freshness_performance_observability_reason_ids(
             reasons.append("artifact_freshness_operational_attention")
         if as_int(summary.get("stable_contract_debt_artifact_count")):
             reasons.append("artifact_freshness_stable_contract_debt")
-        if not any(reason_id.startswith("artifact_freshness_") for reason_id in reasons):
-            reasons.append(f"artifact_freshness_report_status_{_reason_token(report.get('status'))}")
+        if not any(
+            reason_id.startswith("artifact_freshness_") for reason_id in reasons
+        ):
+            reasons.append(
+                f"artifact_freshness_report_status_{_reason_token(report.get('status'))}"
+            )
     return _dedupe_reason_ids(reasons)
 
 
-def repo_boundary_history_hygiene_status(vault: Path, existing_count: int, expected_count: int) -> str:
+def _source_history_scan_is_full_pass(source_history: dict[str, object]) -> bool:
+    return (
+        source_history.get("evaluation_status") == "evaluated"
+        and source_history.get("status") == "pass"
+        and source_history.get("ref_scope") == "all_refs_and_head"
+        and source_history.get("shallow_repository") is False
+        and as_int(source_history.get("violation_count")) == 0
+    )
+
+
+def _source_history_scan_is_current(
+    vault: Path,
+    report: dict[str, object],
+    source_history: dict[str, object],
+) -> bool:
+    stored_fingerprint = str(source_history.get("history_state_fingerprint", ""))
+    if not stored_fingerprint:
+        return False
+    input_fingerprints = as_dict(report.get("input_fingerprints"))
+    if (
+        input_fingerprints.get("source_history_state")
+        != hashlib.sha256(stored_fingerprint.encode("utf-8")).hexdigest()
+    ):
+        return False
+    current_source_history = as_dict(scan_source_history(vault))
+    return current_source_history.get(
+        "history_state_fingerprint"
+    ) == stored_fingerprint and _source_history_scan_is_full_pass(
+        current_source_history
+    )
+
+
+def repo_boundary_history_hygiene_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
     if existing_count == 0:
         return "planned"
     surface_text = "\n".join(
@@ -783,20 +847,13 @@ def repo_boundary_history_hygiene_status(vault: Path, existing_count: int, expec
         )
     )
     report = load_json_object(vault / "ops/reports/public-check-summary.json")
-    physical_split_status = str(
-        as_dict(report.get("summary")).get("physical_repo_split_status", "")
-    ).strip()
-    history_absence_status = str(
-        as_dict(report.get("summary")).get("private_surface_history_absence_status", "")
-    ).strip()
-    negative_assertion_fail_count = as_int(
-        as_dict(report.get("summary")).get("negative_assertion_fail_count")
-    )
-    if (
-        report.get("status") == "pass"
-        and physical_split_status == "pass"
-        and history_absence_status == "pass"
-        and negative_assertion_fail_count == 0
+    source_history = as_dict(report.get("source_history_scan"))
+    if _source_history_scan_is_full_pass(
+        source_history
+    ) and _source_history_scan_is_current(
+        vault,
+        report,
+        source_history,
     ):
         return "implemented"
     has_public_policy = all(
@@ -858,7 +915,9 @@ def release_mechanism_service_layer_extraction_status(
 ) -> str:
     if existing_count == 0:
         return "planned"
-    if existing_count != expected_count or not release_authority_service_complete(vault):
+    if existing_count != expected_count or not release_authority_service_complete(
+        vault
+    ):
         return "partially_automated"
     complete_service_family = all(
         (
@@ -885,18 +944,23 @@ def github_native_security_automation_status(
         )
     )
     has_dependabot = (vault / ".github/dependabot.yml").is_file()
-    has_codeql = "github/codeql-action" in workflow_text or "codeql" in read_text_or_empty(
-        vault / ".github/workflows/codeql.yml"
-    ).lower()
+    has_codeql = (
+        "github/codeql-action" in workflow_text
+        or "codeql"
+        in read_text_or_empty(vault / ".github/workflows/codeql.yml").lower()
+    )
     has_dependency_review = "actions/dependency-review-action" in workflow_text
     has_concurrency = "concurrency:" in workflow_text
     external_uses = re.findall(r"uses:\s+([^\s#]+)", workflow_text)
     pinned_uses = [
         use
         for use in external_uses
-        if re.search(r"@[0-9a-f]{40}\b", use) or use.startswith(("./", "docker://sha256:"))
+        if re.search(r"@[0-9a-f]{40}\b", use)
+        or use.startswith(("./", "docker://sha256:"))
     ]
-    all_external_uses_pinned = bool(external_uses) and len(pinned_uses) == len(external_uses)
+    all_external_uses_pinned = bool(external_uses) and len(pinned_uses) == len(
+        external_uses
+    )
     if (
         existing_count == expected_count
         and has_dependabot
@@ -936,11 +1000,13 @@ def generated_artifact_tracking_policy_status(
     tracking_policy = report.get("tracking_policy")
     tracking_policy_ok = (
         isinstance(tracking_policy, dict)
-        and str(tracking_policy.get("policy_id", "")).strip() == "generated_artifact_tracking_policy"
+        and str(tracking_policy.get("policy_id", "")).strip()
+        == "generated_artifact_tracking_policy"
     )
     currentness = report.get("currentness")
     currentness_ok = (
-        isinstance(currentness, dict) and str(currentness.get("status", "")).strip() == "current"
+        isinstance(currentness, dict)
+        and str(currentness.get("status", "")).strip() == "current"
     )
     if (
         existing_count == expected_count
@@ -971,7 +1037,9 @@ def public_export_negative_assertions_status(
         existing_count == expected_count
         and report.get("status") == "pass"
         and all(token in report_text_value for token in required_assertions)
-        and not re.search(r'"(?:status|result)"\s*:\s*"(?:fail|attention)"', report_text_value)
+        and not re.search(
+            r'"(?:status|result)"\s*:\s*"(?:fail|attention)"', report_text_value
+        )
     ):
         return "implemented"
     return "partially_automated"
@@ -996,7 +1064,9 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
     sbom = load_json_object(vault / "ops/reports/sbom-readiness-gate-report.json")
     in_toto = load_json_object(vault / "ops/reports/in-toto-statement.json")
     sigstore = load_json_object(vault / "ops/reports/sigstore-bundle-verification.json")
-    has_slsa_predicate = in_toto.get("predicateType") == "https://slsa.dev/provenance/v1"
+    has_slsa_predicate = (
+        in_toto.get("predicateType") == "https://slsa.dev/provenance/v1"
+    )
     sigstore_checks = [
         as_dict(check) for check in as_list(sigstore.get("verification_checks"))
     ]
@@ -1024,7 +1094,9 @@ def supply_chain_external_verification_reason_ids(vault: Path) -> list[str]:
     external_bundle_observed = any(
         check.get("pass") is True for check in external_bundle_checks
     )
-    sigstore_check_failed = any(check.get("pass") is not True for check in sigstore_checks)
+    sigstore_check_failed = any(
+        check.get("pass") is not True for check in sigstore_checks
+    )
     local_sigstore_check_failed = any(
         check.get("pass") is not True
         for check in sigstore_checks
@@ -1134,12 +1206,16 @@ def single_source_status(vault: Path) -> str:
     return "partially_automated"
 
 
-def command_heartbeat_observability_status(vault: Path, existing_count: int, expected_count: int) -> str:
+def command_heartbeat_observability_status(
+    vault: Path, existing_count: int, expected_count: int
+) -> str:
     if existing_count == 0:
         return "planned"
     if existing_count < expected_count:
         return "partially_automated"
-    source_package = load_json_object(vault / "ops/reports/source-package-clean-extract.json")
+    source_package = load_json_object(
+        vault / "ops/reports/source-package-clean-extract.json"
+    )
     heartbeat = as_dict(source_package.get("heartbeat_observability"))
     if (
         source_package.get("status") == "pass"
@@ -1156,7 +1232,9 @@ def sealed_preflight_canonicalization_status(
 ) -> str:
     if existing_count == 0:
         return "planned"
-    report = load_json_object(vault / "ops/reports/release-closeout-sealed-rehearsal-check.json")
+    report = load_json_object(
+        vault / "ops/reports/release-closeout-sealed-rehearsal-check.json"
+    )
     if (
         report.get("artifact_kind") == "release_closeout_sealed_rehearsal_check"
         and str(report.get("preflight_status", "")).strip()

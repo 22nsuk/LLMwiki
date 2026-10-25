@@ -24,6 +24,7 @@ from ops.scripts.public.public_surface_policy import (
     PUBLIC_INCLUDED_REPORT_FILES,
     PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS,
     find_public_local_path_leaks,
+    is_public_excluded_path,
     render_public_gitignore_block,
 )
 
@@ -46,6 +47,25 @@ def _git_check_ignored(repo: Path, paths: tuple[str, ...]) -> set[str]:
 
 
 class PublicSurfacePolicyTests(unittest.TestCase):
+    def test_canonical_exclusion_predicate_covers_private_roots_and_generated_state(
+        self,
+    ) -> None:
+        for rel_path in (
+            "raw",
+            "raw/source.pdf",
+            "external-reports/review.md",
+            "ops/reports/public-check-summary.json",
+            "ops/operator/release.json",
+            "docs/__pycache__/page.pyc",
+            "AGENTS.local.md",
+        ):
+            with self.subTest(rel_path=rel_path):
+                self.assertTrue(is_public_excluded_path(rel_path))
+
+        for rel_path in ("AGENTS.md", "docs/public-mirror.md", "ops/scripts/tool.py"):
+            with self.subTest(rel_path=rel_path):
+                self.assertFalse(is_public_excluded_path(rel_path))
+
     def test_root_docs_are_included_in_public_export_allowlist(self) -> None:
         missing = sorted(set(ROOT_DOCS) - set(PUBLIC_INCLUDE_FILES))
         self.assertEqual(

@@ -503,6 +503,72 @@ class ExternalReportActionMatrixTestBase(unittest.TestCase):
         self._write_release_manifests(
             release_source_tree_fingerprint(self.vault)
         )
+        self._write_verified_distribution_attestation()
+
+    def _write_verified_distribution_attestation(self) -> None:
+        package_name = "llm-wiki-vnext"
+        package_version = "0.1.0"
+        source_revision = resolve_source_revision(self.vault).revision
+        source_tree_fingerprint = release_source_tree_fingerprint(self.vault)
+        source_zip_sha256 = "d" * 64
+        dist_dir = self.vault / "dist"
+        dist_dir.mkdir(parents=True, exist_ok=True)
+        files = []
+        for filename, distribution_type, content in (
+            ("llm_wiki_vnext-0.1.0.tar.gz", "sdist", b"verified sdist"),
+            (
+                "llm_wiki_vnext-0.1.0-py3-none-any.whl",
+                "wheel",
+                b"verified wheel",
+            ),
+        ):
+            path = dist_dir / filename
+            path.write_bytes(content)
+            files.append(
+                {
+                    "filename": filename,
+                    "distribution_type": distribution_type,
+                    "size_bytes": len(content),
+                    "sha256": hashlib.sha256(content).hexdigest(),
+                    "package_name": package_name,
+                    "package_version": package_version,
+                }
+            )
+        manifest = {
+            "status": "pass",
+            "failures": [],
+            "package_name": package_name,
+            "package_version": package_version,
+            "source_zip_sha256": source_zip_sha256,
+            "source_revision": source_revision,
+            "source_tree_fingerprint": source_tree_fingerprint,
+            "file_count": 2,
+            "unexpected_files": [],
+            "files": files,
+        }
+        manifest_sha256 = hashlib.sha256(
+            json.dumps(
+                manifest,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        self._write_json(
+            "build/release/release-live-attestation.json",
+            {
+                "status": "pass",
+                "source_zip": {"sha256": source_zip_sha256},
+                "distribution_manifest": manifest,
+                "bindings": {
+                    "distribution_manifest_sha256": manifest_sha256,
+                    "distribution_package_name": package_name,
+                    "distribution_package_version": package_version,
+                    "distribution_source_revision": source_revision,
+                    "source_tree_fingerprint": source_tree_fingerprint,
+                },
+            },
+        )
 
     def _write_finality_authority_reports(self) -> None:
         self._write_json(

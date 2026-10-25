@@ -145,6 +145,12 @@ intentionally smaller than lint/eval, integration-heavy generator smoke, and
 full release smoke. `make runtime-hotspot-smoke` is the focused runtime
 decomposition check for hotspot façade refactors before a broader batch gate.
 
+Changes to the maintainer policy or the runtime golden baseline helper also
+select the session façade and readiness payload golden checks through the test
+lane registry. Compare canonical payloads against the base revision before
+updating a golden digest; accept only differences explained by the intended
+behavior change, and keep repeated-output equality assertions intact.
+
 For ordinary source maintenance, use this loop: edit the source contract,
 refresh tracked projections with `make sync-derived` when generated source
 surfaces are affected, then run the focused test that owns the changed surface.

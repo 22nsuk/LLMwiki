@@ -110,20 +110,54 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
         )
         _assert_run_contains(
-            self, _step(artifacts, "Build distributions"), ("python -m build",)
+            self,
+            _step(verify, "Build wheel and sdist once"),
+            ("python -m build --no-isolation --sdist --wheel",),
         )
         upload = _step(artifacts, "Upload release artifacts")
         self.assertIn("dist/*", _path_entries(upload))
         self.assertEqual(upload["with"]["name"], "release-artifacts")
         artifact_step_names = [str(step.get("name", "")) for step in _steps(artifacts)]
         for before, after in (
-            ("Verify live release authority", "Build distributions"),
-            ("Build distributions", "Upload release artifacts"),
+            ("Download verified distributions", "Verify live release authority"),
+            ("Verify live release authority", "Upload release artifacts"),
             ("Upload release artifacts", "Attest build provenance"),
         ):
             self.assertLess(artifact_step_names.index(before), artifact_step_names.index(after))
         artifact_runs = "\n".join(_run_text(step) for step in _steps(artifacts))
         self.assertNotIn("python -m pip install -r requirements-dev.txt build", artifact_runs)
+        self.assertNotIn("python -m build", artifact_runs)
+
+    def test_distribution_build_is_unprivileged_and_bound_before_upload(self) -> None:
+        workflow = _workflow()
+        verify = _job(workflow, "verify-clean-release")
+        permissions = verify.get("permissions", workflow.get("permissions"))
+        self.assertEqual(permissions, {"contents": "read"})
+        names = [str(step.get("name", "")) for step in _steps(verify)]
+        order = (
+            "Materialize verified source zip",
+            "Materialize verified evidence bundle",
+            "Clean extract verified source zip",
+            "Resolve deterministic source epoch",
+            "Build wheel and sdist once",
+            "Bind live release artifacts",
+            "Upload verified distributions",
+        )
+        self.assertEqual(sorted(order, key=names.index), list(order))
+        build = _step(verify, "Build wheel and sdist once")
+        self.assertEqual(
+            build.get("env"),
+            {"SOURCE_DATE_EPOCH": "${{ steps.source_epoch.outputs.value }}"},
+        )
+        self.assertIn('"${{ steps.extract.outputs.source-root }}"', _run_text(build))
+        builds = [
+            step
+            for job in _jobs(workflow).values()
+            if isinstance(job, dict)
+            for step in _steps(job)
+            if "python -m build" in _run_text(step)
+        ]
+        self.assertEqual(len(builds), 1)
 
     def test_trusted_ci_full_suite_attestation_is_additive_and_minimal(self) -> None:
         workflow = _workflow()
@@ -238,6 +272,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
         for step_name in (
             "Upload verified source zip",
             "Upload verified evidence bundle",
+            "Upload verified distributions",
             "Upload verified release attestation",
         ):
             upload = _step(verify, step_name)
@@ -315,6 +350,8 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
                 "ops.scripts.release.release_live_artifact_attestation build",
                 "--source-zip-path build/release/live-source.zip",
                 "--evidence-bundle-path build/release/release-evidence-bundle.zip",
+                "--dist-dir dist",
+                '--expected-source-revision "$GITHUB_SHA"',
             ),
         )
         expected_uploads = {
@@ -335,6 +372,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
                 "verified-release-attestation",
                 ("build/release/release-live-attestation.json",),
             ),
+            "Upload verified distributions": ("verified-distributions", ("dist/",)),
         }
         for step_name, (artifact_name, paths) in expected_uploads.items():
             with self.subTest(step=step_name):
@@ -342,10 +380,12 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
                 with_section = step.get("with", {})
                 self.assertIsInstance(with_section, dict)
                 self.assertEqual(with_section.get("name"), artifact_name)
+                self.assertTrue(with_section.get("overwrite"))
                 for path in paths:
                     self.assertIn(path, _path_entries(step))
         for step_name, artifact_name, path in (
             ("Download verified source zip", "verified-source-zip", "tmp/live-release/source"),
+            ("Download verified distributions", "verified-distributions", "dist"),
             (
                 "Download verified evidence bundle",
                 "verified-evidence-bundle",
@@ -373,6 +413,8 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
                 '--evidence-bundle-path "$EVIDENCE_BUNDLE"',
                 '--batch-manifest-path "$BATCH_MANIFEST"',
                 '--self-check-path "$SELF_CHECK"',
+                "--dist-dir dist",
+                '--expected-source-revision "$GITHUB_SHA"',
             ),
         )
         all_runs = "\n".join(

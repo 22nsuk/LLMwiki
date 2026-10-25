@@ -162,6 +162,15 @@ SUPPLY_CHAIN_EXTERNAL_REASON_TARGETS: dict[str, tuple[str, str, list[str]]] = {
 }
 REASON_PREFIX_TARGETS: tuple[tuple[tuple[str, ...], str, str, str, tuple[str, ...]], ...] = (
     (
+        ("release_live_distribution_",),
+        "release_publish_authorization",
+        "published_distribution",
+        "",
+        (
+            "python -m ops.scripts.release.release_live_artifact_attestation verify",
+        ),
+    ),
+    (
         ("release_run_manifest_",),
         "release_run_ready",
         "release_run",
@@ -410,4 +419,3 @@ def action_status_reason_details(
         _action_status_reason_detail(reason_id, fallback_target=fallback_target)
         for reason_id in reason_ids
     ]
-

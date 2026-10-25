@@ -14,12 +14,15 @@ from ops.scripts.release.external_report_inventory_runtime import (
     active_report_paths,
     archived_report_count,
     archived_report_paths,
+    content_sha256,
     coverage_markers,
+    is_recommendation_candidate_line,
     is_unmatched_recommendation_line,
     line_sha256,
     matched_actions,
     reference_manifest_alignment,
     report_line_digest_policy,
+    report_recommendation_intake,
     report_type_for_path,
     unmatched_recommendation_count,
 )
@@ -154,6 +157,163 @@ def test_local_report_line_digest_policy_is_digest_backed(tmp_path: Path) -> Non
         assert set(digest) <= set("0123456789abcdef")
 
 
+def test_digest_bound_intake_balances_exact_covered_and_unresolved_lines(
+    tmp_path: Path,
+) -> None:
+    reports = tmp_path / "external-reports"
+    reports.mkdir()
+    report = reports / "review.md"
+    action_line = "### F-01 synthetic tracked recommendation"
+    unresolved_line = "| synthetic recommendation without an owner |"
+    context_line = "P0 synthetic severity context only"
+    text = "\n".join([action_line, unresolved_line, context_line])
+    report.write_text(text, encoding="utf-8")
+    (tmp_path / LOCAL_REPORT_LINE_DIGESTS).write_text(
+        json.dumps(
+            {
+                "report_intakes": {
+                    "external-reports/review.md": {
+                        "content_sha256": content_sha256(report),
+                        "action_line_sha256": {
+                            line_sha256(action_line): [
+                                "codex_exec_dependency_preflight_trust_boundary"
+                            ]
+                        },
+                        "operator_context_line_sha256": [line_sha256(context_line)],
+                        "unmatched_recommendation_line_sha256": [
+                            line_sha256(unresolved_line)
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    intake = report_recommendation_intake(
+        tmp_path,
+        path=report,
+        text=text,
+        report_content_sha256=content_sha256(report),
+    )
+
+    assert intake["recommendation_intake_status"] == "reviewed"
+    assert intake["recommendation_intake_error_codes"] == []
+    assert intake["recommendation_candidate_count"] == 2
+    assert intake["recommendation_covered_count"] == 1
+    assert intake["recommendation_unresolved_count"] == 1
+    assert (
+        intake["recommendation_candidate_count"]
+        == intake["recommendation_covered_count"]
+        + intake["recommendation_unresolved_count"]
+    )
+    assert intake["exact_mapped_action_ids"] == [
+        "codex_exec_dependency_preflight_trust_boundary"
+    ]
+    assert intake["unmatched_recommendation_line_sha256"] == [
+        line_sha256(unresolved_line)
+    ]
+
+
+def test_digest_bound_intake_reports_missing_stale_and_invalid_records(
+    tmp_path: Path,
+) -> None:
+    reports = tmp_path / "external-reports"
+    reports.mkdir()
+    report = reports / "review.md"
+    action_line = "### F-01 synthetic tracked recommendation"
+    report.write_text(action_line, encoding="utf-8")
+    policy_path = tmp_path / LOCAL_REPORT_LINE_DIGESTS
+
+    policy_path.write_text(json.dumps({"report_intakes": {}}), encoding="utf-8")
+    missing = report_recommendation_intake(
+        tmp_path,
+        path=report,
+        text=action_line,
+        report_content_sha256=content_sha256(report),
+    )
+    assert missing["recommendation_intake_status"] == "missing"
+    assert missing["recommendation_intake_error_codes"] == ["missing_report_intake"]
+
+    record = {
+        "content_sha256": "0" * 64,
+        "action_line_sha256": {},
+        "operator_context_line_sha256": [],
+        "unmatched_recommendation_line_sha256": [],
+    }
+    policy_path.write_text(
+        json.dumps({"report_intakes": {"external-reports/review.md": record}}),
+        encoding="utf-8",
+    )
+    stale = report_recommendation_intake(
+        tmp_path,
+        path=report,
+        text=action_line,
+        report_content_sha256=content_sha256(report),
+    )
+    assert stale["recommendation_intake_status"] == "stale"
+    assert stale["recommendation_intake_error_codes"] == [
+        "report_content_sha256_mismatch"
+    ]
+
+    record["content_sha256"] = content_sha256(report)
+    record["action_line_sha256"] = {
+        line_sha256(action_line): ["not-a-catalog-action"]
+    }
+    policy_path.write_text(
+        json.dumps({"report_intakes": {"external-reports/review.md": record}}),
+        encoding="utf-8",
+    )
+    invalid = report_recommendation_intake(
+        tmp_path,
+        path=report,
+        text=action_line,
+        report_content_sha256=content_sha256(report),
+    )
+    assert invalid["recommendation_intake_status"] == "invalid"
+    assert "invalid_action_id" in invalid["recommendation_intake_error_codes"]
+
+
+def test_digest_bound_intake_preserves_legacy_archive_records_without_opt_in(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "external-reports" / "archive"
+    archive.mkdir(parents=True)
+    report = archive / "review.md"
+    text = "P0 archived recommendation retained by the legacy classifier"
+    report.write_text(text, encoding="utf-8")
+    (tmp_path / LOCAL_REPORT_LINE_DIGESTS).write_text(
+        json.dumps({"report_intakes": {}}),
+        encoding="utf-8",
+    )
+
+    intake = report_recommendation_intake(
+        tmp_path,
+        path=report,
+        text=text,
+        report_content_sha256=content_sha256(report),
+    )
+
+    assert intake["recommendation_intake_status"] == "legacy"
+    assert intake["recommendation_intake_error_codes"] == []
+
+
+def test_exact_digest_can_promote_a_heading_without_broad_heading_matching() -> None:
+    heading = "### F-01 synthetic tracked recommendation"
+    digest = line_sha256(heading)
+
+    assert not is_recommendation_candidate_line(
+        heading,
+        line_action_digests={},
+        operator_context_line_digests=frozenset(),
+    )
+    assert is_recommendation_candidate_line(
+        heading,
+        line_action_digests={digest: ("codex_exec_dependency_preflight_trust_boundary",)},
+        operator_context_line_digests=frozenset(),
+    )
+
+
 def test_unmatched_recommendation_count_ignores_headings_and_priority_notation_meta() -> None:
     text = "\n".join(
         [
@@ -173,7 +333,7 @@ def test_unmatched_recommendation_count_ignores_headings_and_priority_notation_m
     assert unmatched_recommendation_count(text) == 0
 
 
-def test_local_active_markdown_reports_have_no_unmatched_recommendations() -> None:
+def test_local_active_markdown_reports_have_digest_bound_reviewed_intake() -> None:
     report_paths = [
         path
         for path in active_reference_report_paths(REPO_ROOT)
@@ -182,17 +342,26 @@ def test_local_active_markdown_reports_have_no_unmatched_recommendations() -> No
     if not report_paths:
         pytest.skip("local active external reports are absent in this source tree")
 
-    line_action_digests, operator_context_line_digests = report_line_digest_policy(REPO_ROOT)
     for path in report_paths:
         text = path.read_text(encoding="utf-8")
+        intake = report_recommendation_intake(
+            REPO_ROOT,
+            path=path,
+            text=text,
+            report_content_sha256=content_sha256(path),
+        )
+        assert intake["recommendation_intake_status"] == "reviewed", report_path(
+            REPO_ROOT, path
+        )
+        assert intake["recommendation_candidate_count"] > 0, report_path(REPO_ROOT, path)
         assert (
-            unmatched_recommendation_count(
-                text,
-                line_action_digests=line_action_digests,
-                operator_context_line_digests=operator_context_line_digests,
-            )
-            == 0
+            intake["recommendation_candidate_count"]
+            == intake["recommendation_covered_count"]
+            + intake["recommendation_unresolved_count"]
         ), report_path(REPO_ROOT, path)
+        assert len(intake["unmatched_recommendation_line_sha256"]) == intake[
+            "recommendation_unresolved_count"
+        ], report_path(REPO_ROOT, path)
 
 
 def test_archived_reports_seven_and_eight_have_no_unmatched_recommendations() -> None:

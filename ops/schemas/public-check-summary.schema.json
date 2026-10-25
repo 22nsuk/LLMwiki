@@ -22,6 +22,7 @@
     "status",
     "summary",
     "public_export",
+    "source_history_scan",
     "public_export_negative_assertions",
     "commands"
   ],
@@ -83,7 +84,10 @@
         "command_fail_count",
         "negative_assertion_fail_count",
         "physical_repo_split_status",
-        "private_surface_history_absence_status",
+        "export_git_metadata_absence_status",
+        "source_history_evaluation_status",
+        "source_history_status",
+        "source_history_violation_count",
         "pytest_passed",
         "pytest_failed",
         "pytest_errors",
@@ -102,7 +106,13 @@
         "command_fail_count": { "type": "integer", "minimum": 0 },
         "negative_assertion_fail_count": { "type": "integer", "minimum": 0 },
         "physical_repo_split_status": { "type": "string", "enum": ["pass", "fail"] },
-        "private_surface_history_absence_status": { "type": "string", "enum": ["pass", "fail"] },
+        "export_git_metadata_absence_status": { "type": "string", "enum": ["pass", "fail"] },
+        "source_history_evaluation_status": {
+          "type": "string",
+          "enum": ["evaluated", "insufficient_history", "not_requested"]
+        },
+        "source_history_status": { "type": "string", "enum": ["pass", "fail", "unknown"] },
+        "source_history_violation_count": { "type": "integer", "minimum": 0 },
         "pytest_passed": { "type": "integer", "minimum": 0 },
         "pytest_failed": { "type": "integer", "minimum": 0 },
         "pytest_errors": { "type": "integer", "minimum": 0 },
@@ -126,7 +136,8 @@
         "file_count",
         "source_file_count",
         "export_root_fingerprint",
-        "manifest_sha256"
+        "manifest_sha256",
+        "git_metadata_present"
       ],
       "properties": {
         "output_dir": { "type": "string", "minLength": 1 },
@@ -134,9 +145,11 @@
         "file_count": { "type": "integer", "minimum": 0 },
         "source_file_count": { "type": "integer", "minimum": 0 },
         "export_root_fingerprint": { "$ref": "#/$defs/sha256" },
-        "manifest_sha256": { "$ref": "#/$defs/sha256" }
+        "manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "git_metadata_present": { "type": "boolean" }
       }
     },
+    "source_history_scan": { "$ref": "#/$defs/source_history_scan" },
     "commands": {
       "type": "array",
       "minItems": 3,
@@ -163,6 +176,146 @@
   },
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source_history_scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested",
+        "evaluation_status",
+        "status",
+        "reason",
+        "ref_scope",
+        "ref_count",
+        "head_present",
+        "shallow_repository",
+        "legacy_grafts_present",
+        "ref_fingerprint",
+        "history_state_fingerprint",
+        "scan_command",
+        "object_enumeration_complete",
+        "reachable_object_path_count",
+        "violation_count",
+        "violation_bytes",
+        "missing_object_count",
+        "sample_limit",
+        "sample_paths"
+      ],
+      "properties": {
+        "requested": { "type": "boolean" },
+        "evaluation_status": {
+          "type": "string",
+          "enum": ["evaluated", "insufficient_history", "not_requested"]
+        },
+        "status": { "type": "string", "enum": ["pass", "fail", "unknown"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "ref_scope": { "type": "string", "enum": ["all_refs_and_head", "none"] },
+        "ref_count": { "type": "integer", "minimum": 0 },
+        "head_present": { "type": "boolean" },
+        "shallow_repository": { "type": ["boolean", "null"] },
+        "legacy_grafts_present": { "type": ["boolean", "null"] },
+        "ref_fingerprint": { "$ref": "#/$defs/sha256" },
+        "history_state_fingerprint": { "$ref": "#/$defs/sha256" },
+        "scan_command": { "type": "string" },
+        "object_enumeration_complete": { "type": "boolean" },
+        "reachable_object_path_count": { "type": "integer", "minimum": 0 },
+        "violation_count": { "type": "integer", "minimum": 0 },
+        "violation_bytes": { "type": "integer", "minimum": 0 },
+        "missing_object_count": { "type": "integer", "minimum": 0 },
+        "sample_limit": { "type": "integer", "minimum": 1 },
+        "sample_paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "evaluation_status": { "const": "evaluated" } } },
+          "then": {
+            "properties": {
+              "requested": { "const": true },
+              "status": { "enum": ["pass", "fail"] },
+              "ref_scope": { "const": "all_refs_and_head" },
+              "shallow_repository": { "const": false },
+              "legacy_grafts_present": { "const": false },
+              "scan_command": { "minLength": 1 },
+              "object_enumeration_complete": { "const": true },
+              "missing_object_count": { "const": 0 }
+            },
+            "anyOf": [
+              { "properties": { "head_present": { "const": true } } },
+              { "properties": { "ref_count": { "minimum": 1 } } }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evaluation_status": { "const": "insufficient_history" }
+            }
+          },
+          "then": {
+            "properties": {
+              "requested": { "const": true },
+              "status": { "enum": ["fail", "unknown"] },
+              "ref_scope": { "const": "all_refs_and_head" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "evaluation_status": { "const": "not_requested" } }
+          },
+          "then": {
+            "properties": {
+              "requested": { "const": false },
+              "status": { "const": "unknown" },
+              "ref_scope": { "const": "none" },
+              "ref_count": { "const": 0 },
+              "head_present": { "const": false },
+              "shallow_repository": { "const": null },
+              "legacy_grafts_present": { "const": null },
+              "scan_command": { "const": "" },
+              "object_enumeration_complete": { "const": false },
+              "reachable_object_path_count": { "const": 0 },
+              "violation_count": { "const": 0 },
+              "violation_bytes": { "const": 0 },
+              "missing_object_count": { "const": 0 },
+              "sample_paths": { "maxItems": 0 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "pass" } } },
+          "then": {
+            "properties": {
+              "evaluation_status": { "const": "evaluated" },
+              "violation_count": { "const": 0 },
+              "violation_bytes": { "const": 0 },
+              "sample_paths": { "maxItems": 0 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "fail" } } },
+          "then": {
+            "properties": {
+              "violation_count": { "minimum": 1 },
+              "sample_paths": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "unknown" } } },
+          "then": {
+            "properties": {
+              "violation_count": { "const": 0 },
+              "sample_paths": { "maxItems": 0 }
+            }
+          }
+        }
+      ]
+    },
     "negative_assertion": {
       "type": "object",
       "additionalProperties": false,

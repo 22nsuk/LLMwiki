@@ -258,6 +258,7 @@ def _public_check_summary_payload() -> dict[str, object]:
         "input_fingerprints": {
             "source": "fp-current",
             "public_check_config": ZERO_SHA256,
+            "source_history_state": ZERO_SHA256,
         },
         "summary": {
             "public_export_status": "pass",
@@ -272,7 +273,10 @@ def _public_check_summary_payload() -> dict[str, object]:
             "command_fail_count": 0,
             "negative_assertion_fail_count": 0,
             "physical_repo_split_status": "pass",
-            "private_surface_history_absence_status": "pass",
+            "export_git_metadata_absence_status": "pass",
+            "source_history_evaluation_status": "evaluated",
+            "source_history_status": "pass",
+            "source_history_violation_count": 0,
             "pytest_passed": 1,
             "pytest_failed": 0,
             "pytest_errors": 0,
@@ -285,6 +289,32 @@ def _public_check_summary_payload() -> dict[str, object]:
             "source_file_count": 1,
             "export_root_fingerprint": ZERO_SHA256,
             "manifest_sha256": ZERO_SHA256,
+            "git_metadata_present": False,
+        },
+        "source_history_scan": {
+            "requested": True,
+            "evaluation_status": "evaluated",
+            "status": "pass",
+            "reason": "complete_full_ref_scan",
+            "ref_scope": "all_refs_and_head",
+            "ref_count": 1,
+            "head_present": True,
+            "shallow_repository": False,
+            "legacy_grafts_present": False,
+            "ref_fingerprint": ZERO_SHA256,
+            "history_state_fingerprint": ZERO_SHA256,
+            "scan_command": (
+                "git --no-replace-objects log --format= --raw --root "
+                "--no-renames --ignore-submodules=none -m -r -z "
+                "--no-abbrev --all HEAD"
+            ),
+            "object_enumeration_complete": True,
+            "reachable_object_path_count": 1,
+            "violation_count": 0,
+            "violation_bytes": 0,
+            "missing_object_count": 0,
+            "sample_limit": 20,
+            "sample_paths": [],
         },
         "public_export_negative_assertions": {
             "excluded_prefix_absence": {

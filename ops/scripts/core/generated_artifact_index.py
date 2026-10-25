@@ -100,6 +100,7 @@ SOURCE_COMMAND = (
 SOURCE_PATHS = [
     "ops/scripts/core/generated_artifact_index.py",
     "ops/scripts/release/external_report_inventory_runtime.py",
+    "ops/scripts/release/external_report_lifecycle_profile_runtime.py",
     "ops/scripts/release/external_report_lifecycle_runtime.py",
 ]
 COMPACT_YYYYMMDD_RE = re.compile(r"(?<!\d)(20\d{6})(?!\d)")
@@ -425,6 +426,29 @@ def _external_report_decision_fields(decision: dict[str, Any]) -> dict[str, Any]
         "unmatched_recommendation_count": int(
             decision.get("unmatched_recommendation_count") or 0
         ),
+        "recommendation_intake_status": str(
+            decision.get("recommendation_intake_status", "legacy")
+        ),
+        "recommendation_intake_error_codes": [
+            str(item) for item in decision.get("recommendation_intake_error_codes", [])
+        ],
+        "recommendation_candidate_count": int(
+            decision.get("recommendation_candidate_count") or 0
+        ),
+        "recommendation_covered_count": int(
+            decision.get("recommendation_covered_count") or 0
+        ),
+        "recommendation_unresolved_count": int(
+            decision.get("recommendation_unresolved_count") or 0
+        ),
+        "exact_mapped_action_ids": [
+            str(action_id)
+            for action_id in decision.get("exact_mapped_action_ids", [])
+        ],
+        "unmatched_recommendation_line_sha256": [
+            str(digest)
+            for digest in decision.get("unmatched_recommendation_line_sha256", [])
+        ],
         "operator_only_rationale": str(decision.get("operator_only_rationale", "")),
         "archive_decision_code": str(decision.get("archive_decision_code", "")),
     }

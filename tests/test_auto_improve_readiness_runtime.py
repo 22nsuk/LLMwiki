@@ -520,9 +520,10 @@ class AutoImproveReadinessRuntimeTests(
         self.assertEqual(outcome_summary["attempts_considered"], 12)
         self.assertEqual(proposal_summary["proposals_emitted"], 1)
         self.assertEqual(runnable_proposal_ids, ["proposal-ready"])
+        # The reviewed four-rung routing policy is part of the loader payload.
         self.assertEqual(
             hashlib.sha256(first_bytes).hexdigest(),
-            "d48b95d0371fce7aa005db7e5bc6fb548f07da9bd90548c1e14e4fb01542fd17",
+            "29d329dedf84d98773c05c996cfdb2018ee071bb436d8a6c097406fd5ba5f91c",
         )
 
     def test_open_remediation_backlog_blocks_promotion_not_trial(self) -> None:

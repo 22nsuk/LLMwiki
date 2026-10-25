@@ -1523,7 +1523,10 @@ class MakefileStaticGateTests(unittest.TestCase):
         )
         self.assertEqual(
             release_workflow_rule["path_patterns"],
-            [".github/workflows/release.yml"],
+            [
+                ".github/workflows/release.yml",
+                ".github/release-governance.yml",
+            ],
         )
         self.assertIn(
             "tests/test_release_workflow_static.py",

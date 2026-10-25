@@ -139,6 +139,14 @@ evidence rather than being hidden by omission. Do not blanket-register a task's
 observations; register only the unregistered open/planned items reported by the
 lint.
 
+Update an existing item through the canonical writer instead of editing its
+generated envelope by hand. Use
+`python -m ops.scripts.mechanism.improvement_observations --task-id <task-id>
+--update-observation-id <observation-id>` with at least one of `--status`,
+`--suggested-followup`, or repeatable `--resolution-evidence`; the equivalent
+`--run-id` form owns run observations. The command preserves the original
+capture time and untouched observations while refreshing envelope fingerprints.
+
 For meta-maintenance tracks that reduce bookkeeping surfaces, declare a stop
 condition once the duplicated owner has moved to a generator, manifest, or lint.
 After that point, observe the next 20-30 commits for recurring companion edits

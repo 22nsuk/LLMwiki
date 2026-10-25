@@ -244,6 +244,106 @@ def write_task_improvement_observations(
     return target_rel_path
 
 
+def update_improvement_observation(
+    vault: Path,
+    *,
+    observation_id: str,
+    run_id: str | None = None,
+    task_id: str | None = None,
+    status: str | None = None,
+    suggested_followup: str | None = None,
+    resolution_evidence: list[str] | None = None,
+    context: RuntimeContext | None = None,
+    policy_path: str | None = None,
+) -> str:
+    if bool(run_id) == bool(task_id):
+        raise ValueError("exactly one of run_id or task_id is required")
+    if not observation_id:
+        raise ValueError("observation_id is required")
+    if status is None and suggested_followup is None and resolution_evidence is None:
+        raise ValueError(
+            "at least one of status, suggested_followup, or resolution_evidence is required"
+        )
+    if status is not None and status not in {"open", "planned", "automated", "wontfix"}:
+        raise ValueError(f"unsupported improvement observation status: {status}")
+    if suggested_followup is not None:
+        suggested_followup = suggested_followup.strip()
+        if not suggested_followup:
+            raise ValueError("suggested_followup must not be empty")
+    if resolution_evidence is not None:
+        resolution_evidence = _resolution_evidence(resolution_evidence)
+        if not resolution_evidence:
+            raise ValueError("resolution_evidence must include at least one non-empty item")
+
+    selected_id = run_id or task_id or ""
+    expected_scope = RUN_SCOPE if run_id else TASK_SCOPE
+    identity_key = "run_id" if run_id else "task_id"
+    rel_path = (
+        run_improvement_observations_rel(selected_id)
+        if run_id
+        else task_improvement_observations_rel(selected_id)
+    )
+    payload = _read_existing_payload(vault, rel_path)
+    if payload.get("scope") != expected_scope:
+        raise ValueError(f"{rel_path}: expected scope {expected_scope}")
+    if payload.get(identity_key) != selected_id:
+        raise ValueError(f"{rel_path}: expected {identity_key} {selected_id}")
+
+    record_id = payload.get("record_id")
+    summary = payload.get("summary")
+    captured_at = payload.get("captured_at")
+    if not isinstance(record_id, str) or not record_id:
+        raise ValueError(f"{rel_path}: record_id must be a non-empty string")
+    if not isinstance(summary, str) or not summary:
+        raise ValueError(f"{rel_path}: summary must be a non-empty string")
+    if not isinstance(captured_at, str) or not captured_at:
+        raise ValueError(f"{rel_path}: captured_at must be a non-empty string")
+
+    raw_observations = payload.get("observations")
+    if not isinstance(raw_observations, list) or not all(
+        isinstance(item, dict) for item in raw_observations
+    ):
+        raise ValueError(f"{rel_path}: observations must be a list of objects")
+    observation_ids = [item.get("observation_id") for item in raw_observations]
+    if any(not isinstance(item_id, str) or not item_id for item_id in observation_ids):
+        raise ValueError(f"{rel_path}: every observation must have a non-empty observation_id")
+    duplicate_ids = sorted(
+        {item_id for item_id in observation_ids if observation_ids.count(item_id) > 1}
+    )
+    if duplicate_ids:
+        raise ValueError(
+            f"{rel_path}: duplicate observation_id values: {', '.join(duplicate_ids)}"
+        )
+    if observation_id not in observation_ids:
+        raise ValueError(f"{rel_path}: observation_id not found: {observation_id}")
+
+    observations = [dict(item) for item in raw_observations]
+    target = observations[observation_ids.index(observation_id)]
+    if status is not None:
+        target["status"] = status
+    if suggested_followup is not None:
+        target["suggested_followup"] = suggested_followup
+    if resolution_evidence is not None:
+        target["resolution_evidence"] = resolution_evidence
+
+    updated = build_improvement_observations(
+        ImprovementObservationsBuildRequest(
+            record_id=record_id,
+            scope=expected_scope,
+            summary=summary,
+            vault=vault,
+            context=context,
+            run_id=selected_id if run_id else None,
+            task_id=selected_id if task_id else None,
+            observations=observations,
+            captured_at=captured_at,
+            policy_path=policy_path,
+        )
+    )
+    write_json(vault, rel_path, updated, IMPROVEMENT_OBSERVATIONS_SCHEMA)
+    return rel_path
+
+
 def improvement_observation_paths(vault: Path) -> list[str]:
     paths: list[Path] = []
     task_root = vault / IMPROVEMENT_OBSERVATIONS_TASK_DIR
@@ -402,6 +502,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--summary")
     ap.add_argument("--out")
     ap.add_argument("--policy-path")
+    ap.add_argument("--update-observation-id")
+    ap.add_argument(
+        "--status",
+        choices=("open", "planned", "automated", "wontfix"),
+    )
+    ap.add_argument("--suggested-followup")
+    ap.add_argument(
+        "--resolution-evidence",
+        action="append",
+        help="Replacement resolution evidence entry; may be repeated.",
+    )
     ap.add_argument(
         "--backfill-existing",
         action="store_true",
@@ -413,8 +524,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.backfill_existing:
-        if args.run_id or args.task_id or args.out:
-            raise SystemExit("--backfill-existing cannot be combined with --run-id, --task-id, or --out")
+        incompatible = (
+            args.run_id,
+            args.task_id,
+            args.summary,
+            args.out,
+            args.update_observation_id,
+            args.status,
+            args.suggested_followup,
+            args.resolution_evidence,
+        )
+        if any(value is not None for value in incompatible):
+            raise SystemExit(
+                "--backfill-existing cannot be combined with scaffold or observation-update options"
+            )
         vault = args.vault.resolve()
         written = backfill_improvement_observations(vault, policy_path=args.policy_path)
         print(
@@ -429,10 +552,54 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    semantic_update_requested = any(
+        value is not None
+        for value in (args.status, args.suggested_followup, args.resolution_evidence)
+    )
+    if args.update_observation_id is None and semantic_update_requested:
+        raise SystemExit(
+            "--status, --suggested-followup, and --resolution-evidence require "
+            "--update-observation-id"
+        )
+    if args.update_observation_id is not None:
+        if args.summary is not None or args.out is not None:
+            raise SystemExit(
+                "--update-observation-id cannot be combined with scaffold options --summary or --out"
+            )
+        if not semantic_update_requested:
+            raise SystemExit(
+                "--update-observation-id requires at least one of --status, "
+                "--suggested-followup, or --resolution-evidence"
+            )
+
     if bool(args.run_id) == bool(args.task_id):
         raise SystemExit("exactly one of --run-id or --task-id is required")
 
     vault = args.vault.resolve()
+    if args.update_observation_id is not None:
+        rel_path = update_improvement_observation(
+            vault,
+            run_id=args.run_id,
+            task_id=args.task_id,
+            observation_id=args.update_observation_id,
+            status=args.status,
+            suggested_followup=args.suggested_followup,
+            resolution_evidence=args.resolution_evidence,
+            policy_path=args.policy_path,
+        )
+        print(
+            json.dumps(
+                {
+                    "scope": RUN_SCOPE if args.run_id else TASK_SCOPE,
+                    "record_id": args.run_id or args.task_id,
+                    "observation_id": args.update_observation_id,
+                    "path": rel_path,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return 0
+
     if args.run_id:
         rel_path = args.out or run_improvement_observations_rel(args.run_id)
         if rel_path != run_improvement_observations_rel(args.run_id):

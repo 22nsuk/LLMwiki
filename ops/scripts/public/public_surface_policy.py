@@ -214,9 +214,7 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
         PublicLocalPathLiteralExemption(_posix_local_path("tmp", "vault")),
     ),
     "tests/test_derived_surfaces.py": (
-        PublicLocalPathLiteralExemption(
-            _posix_local_path("tmp", "private-source.py")
-        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "private-source.py")),
     ),
     "tests/test_goal_run_status.py": (
         PublicLocalPathLiteralExemption(
@@ -283,22 +281,16 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
         ),
     ),
     "tests/test_release_run_manifest.py": (
-        PublicLocalPathLiteralExemption(
-            _posix_local_path("tmp", "not-in-vault.zip")
-        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "not-in-vault.zip")),
     ),
     "tests/test_release_run_ready.py": (
-        PublicLocalPathLiteralExemption(
-            _posix_local_path("tmp", "not-in-vault.zip")
-        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "not-in-vault.zip")),
         PublicLocalPathLiteralExemption(
             _posix_local_path("tmp", "not-in-vault-smoke.json")
         ),
     ),
     "tests/test_release_smoke.py": (
-        PublicLocalPathLiteralExemption(
-            _posix_local_path("tmp", "release-vault")
-        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "release-vault")),
     ),
     "tests/test_runtime_hotspot_facade_golden_outputs.py": (
         PublicLocalPathLiteralExemption(_posix_local_path("var", "folders/")),
@@ -344,9 +336,7 @@ PUBLIC_INTENTIONAL_LOCAL_PATH_LITERALS: dict[
         PublicLocalPathLiteralExemption(_posix_local_path("tmp", "evil")),
     ),
     "tests/test_test_execution_command_runtime.py": (
-        PublicLocalPathLiteralExemption(
-            _posix_local_path("tmp", "venv/bin/python")
-        ),
+        PublicLocalPathLiteralExemption(_posix_local_path("tmp", "venv/bin/python")),
     ),
 }
 
@@ -523,9 +513,27 @@ def is_public_excluded_by_local_state(rel_path: str) -> bool:
     for part in path.parts:
         if part in PUBLIC_EXCLUDED_SEGMENTS:
             return True
-        if any(fnmatchcase(part, pattern) for pattern in PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS):
+        if any(
+            fnmatchcase(part, pattern)
+            for pattern in PUBLIC_EXCLUDED_LOCAL_FILE_PATTERNS
+        ):
             return True
     return False
+
+
+def is_public_excluded_path(rel_path: str) -> bool:
+    """Return whether the canonical public policy excludes a repository path."""
+    normalized = PurePosixPath(rel_path).as_posix().removeprefix("./")
+    if normalized in PUBLIC_INCLUDED_REPORT_FILES:
+        return False
+    if normalized in PUBLIC_EXCLUDED_FILES:
+        return True
+    if any(
+        normalized == prefix.rstrip("/") or normalized.startswith(prefix)
+        for prefix in PUBLIC_EXCLUDED_PREFIXES
+    ):
+        return True
+    return is_public_excluded_by_local_state(normalized)
 
 
 def render_public_gitignore_block() -> str:
