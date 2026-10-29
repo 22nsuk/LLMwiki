@@ -21,7 +21,13 @@ runs:
         sudo apt-get update
         # The ephemeral runner needs this profile, not unrelated service restarts.
         sudo env NEEDRESTART_MODE=l apt-get install --yes bubblewrap apparmor-profiles
-        sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+        # AppArmor moved the packaged profile into /etc on newer Ubuntu images.
+        sandbox_profile=/etc/apparmor.d/bwrap-userns-restrict
+        if [ ! -f "$sandbox_profile" ]; then
+          sandbox_profile=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+        fi
+        test -f "$sandbox_profile"
+        sudo apparmor_parser -r "$sandbox_profile"
 
     - name: Setup Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0

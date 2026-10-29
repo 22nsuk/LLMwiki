@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import shlex
+import subprocess
 import unittest
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -79,6 +82,48 @@ def _assert_locked_dependency_steps(case: unittest.TestCase, job: dict[str, obje
         case.assertNotIn("python -m pip install -r requirements-dev.txt build", run_text)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Linux-only sandbox setup shell")
+@pytest.mark.parametrize("layout, parser_exit", [("system", 0), ("extra", 0), ("missing", 0), ("system", 9)])
+def test_sandbox_setup_loads_packaged_profile_and_propagates_failure(
+    tmp_path: Path, layout: str, parser_exit: int
+) -> None:
+    action = load_workflow(Path(".github/actions/setup-python-uv/action.yml"))
+    runs = workflow_mapping(action["runs"], "composite runs")
+    script = _run_text(_step_by_name(runs, "Install candidate validation sandbox"))
+    for kind, location in (
+        ("system", "/etc/apparmor.d/bwrap-userns-restrict"),
+        ("extra", "/usr/share/apparmor/extra-profiles/bwrap-userns-restrict"),
+    ):
+        profile = tmp_path / f"{kind}-profile"
+        if kind == layout:
+            profile.write_text("synthetic packaged profile\n", encoding="utf-8")
+        script = script.replace(location, shlex.quote(str(profile)))
+    # Substitute privileged package/parser commands, retaining the real shell
+    # selection and exit propagation without changing the test host.
+    sudo = tmp_path / "sudo"
+    sudo.write_text(
+        '#!/bin/sh\nif [ "$1" = apparmor_parser ]; then\n'
+        '  test -f "$3" || exit 2\n'
+        '  printf "%s\\n" "$3" > "$LLMWIKI_TEST_PROFILE_LOG"\n'
+        '  exit "$LLMWIKI_TEST_PROFILE_EXIT"\nfi\n',
+        encoding="utf-8",
+    )
+    sudo.chmod(0o755)
+    log = tmp_path / "loaded-profile"
+    result = subprocess.run(
+        ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", script],
+        env={**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ.get('PATH', '')}",
+             "LLMWIKI_TEST_PROFILE_LOG": str(log), "LLMWIKI_TEST_PROFILE_EXIT": str(parser_exit)},
+        text=True, capture_output=True, timeout=10, check=False,
+    )
+    if layout == "missing":
+        assert result.returncode != 0
+        assert not log.exists()
+    else:
+        assert result.returncode == parser_exit, result.stderr
+        assert log.read_text(encoding="utf-8").strip() == str(tmp_path / f"{layout}-profile")
+
+
 class CiWorkflowStaticTests(unittest.TestCase):
     def test_candidate_sandbox_install_is_limited_to_linux(self) -> None:
         action = load_workflow(Path(".github/actions/setup-python-uv/action.yml"))
@@ -91,7 +136,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
             install,
         )
         self.assertIn(
-            "apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict",
+            'sudo apparmor_parser -r "$sandbox_profile"',
             install,
         )
         smoke = _step_by_name(runs, "Verify candidate validation sandbox")
