@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_envelope_runtime import local_corpus_policy_is_current
 from ops.scripts.core.source_revision_runtime import resolve_source_revision
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
@@ -239,8 +240,12 @@ def canonical_artifact_freshness_state(
         )
         if rejection is None:
             rejection = _artifact_freshness_summary_rejection_reason(artifact_freshness_report)
+        if rejection is None and vault is not None and not local_corpus_policy_is_current(vault, artifact_freshness_report):
+            rejection = (EVIDENCE_STATUS_STALE, "artifact_freshness_local_corpus_policy_mismatch")
         if rejection is not None:
-            fallback_evidence_status, fallback_reason_id = rejection
+            return _artifact_freshness_unavailable_state(
+                evidence_status=rejection[0], reason_id=rejection[1]
+            )
         state = _canonical_artifact_freshness_state_from_report(
             artifact_freshness_report,
             current_source_revision=current_source_revision,

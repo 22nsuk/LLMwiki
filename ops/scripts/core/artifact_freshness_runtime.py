@@ -15,6 +15,7 @@ from .artifact_envelope_runtime import (
     CanonicalReportEnvelopeRequest,
     artifact_input_fingerprints,
     build_canonical_report_envelope,
+    local_corpus_policy_is_current,
     resolve_artifact_path as _resolve_artifact_path,
 )
 from .artifact_freshness_debt_runtime import (
@@ -773,6 +774,19 @@ def _artifact_record_currentness_state(
     )
     input_fingerprint_status = "not_applicable"
     input_fingerprint_mismatch_keys: list[str] = []
+    # Only effective-policy inputs depend on the overlay; environment-only
+    # preflight reports use file-path inputs without consuming corpus policy.
+    fingerprints = normalized_payload.get("input_fingerprints", {})
+    policy_bound = isinstance(fingerprints, dict) and any(
+        key in fingerprints for key in ("policy", "local_corpus_policy")
+    )
+    if (
+        source_tree_fingerprint_status != "not_applicable"
+        and policy_bound
+        and not local_corpus_policy_is_current(vault, normalized_payload)
+    ):
+        input_fingerprint_status = "stale"
+        input_fingerprint_mismatch_keys = ["local_corpus_policy"]
     currentness_status = _computed_currentness_status(
         declared_currentness_status=declared_currentness_status,
         source_tree_fingerprint_status=source_tree_fingerprint_status,

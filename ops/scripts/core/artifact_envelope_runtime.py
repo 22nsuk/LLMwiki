@@ -10,6 +10,7 @@ from .policy_runtime import (
     LOCAL_CORPUS_POLICY_PATH,
     local_corpus_policy_path,
     report_path,
+    resolve_policy_path,
 )
 from .source_revision_runtime import resolve_source_revision
 from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
@@ -186,6 +187,16 @@ def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bo
     if not isinstance(fingerprints, dict):
         return False
     if "custom_policy_path" in fingerprints:
+        return True
+    # Reports written before local overlays used only policy.path for scope.
+    policy = report.get("policy", {})
+    path = policy.get("path") if isinstance(policy, dict) else None
+    if (
+        "local_corpus_policy" not in fingerprints
+        and isinstance(path, str)
+        and path
+        and local_corpus_policy_path(vault, resolve_policy_path(vault, path)) is None
+    ):
         return True
     local_policy = vault / LOCAL_CORPUS_POLICY_PATH
     current = _sha256_file(local_policy) if local_policy.exists() else None

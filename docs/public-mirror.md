@@ -73,6 +73,17 @@ Canonical report input fingerprints include `local_corpus_policy` whenever the
 default policy has a local overlay. The `policy` fingerprint binds both files,
 and cached test summaries and collection manifests are invalidated when the
 overlay changes or is removed.
+The shared artifact freshness scan also marks policy-bound live canonical reports stale
+when the overlay is created, changed, or removed, including reports generated
+before overlays were supported. It records
+`input_fingerprint_mismatch:local_corpus_policy` and requires the report owner
+to regenerate the evidence. Explicit custom policies stay independent of the
+default overlay; archived reports and historical run snapshots retain their
+existing lifecycle treatment. Release closeout routes policy mismatches in
+release-owned reports through its existing freshness review gate. Closeout and
+external-report lifecycle readers reject a cached freshness aggregate whose
+local policy inputs have changed until it is regenerated. Environment-only
+diagnostics without effective-policy inputs remain independent of the overlay.
 Public source fingerprints, Git tracking, public exports, wheels, and sdists
 exclude the local file.
 Full and sparse candidate workspaces retain the overlay whenever they copy the

@@ -186,8 +186,9 @@ def release_owned_artifact_freshness_attention(vault: Path, payload: dict[str, A
                 "source_tree_fingerprint_unknown",
                 "generated_at_older_than_file_mtime",
                 "test_target_missing",
+                "input_fingerprint_unknown",
             }
-            or issue.startswith("test_target_fingerprint_mismatch")
+            or issue.startswith(("test_target_fingerprint_mismatch", "input_fingerprint_mismatch"))
             for issue in issues
         ):
             return True

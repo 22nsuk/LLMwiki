@@ -11,6 +11,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 import pytest
+import yaml
 
 from ops.scripts.core.artifact_freshness_runtime import (
     ArtifactFreshnessContext,
@@ -18,12 +19,27 @@ from ops.scripts.core.artifact_freshness_runtime import (
     build_report,
     write_report,
 )
+from ops.scripts.core.bootstrap_preflight import build_report as build_bootstrap_report
 from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.policy_runtime import (
+    DEFAULT_POLICY_PATH,
+    LOCAL_CORPUS_POLICY_PATH,
+    load_policy,
+    write_local_corpus_policy,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_constants_runtime import CYCLONEDX_16_SCHEMA_URI
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.core.source_tree_fingerprint_runtime import (
     release_source_tree_fingerprint,
+)
+from ops.scripts.eval.wiki_lint import lint
+from ops.scripts.release.external_report_action_lifecycle_runtime import (
+    canonical_artifact_freshness_state,
+)
+from ops.scripts.release.release_closeout_source_runtime import (
+    SOURCE_SPECS,
+    load_closeout_source,
 )
 from ops.scripts.test.test_execution_summary import (
     build_report as build_test_execution_summary,
@@ -50,6 +66,167 @@ def fixed_context() -> RuntimeContext:
         display_timezone=dt.UTC,
         clock=lambda: dt.datetime(2026, 4, 24, 12, 0, tzinfo=dt.UTC),
     )
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+def test_local_policy_transitions_invalidate_native_lint_evidence(
+    tmp_path: Path, transition: str
+) -> None:
+    seed_minimal_vault(tmp_path)
+    policy, _ = load_policy(tmp_path)
+    sections = policy["page_shape"]["special_page_required_sections"]["system/system-index.md"]
+    missing_section = "Synthetic required section"
+    if transition == "remove":
+        sections.append(missing_section)
+        (tmp_path / DEFAULT_POLICY_PATH).write_text(yaml.safe_dump(policy, sort_keys=False), encoding="utf-8")
+        sections.remove(missing_section)
+    if transition != "create":
+        write_local_corpus_policy(tmp_path, policy)
+    original = lint(tmp_path, context=fixed_context())
+    assert original["status"] == "pass"
+    relative_path = "ops/reports/lint-report.json"
+    report_path = tmp_path / relative_path
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(original), encoding="utf-8")
+    before = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    assert next(row for row in before["artifact_records"] if row["path"] == relative_path)["currentness_status"] == "current"
+
+    if transition == "remove":
+        (tmp_path / LOCAL_CORPUS_POLICY_PATH).unlink()
+    else:
+        sections.append(missing_section)
+        write_local_corpus_policy(tmp_path, policy)
+    refreshed = lint(tmp_path, context=fixed_context())
+    assert refreshed["status"] == "fail"
+    assert refreshed["source_tree_fingerprint"] == original["source_tree_fingerprint"]
+    assert refreshed["input_fingerprints"]["policy"] != original["input_fingerprints"]["policy"]
+    report = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    record = next(row for row in report["artifact_records"] if row["path"] == relative_path)
+    assert validate_with_schema(report, load_schema(REPORT_SCHEMA_PATH)) == []
+    assert record["schema_validation_status"] == "pass"
+    assert record["source_tree_fingerprint_status"] == "current"
+    assert record["currentness_status"] == "stale"
+    assert record["input_fingerprint_status"] == "stale"
+    assert record["input_fingerprint_mismatch_keys"] == ["local_corpus_policy"]
+    assert record["issues"] == ["input_fingerprint_mismatch:local_corpus_policy"]
+    assert record["safe_to_backfill"] is False
+    assert record["recommended_next_action"] == "regenerate_canonical_report"
+    assert record["gate_effect"] == "claim_blocker"
+    assert report["status"] == "attention"
+    assert report["summary"]["stale_artifact_count"] == 1
+    assert report["summary"]["operational_attention_artifact_count"] == 1
+    assert report["gate_effect"] == "claim_blocker"
+
+    report_path.write_text(json.dumps(refreshed), encoding="utf-8")
+    after = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    current = next(row for row in after["artifact_records"] if row["path"] == relative_path)
+    assert current["currentness_status"] == "current"
+    assert current["input_fingerprint_mismatch_keys"] == []
+    assert after["status"] == "pass"
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_custom_policy_freshness_is_independent_of_default_local_policy(
+    tmp_path: Path, legacy: bool
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom_path = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom_path).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    original = lint(tmp_path, custom_path, context=fixed_context())
+    if legacy:
+        original["input_fingerprints"].pop("custom_policy_path")
+    relative_path = "ops/reports/lint-report.json"
+    report_path = tmp_path / relative_path
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(original), encoding="utf-8")
+    policy, _ = load_policy(tmp_path)
+    policy["page_shape"]["special_page_required_sections"]["system/system-index.md"].append("Synthetic required section")
+    write_local_corpus_policy(tmp_path, policy)
+
+    assert lint(tmp_path, context=fixed_context())["status"] == "fail"
+    assert lint(tmp_path, custom_path, context=fixed_context())["status"] == "pass"
+    report = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    record = next(row for row in report["artifact_records"] if row["path"] == relative_path)
+    assert record["currentness_status"] == "current"
+    assert record["input_fingerprint_status"] == "not_applicable"
+    assert record["issues"] == []
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+def test_cached_freshness_consumers_reject_local_policy_drift(
+    tmp_path: Path, transition: str
+) -> None:
+    seed_minimal_vault(tmp_path)
+    policy, _ = load_policy(tmp_path)
+    if transition != "create":
+        write_local_corpus_policy(tmp_path, policy)
+    original = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    write_report(tmp_path, original)
+    spec = next(item for item in SOURCE_SPECS if item.name == "artifact_freshness")
+    assert load_closeout_source(tmp_path, spec)[1] == "ok"
+    assert canonical_artifact_freshness_state(tmp_path)["evidence_status"] == "current"
+
+    if transition == "remove":
+        (tmp_path / LOCAL_CORPUS_POLICY_PATH).unlink()
+    else:
+        policy["page_shape"]["special_page_required_sections"]["system/system-index.md"].append("Synthetic required section")
+        write_local_corpus_policy(tmp_path, policy)
+    assert release_source_tree_fingerprint(tmp_path) == original["source_tree_fingerprint"]
+    _, load_status, blockers = load_closeout_source(tmp_path, spec)
+    assert load_status == "unusable"
+    assert blockers[0]["code"] == "artifact_freshness_report_not_current"
+    assert "local_corpus_policy" in blockers[0]["message"]
+    state = canonical_artifact_freshness_state(tmp_path)
+    assert state["evidence_status"] == "stale"
+    assert state["stale_artifact_count"] is None
+    assert state["total_artifact_count"] is None
+
+    refreshed = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    write_report(tmp_path, refreshed)
+    assert load_closeout_source(tmp_path, spec)[1] == "ok"
+    assert canonical_artifact_freshness_state(tmp_path)["evidence_status"] == "current"
+
+
+def test_environment_report_without_effective_policy_inputs_stays_current(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    original = build_bootstrap_report(vault=tmp_path, clock=lambda: dt.datetime(2026, 4, 24, 12, 0, tzinfo=dt.UTC))
+    relative_path = "ops/reports/bootstrap-preflight-report.json"
+    report_path = tmp_path / relative_path
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(original), encoding="utf-8")
+    policy, _ = load_policy(tmp_path)
+    write_local_corpus_policy(tmp_path, policy)
+
+    report = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    record = next(row for row in report["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["currentness_status"] == "current"
+    assert record["input_fingerprint_status"] == "not_applicable"
+
+
+@pytest.mark.parametrize("relative_path, archived", [
+    ("ops/reports/history/lint-report.json", False),
+    ("runs/historical/lint-report.json", False),
+    ("ops/reports/lint-report.json", True),
+])
+def test_local_policy_drift_does_not_reclassify_historical_evidence(
+    tmp_path: Path, relative_path: str, archived: bool
+) -> None:
+    seed_minimal_vault(tmp_path)
+    original = lint(tmp_path, context=fixed_context())
+    if archived:
+        original.update(artifact_status="archived", retention_policy="archive")
+    report_path = tmp_path / relative_path
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(original), encoding="utf-8")
+    policy, _ = load_policy(tmp_path)
+    write_local_corpus_policy(tmp_path, policy)
+
+    report = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    record = next(row for row in report["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["input_fingerprint_status"] == "not_applicable"
+    assert record["input_fingerprint_mismatch_keys"] == []
 
 
 @pytest.mark.fast_smoke
