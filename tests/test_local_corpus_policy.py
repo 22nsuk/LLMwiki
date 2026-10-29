@@ -293,6 +293,10 @@ class LocalCorpusPolicyTests(unittest.TestCase):
         (self.vault / "ops/__init__.py").write_text("", encoding="utf-8")
         sentinel = b"private-corpus-build-sentinel"
         self.local_path.write_bytes(sentinel)
+        for directory in ("reports", "operator"):
+            private_module = self.vault / "ops" / directory / "private_diagnostic.py"
+            private_module.parent.mkdir(parents=True, exist_ok=True)
+            private_module.write_bytes(b"# " + sentinel + b"\n")
         result = subprocess.run(
             [sys.executable, "-m", "build", "--no-isolation", "--sdist", "--wheel"],
             cwd=self.vault,

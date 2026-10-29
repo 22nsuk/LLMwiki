@@ -184,6 +184,9 @@ jobs:
           --outdir "$GITHUB_WORKSPACE/dist"
           "${{ steps.extract.outputs.source-root }}"
 
+      - name: Verify installed wheel
+        run: python tools/verify_installed_wheel.py --dist dist --out tmp/installed-wheel-smoke.json
+
       - name: Bind live release artifacts
         run: |
           python -m ops.scripts.release.release_live_artifact_attestation build \

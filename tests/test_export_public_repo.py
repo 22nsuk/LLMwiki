@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -17,6 +18,87 @@ from ops.scripts.release.external_report_lifecycle_status_decision_runtime impor
 from tests.minimal_vault_runtime import REPO_ROOT
 
 pytestmark = pytest.mark.public
+
+
+@pytest.mark.parametrize("relationship", ["same", "ancestor", "descendant", "alias"])
+@pytest.mark.parametrize("clean", [True, False])
+def test_export_rejects_overlapping_roots_before_mutation(tmp_path: Path, relationship: str, clean: bool) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    source = vault / "README.md"
+    source.write_text("public source\n")
+    private = vault / "private-sentinel"
+    private.write_text("private source\n")
+    output = {"same": vault, "ancestor": tmp_path, "descendant": vault / "output"}.get(relationship)
+    if relationship == "alias":
+        output = tmp_path / "alias"
+        try:
+            output.symlink_to(vault, target_is_directory=True)
+        except OSError:
+            pytest.skip("directory symlinks are unavailable")
+    assert output is not None
+    with pytest.raises(ValueError, match="overlap"):
+        export_public_repo(vault, output, clean=clean)
+    assert source.read_text() == "public source\n"
+    assert private.read_text() == "private source\n"
+    assert not (vault / "output").exists()
+
+
+def test_export_copy_failure_preserves_previous_export_and_source(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    output.mkdir()
+    (vault / "README.md").write_text("new source\n")
+    (output / "README.md").write_text("previous export\n")
+    with (
+        patch("ops.scripts.public.export_public_repo.shutil.copy2", side_effect=OSError("copy failed")),
+        pytest.raises(OSError, match="copy failed"),
+    ):
+        export_public_repo(vault, output)
+    assert (vault / "README.md").read_text() == "new source\n"
+    assert (output / "README.md").read_text() == "previous export\n"
+    assert not list(tmp_path.glob(".public.stage-*"))
+
+
+def test_no_clean_export_preserves_extras_without_following_destination_links(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    output.mkdir()
+    (vault / "README.md").write_text("new source\n")
+    (output / "extra.txt").write_text("retained\n")
+    export_public_repo(vault, output, clean=False)
+    assert (output / "extra.txt").read_text() == "retained\n"
+    assert (output / "README.md").read_text() == "new source\n"
+
+    outside = tmp_path / "outside.txt"
+    outside.write_text("untouched\n")
+    (output / "README.md").unlink()
+    try:
+        (output / "README.md").symlink_to(outside)
+    except OSError:
+        pytest.skip("file symlinks are unavailable")
+    export_public_repo(vault, output, clean=False)
+    assert outside.read_text() == "untouched\n"
+    assert not (output / "README.md").is_symlink()
+
+
+def test_export_publish_failure_restores_previous_directory(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    output.mkdir()
+    (vault / "README.md").write_text("new\n")
+    (output / "README.md").write_text("previous\n")
+    replace = Path.replace
+
+    def fail_publish(path: Path, target: Path) -> Path:
+        if path.name == "export" and path.parent.name.startswith(".public.stage-"):
+            raise OSError("publish failed")
+        return replace(path, target)
+
+    with patch.object(Path, "replace", fail_publish), pytest.raises(OSError, match="publish failed"):
+        export_public_repo(vault, output)
+    assert (output / "README.md").read_text() == "previous\n"
+    assert not list(tmp_path.glob(".public.previous-*"))
 
 
 class ExportPublicRepoTests(unittest.TestCase):

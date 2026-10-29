@@ -114,6 +114,7 @@ strict_optional = true
 
 [tool.setuptools.packages.find]
 include = ["ops*"]
+exclude = ["ops.reports*", "ops.operator*"]
 
 [tool.setuptools.package-data]
 ops = [

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import sys
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
@@ -74,35 +75,45 @@ def iter_public_files(vault: Path) -> list[str]:
     return files
 
 
-def _remove_tree(path: Path) -> None:
-    if not path.exists():
-        return
-    target = path
-    tombstone = path.parent / f".{path.name}.delete-{os.getpid()}"
-    suffix = 0
-    while tombstone.exists():
-        suffix += 1
-        tombstone = path.parent / f".{path.name}.delete-{os.getpid()}-{suffix}"
-    try:
-        path.replace(tombstone)
-        target = tombstone
-    except FileNotFoundError:
-        return
-    except OSError:
-        target = path
-    try:
-        shutil.rmtree(target)
-    except FileNotFoundError:
-        return
+def _export_roots(vault: Path, out_dir: Path) -> tuple[Path, Path]:
+    source, output = vault.resolve(), out_dir.resolve()
+    if source.is_relative_to(output) or output.is_relative_to(source):
+        raise ValueError("public export source and output must not overlap")
+    if not source.is_dir():
+        raise ValueError("public export source must be an existing directory")
+    if output.exists() and not output.is_dir():
+        raise ValueError("public export output must be a directory")
+    return source, output
 
 
-def export_public_repo(
-    vault: Path, out_dir: Path, *, clean: bool = True
-) -> dict[str, object]:
-    if clean and out_dir.exists():
-        _remove_tree(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+@contextmanager
+def _output_lock(output: Path) -> Iterator[None]:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    lock = output.parent / f".{output.name}.export.lock"
+    if lock.is_symlink():
+        raise ValueError("public export lock must not be a symlink")
+    # Keep the inode after release so another process cannot lock a replacement
+    # while a waiter still holds the old inode. The OS releases locks on exit.
+    with lock.open("a+b") as handle:
+        if handle.tell() == 0:
+            handle.write(b"0")
+            handle.flush()
+        handle.seek(0)
+        try:
+            if sys.platform == "win32":
+                import msvcrt
 
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise RuntimeError("cannot acquire public export output lock") from exc
+        yield
+
+
+def _populate_export(vault: Path, out_dir: Path) -> dict[str, object]:
     vault_root = vault.resolve()
     copied: list[str] = []
     for rel_path in iter_public_files(vault):
@@ -110,7 +121,11 @@ def export_public_repo(
         if not _is_safe_export_file(vault_root, source):
             continue
         destination = out_dir / rel_path
+        if any(parent.is_symlink() for parent in destination.parents if parent.is_relative_to(out_dir)):
+            raise ValueError("public export destination contains a symlink directory")
         destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.is_symlink():
+            destination.unlink()
         if rel_path == ".gitignore":
             destination.write_text(render_public_gitignore_block(), encoding="utf-8")
         else:
@@ -130,6 +145,46 @@ def export_public_repo(
     }
     atomic_write_json(out_dir / "PUBLIC-EXPORT-MANIFEST.json", manifest)
     return manifest
+
+
+def _publish_export(staged: Path, output: Path) -> None:
+    backup: Path | None = None
+    if output.exists():
+        backup = Path(tempfile.mkdtemp(prefix=f".{output.name}.previous-", dir=output.parent))
+        backup.rmdir()
+        output.replace(backup)
+    try:
+        staged.replace(output)
+    except OSError:
+        if backup is not None:
+            backup.replace(output)
+        raise
+    if backup is not None:
+        shutil.rmtree(backup)
+
+
+@contextmanager
+def public_export_session(
+    vault: Path, out_dir: Path, *, clean: bool = True
+) -> Iterator[dict[str, object]]:
+    source, output = _export_roots(vault, out_dir)
+    with _output_lock(output):
+        with tempfile.TemporaryDirectory(prefix=f".{output.name}.stage-", dir=output.parent) as temp:
+            staged = Path(temp) / "export"
+            if not clean and output.exists():
+                shutil.copytree(output, staged, symlinks=True)
+            else:
+                staged.mkdir()
+            manifest = _populate_export(source, staged)
+            _publish_export(staged, output)
+        yield manifest
+
+
+def export_public_repo(
+    vault: Path, out_dir: Path, *, clean: bool = True
+) -> dict[str, object]:
+    with public_export_session(vault, out_dir, clean=clean) as manifest:
+        return manifest
 
 
 def build_parser() -> argparse.ArgumentParser:

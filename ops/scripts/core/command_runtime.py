@@ -333,6 +333,8 @@ def _poll_returncode(process: ProcessHandle) -> int | None:
 
 
 def _normalize_output(value: object) -> str:
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
     if isinstance(value, str):
         return value
     return "" if value is None else str(value)
@@ -382,7 +384,9 @@ def _result_from_completed_process(
         normalized_quiet_seconds = inputs.timeout_seconds
     return TimedProcessResult(
         args=inputs.argv_list,
-        returncode=inputs.process.returncode if inputs.process.returncode is not None else -1,
+        returncode=(inputs.process.returncode or -1) if inputs.timed_out else (
+            inputs.process.returncode if inputs.process.returncode is not None else -1
+        ),
         stdout=normalized_stdout,
         stderr=normalized_stderr,
         timed_out=inputs.timed_out,
@@ -469,6 +473,13 @@ def _signal_process(
     return active_backend.send_signal(process, sig)
 
 
+def _ready_output(process: ProcessHandle) -> tuple[str, str] | None:
+    try:
+        return process.communicate(timeout=0)
+    except subprocess.TimeoutExpired:
+        return None
+
+
 def _finalize_timed_out_process(
     process: ProcessHandle,
     *,
@@ -476,18 +487,14 @@ def _finalize_timed_out_process(
     grace_seconds: float,
 ) -> tuple[str, str, str, str]:
     returncode = _poll_returncode(process)
-    if returncode is not None:
-        stdout, stderr = process.communicate()
-        return stdout, stderr, "none", "poll_before_signal"
-
-    try:
-        stdout, stderr = process.communicate(timeout=0)
-        return stdout, stderr, "none", "signal_race_recovered"
-    except subprocess.TimeoutExpired:
-        returncode = _poll_returncode(process)
-        if returncode is not None:
-            stdout, stderr = process.communicate()
-            return stdout, stderr, "none", "poll_before_signal"
+    ready = _ready_output(process)
+    if ready is not None:
+        state = "poll_before_signal" if returncode is not None else "signal_race_recovered"
+        return *ready, "none", state
+    if returncode is None and _poll_returncode(process) is not None:
+        ready = _ready_output(process)
+        if ready is not None:
+            return *ready, "none", "poll_before_signal"
 
     signal_sent = backend.send_signal(process, signal.SIGTERM)
     try:
@@ -496,14 +503,20 @@ def _finalize_timed_out_process(
     except subprocess.TimeoutExpired:
         returncode = _poll_returncode(process)
         if returncode is not None:
-            stdout, stderr = process.communicate()
-            return stdout, stderr, signal_sent, "poll_after_grace"
+            ready = _ready_output(process)
+            if ready is not None:
+                return *ready, signal_sent, "poll_after_grace"
         kill_signal = backend.kill_signal()
         kill_sent = backend.send_signal(process, kill_signal)
         if kill_sent != "none":
             signal_sent = kill_sent
-        stdout, stderr = process.communicate()
-        return stdout, stderr, signal_sent, "drain_after_kill"
+        try:
+            stdout, stderr = process.communicate(timeout=grace_seconds)
+            return stdout, stderr, signal_sent, "drain_after_kill"
+        except subprocess.TimeoutExpired as exc:
+            # A detached writer may be outside the backend's termination scope.
+            # Return bounded, unsuccessful evidence instead of waiting forever.
+            return _normalize_output(exc.output), _normalize_output(exc.stderr), signal_sent, "output_drain_timeout"
 
 
 def _terminate_timed_out_process(
@@ -719,13 +732,14 @@ def _completed_run_result(
 def _timeout_expired_run_result(state: _RunWithTimeoutState) -> TimedProcessResult:
     returncode = _poll_returncode(state.process)
     if returncode is not None:
-        stdout, stderr = state.process.communicate()
-        return _completed_run_result(
-            state,
-            stdout=stdout,
-            stderr=stderr,
-            final_state_observed="poll_before_signal",
-        )
+        try:
+            stdout, stderr = state.process.communicate(timeout=0)
+            return _completed_run_result(
+                state, stdout=stdout, stderr=stderr,
+                final_state_observed="poll_before_signal",
+            )
+        except subprocess.TimeoutExpired:
+            pass
     stdout, stderr, signal_sent, final_state_observed = _finalize_timed_out_process(
         state.process,
         backend=state.active_backend,

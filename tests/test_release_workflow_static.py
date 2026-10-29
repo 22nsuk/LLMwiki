@@ -140,6 +140,7 @@ class ReleaseWorkflowStaticTests(unittest.TestCase):
             "Clean extract verified source zip",
             "Resolve deterministic source epoch",
             "Build wheel and sdist once",
+            "Verify installed wheel",
             "Bind live release artifacts",
             "Upload verified distributions",
         )

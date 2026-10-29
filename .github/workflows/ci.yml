@@ -94,6 +94,10 @@ jobs:
         if: matrix.tier == 'fast'
         run: python -m build
 
+      - name: Verify installed wheel
+        if: matrix.tier == 'fast'
+        run: python tools/verify_installed_wheel.py --dist dist --out tmp/installed-wheel-smoke.json
+
       - name: Run fast contract tier
         if: matrix.tier == 'fast'
         run: |

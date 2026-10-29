@@ -8,7 +8,8 @@ PUBLIC_CHECK_SUMMARY_FULL_CHECK_OUT ?= tmp/public-check-summary-full-check.json
 PUBLIC_CHECK_SUMMARY_FULL_REUSE_FROM ?= $(PUBLIC_CHECK_SUMMARY_FULL_OUT)
 PUBLIC_CHECK_TIMEOUT_SECONDS ?= 5400
 PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS ?= 30
-PUBLIC_OUT ?= $(if $(TMPDIR),$(TMPDIR),/tmp)/llm-wiki-public-repo
+PUBLIC_OUT ?=
+PUBLIC_EXPORT_OUT ?= $(if $(strip $(PUBLIC_OUT)),$(PUBLIC_OUT),$(if $(TMPDIR),$(TMPDIR),/tmp)/llm-wiki-public-repo)
 PUBLIC_PYTHON ?= $(if $(wildcard $(firstword $(PYTHON))),$(abspath $(firstword $(PYTHON))),$(shell command -v $(firstword $(PYTHON))))
 PUBLIC_GITIGNORE_TEMPLATE ?= ops/templates/public-mirror.gitignore
 
@@ -24,7 +25,7 @@ sync-public-policy-check:
 	$(PYTHON) -m ops.scripts.public.sync_public_surface_gitignore --gitignore "$(PUBLIC_GITIGNORE_TEMPLATE)" --check
 
 public-export:
-	$(PYTHON) -m ops.scripts.export_public_repo --vault "$(VAULT)" --out "$(PUBLIC_OUT)"
+	$(PYTHON) -m ops.scripts.export_public_repo --vault "$(VAULT)" --out "$(PUBLIC_EXPORT_OUT)"
 
 public-check-summary: script-output-surfaces-check
 	$(PYTHON) -m ops.scripts.public_check_summary --vault "$(VAULT)" --out "$(PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT)" --public-out "$(PUBLIC_OUT)" --public-python "$(PUBLIC_PYTHON)" --ruff-targets "$(RUFF_TARGETS)" --mypy-targets "$(MYPY_TARGETS)" --pytest-mark-expr "$(PYTEST_PUBLIC_MARK_EXPR)" --pytest-flags "$(PYTEST_FLAGS)" --timeout-seconds "$(PUBLIC_CHECK_TIMEOUT_SECONDS)" --heartbeat-interval-seconds "$(PUBLIC_CHECK_HEARTBEAT_INTERVAL_SECONDS)"

@@ -46,6 +46,17 @@ separately from the canonical-index check so local index configuration drift is
 visible as environment normalization work instead of being mistaken for lockfile
 staleness.
 
+After building distributions, `python tools/verify_installed_wheel.py` installs
+the exact wheel in a disposable virtualenv outside the checkout using hashed
+runtime dependencies exported from `uv.lock`. It checks every declared console
+script, installed-module locations, bundled schema fallback, and a synthetic
+local policy overlay. Its JSON result binds success to the wheel's SHA-256.
+CI runs this check after package build; release runs it before artifact binding.
+Generated `ops/reports` and `ops/operator` modules are excluded from package
+discovery. The wheel check also rejects policy-excluded members, including
+residue from older build caches. If that check fails, build from a fresh public
+export rather than publishing the cached distribution.
+
 CI and release jobs share `.github/actions/setup-python-uv/action.yml` for
 Python, uv, and frozen dependency installation. When enabled, pip and uv cache
 downloads have a one-minute timeout per segment; an unavailable cache falls through to the same
@@ -56,6 +67,10 @@ installed dependencies. See [candidate validation isolation](ops-runtime.md)
 for the host requirements.
 
 ## Supported Test Entrypoints
+
+`report-contract-closeout-precheck` stops if its target-list generator or any
+listed Make target fails. Later targets and closeout evidence refresh do not
+run after that failure; a successful final target cannot mask an earlier error.
 
 Use Make targets for repository-owned test lanes. They apply the documented
 virtualenv, plugin-autoload, bytecode/cache, marker, and xdist policy. Bare
