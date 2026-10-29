@@ -173,8 +173,9 @@ full-pytest-generated-preflight:
 	$(MAKE) _internal-runtime-hotspot-goldens-check
 
 report-contract-closeout-precheck:
-	@for target in $$($(PYTHON) -m ops.scripts.report_contract_closeout_runtime --vault "$(VAULT)"); do \
-		$(MAKE) $$target; \
+	@targets=$$($(PYTHON) -m ops.scripts.report_contract_closeout_runtime --vault "$(VAULT)") || exit $$?; \
+	for target in $$targets; do \
+		$(MAKE) "$$target" || exit $$?; \
 	done
 
 report-contract-closeout:

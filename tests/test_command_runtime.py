@@ -29,6 +29,19 @@ class CompletingOnDrainFakeProcess(FakeProcess):
 
 
 class CommandRuntimeTests(unittest.TestCase):
+    def test_timeout_with_unreleased_output_is_bounded_and_unsuccessful(self) -> None:
+        process = FakeProcess(
+            communicate_side_effect=[subprocess.TimeoutExpired(cmd=["python"], timeout=1, output=b"partial\n") for _ in range(8)],
+            poll_side_effect=[0] * 8,
+        )
+        result = run_with_timeout(["python"], cwd=Path(), timeout_seconds=1,
+                                  grace_seconds=0.1, backend=FakeProcessBackend(process))
+        self.assertTrue(result.timed_out)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.final_state_observed, "output_drain_timeout")
+        self.assertIn("partial", result.stdout)
+        self.assertTrue(all(call["timeout"] is not None for call in process.communicate_calls))
+
     def test_run_with_timeout_returns_completed_process_result(self) -> None:
         process = FakeProcess(communicate_side_effect=[("ok\n", "")])
         process.returncode = 0

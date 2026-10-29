@@ -7,18 +7,24 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
+import threading
 import unittest
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+import pytest
+
 import ops.scripts.public.public_check_summary as public_check_summary_module
 from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.public.export_public_repo import public_export_session
 from ops.scripts.public.public_check_summary import (
     PublicCheckRequest,
     _default_command_runner,
@@ -113,6 +119,82 @@ def fake_runner(
         timeout_seconds=timeout_seconds,
         termination_reason="completed",
     )
+
+
+def test_default_public_checks_have_independent_workspaces_and_caches(tmp_path: Path) -> None:
+    barrier = threading.Barrier(2)
+    directories: list[Path] = []
+    requests = PublicCheckRequest(source_history_scan=False)
+    vaults = [tmp_path / name for name in ("a", "b")]
+    for vault in vaults:
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        seed_public_policy_file(vault)
+        (vault / "README.md").write_text(vault.name, encoding="utf-8")
+
+    def check(vault: Path) -> dict[str, Any]:
+        def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+            if argv[2] == "ruff":
+                directories.append(cwd)
+                barrier.wait(timeout=15)
+            read = subprocess.run([sys.executable, "-I", "-c", "from pathlib import Path; print(Path('README.md').read_text())"], cwd=cwd, capture_output=True, text=True, check=True, timeout=10)
+            assert read.stdout.strip() == vault.name
+            return fake_runner(argv, cwd, timeout)
+        return build_report(vault, requests, context=fixed_context(), command_runner=runner)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        reports = list(pool.map(check, vaults))
+    assert all(report["status"] == "pass" for report in reports)
+    assert len(set(directories)) == 2
+    assert all(not path.exists() for path in directories)
+    assert _public_pytest_summary_cache_path(vaults[0], requests) != _public_pytest_summary_cache_path(vaults[1], requests)
+    assert reports[0]["public_export"]["output_dir"] == "<tmp>/invocation-private/export"
+
+
+@pytest.mark.parametrize("changed", ["source", "export"])
+def test_public_check_rejects_input_changes_during_validation(tmp_path: Path, changed: str) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+
+    def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+        if argv[2] == "ruff":
+            target = vault if changed == "source" else cwd
+            (target / "README.md").write_text("changed after snapshot\n", encoding="utf-8")
+        return fake_runner(argv, cwd, timeout)
+
+    with pytest.raises(ValueError, match="inputs changed"):
+        build_report(vault, context=fixed_context(), command_runner=runner)
+
+
+def test_explicit_export_lock_excludes_other_processes(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    (vault / "README.md").write_text("source\n", encoding="utf-8")
+    code = "from pathlib import Path; from ops.scripts.public.export_public_repo import export_public_repo; import sys; export_public_repo(Path(sys.argv[1]), Path(sys.argv[2]))"
+    command = [sys.executable, "-c", code, str(vault), str(output)]
+    with public_export_session(vault, output):
+        result = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, timeout=20, check=False)
+        assert result.returncode != 0
+        assert "output lock" in result.stderr
+        assert (output / "README.md").read_text() == "source\n"
+    subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, timeout=20, check=True)
+
+
+def test_reuse_rejects_retained_export_content_drift(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(output), source_history_scan=False)
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    path = write_report(vault, report)
+    assert reusable_summary_diagnostics(vault, path, request)["reusable"] is True
+    (output / "README.md").write_text("replaced by another invocation\n", encoding="utf-8")
+    diagnostics = reusable_summary_diagnostics(vault, path, request)
+    assert diagnostics["reusable"] is False
+    assert diagnostics["checks"]["retained_export"] is False
 
 
 def failing_pytest_runner(
@@ -378,7 +460,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertTrue(
                 report["public_export"]["output_dir"].endswith(f"/{public_out.name}")
             )
-            self.assertTrue(_public_pytest_summary_cache_path().exists())
+            self.assertTrue(_public_pytest_summary_cache_path(vault, PublicCheckRequest(
+                public_out=str(public_out), public_python="python", pytest_flags="-q"
+            )).exists())
             self.assertFalse(
                 (public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).exists()
             )

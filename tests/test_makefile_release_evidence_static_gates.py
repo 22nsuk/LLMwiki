@@ -4,6 +4,8 @@ import hashlib
 import json
 import os
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -34,6 +36,28 @@ pytestmark = [
 
 REPORT_CONTRACT_CLOSEOUT_POLICY = Path("ops/policies/report-contract-closeout.json")
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.skipif(shutil.which("make") is None or shutil.which("sh") is None, reason="Make recipe shell is unavailable")
+@pytest.mark.parametrize("failure", ["generator", "child"])
+def test_closeout_precheck_propagates_failure_and_stops_followups(tmp_path: Path, failure: str) -> None:
+    generator = tmp_path / "generator.py"
+    generator.write_text("raise SystemExit(7)\n" if failure == "generator" else "print('first second')\n", encoding="utf-8")
+    marker = tmp_path / "continued"
+    recipe = _target_block(_makefile_text(), "report-contract-closeout-precheck")
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        recipe + "\nfirst:\n\t@exit 7\nsecond:\n\t@" + shlex.join([sys.executable, "-c", f"from pathlib import Path; Path({str(marker)!r}).touch()"])+"\n",
+        encoding="utf-8",
+    )
+    command = ["make", "--no-print-directory", "-f", str(makefile)]
+    result = subprocess.run(
+        [*command, "report-contract-closeout-precheck", f"SHELL={shutil.which('sh')}",
+         f"PYTHON={shlex.join([sys.executable, str(generator)])}", f"MAKE={shlex.join(command)}"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=20, check=False,
+    )
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert not marker.exists()
 
 _RELEASE_EVIDENCE_COHORT_ASSIGNMENTS = (
     ("RELEASE_EVIDENCE_DASHBOARD_OUT", "ops/reports/release-evidence-dashboard.json"),
@@ -1011,10 +1035,10 @@ class MakefileReleaseEvidenceStaticGateTests(unittest.TestCase):
         self.assertEqual(policy.get("pre_refresh_targets"), expected_targets)
         precheck_block = _target_block(text, "report-contract-closeout-precheck")
         self.assertIn(
-            '@for target in $$($(PYTHON) -m ops.scripts.report_contract_closeout_runtime --vault "$(VAULT)"); do \\',
+            '@targets=$$($(PYTHON) -m ops.scripts.report_contract_closeout_runtime --vault "$(VAULT)") || exit $$?; \\',
             precheck_block,
         )
-        self.assertIn("\t\t$(MAKE) $$target; \\", precheck_block)
+        self.assertIn('$(MAKE) "$$target" || exit $$?; \\', precheck_block)
 
         env = os.environ.copy()
         env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"

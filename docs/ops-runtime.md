@@ -39,6 +39,15 @@ preferred operator entrypoint for report generators and maintenance lanes.
 
 ## Candidate Validation Isolation
 
+Command deadlines include output collection after the leader exits. A live
+descendant holding stdout or stderr does not turn a timeout into success. The
+POSIX backend signals the process group and escalates after the grace period;
+every subsequent drain is bounded. If a writer remains outside the backend's
+termination scope, the result records `output_drain_timeout`, partial output,
+and a nonzero return code. Genuine completion races with output already at EOF
+remain successful. Timeout handling may use up to two configured grace periods
+after the execution deadline to terminate and collect output.
+
 Mechanism repository-health checks, worker repository-health preflight, and
 candidate dependency probes require Linux with Bubblewrap installed at
 `/usr/bin/bwrap` and working user, PID, and network namespaces. On Debian/Ubuntu,
@@ -62,6 +71,10 @@ packaged profile exists or the parser rejects it.
 The shared CI setup action loads the profile and runs the production sandbox
 launcher with dependency imports before the test lanes start. Unsupported hosts
 or failed sandbox setup block validation; they never run the candidate on the host.
+Goal-runtime bootstrap preflight uses the same bounded sandbox probe after its
+Python, dependency, and Codex checks pass. Missing Bubblewrap, unusable namespaces,
+or sandbox import failures produce a failed preflight with a `sandbox` diagnostic;
+developer-only bootstrap checks do not require candidate execution support.
 
 The trusted parent launches the check in a fresh filesystem and network
 namespace. Only the candidate workspace is writable on the host; `/tmp` and

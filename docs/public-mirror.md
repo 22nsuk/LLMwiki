@@ -10,6 +10,14 @@ document owns the public mirror/export lane only.
 
 ## Included Surface
 
+Exports require separate source and output trees. Equal paths, ancestor or
+descendant relationships, and aliases resolving to those relationships are
+rejected before writes. A complete export is staged beside the destination;
+copy failures preserve the previous export, and failed replacement restores it.
+`--no-clean` retains existing extra files without following destination symlinks.
+Concurrent users of an explicit output directory must acquire its export lock;
+the small sibling lock file remains so processes cannot lock different inodes.
+
 The source of truth is `ops/scripts/public/public_surface_policy.py`.
 The public mirror `.gitignore` is generated into
 `ops/templates/public-mirror.gitignore`; the repository root `.gitignore` is
@@ -123,6 +131,18 @@ make sync-derived
 make public-export
 make public-check
 ```
+
+`public-check` uses a fresh disposable export directory for every invocation.
+An explicit `PUBLIC_OUT`/`--public-out` is retained and locked through export,
+validation, and final source/export identity checks. A competing exporter fails
+before replacement. If source contents, exported inputs, or scanned Git refs
+change during validation, the check fails without publishing a passing report.
+Test-summary caches are atomic and keyed by source root, source contents, and
+check configuration. Reusing a summary for an explicit retained output also
+checks that output's current manifest and file contents under the lock.
+`make public-export` still writes a retained mirror to
+the default system temporary location, overridable with `PUBLIC_EXPORT_OUT`
+or the existing `PUBLIC_OUT` override.
 
 Use `make help` for the compact operator index and
 `make sync-derived-check` in check-only contexts. The aggregate includes public

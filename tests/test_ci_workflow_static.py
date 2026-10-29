@@ -125,6 +125,16 @@ def test_sandbox_setup_loads_packaged_profile_and_propagates_failure(
 
 
 class CiWorkflowStaticTests(unittest.TestCase):
+    def test_installed_wheel_smoke_checks_the_built_artifact_before_fast_tests(self) -> None:
+        job = _job(_workflow(), "test-tier")
+        smoke = _step_by_name(job, "Verify installed wheel")
+        self.assertEqual(smoke.get("if"), "matrix.tier == 'fast'")
+        self.assertIn("python tools/verify_installed_wheel.py --dist dist --out tmp/installed-wheel-smoke.json", _run_text(smoke))
+        steps = _steps(job)
+        self.assertLess(steps.index(_step_by_name(job, "Validate package build")), steps.index(smoke))
+        self.assertLess(steps.index(smoke), steps.index(_step_by_name(job, "Run fast contract tier")))
+        self.assertFalse(smoke.get("continue-on-error", False))
+
     def test_candidate_sandbox_install_is_limited_to_linux(self) -> None:
         action = load_workflow(Path(".github/actions/setup-python-uv/action.yml"))
         runs = workflow_mapping(action.get("runs"), "composite action runs must be a mapping")
@@ -143,10 +153,10 @@ class CiWorkflowStaticTests(unittest.TestCase):
         self.assertEqual(smoke.get("if"), "runner.os == 'Linux'")
         smoke_run = _run_text(smoke)
         self.assertIn(
-            "from ops.scripts.core.candidate_sandbox_runtime import run_candidate_command",
+            "from ops.scripts.core.candidate_sandbox_runtime import probe_candidate_sandbox",
             smoke_run,
         )
-        self.assertIn("import jsonschema, pytest, yaml", smoke_run)
+        self.assertIn("probe_candidate_sandbox(timeout_seconds=30)", smoke_run)
         self.assertIn("timeout_seconds=30", smoke_run)
         self.assertIn("raise SystemExit(result.returncode)", smoke_run)
         steps = _steps(runs)

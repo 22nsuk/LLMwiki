@@ -244,6 +244,17 @@
         "codex_on_path": { "type": "string" },
         "codex_outside_workspace_virtualenv": { "type": "string" },
         "workspace_virtualenv_codex_shadowing_path": { "type": "boolean" },
+        "sandbox": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "returncode", "timed_out", "detail"],
+          "properties": {
+            "status": { "type": "string", "enum": ["pass", "fail"] },
+            "returncode": { "type": "integer" },
+            "timed_out": { "type": "boolean" },
+            "detail": { "type": "string" }
+          }
+        },
         "failures": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },

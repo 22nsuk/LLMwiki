@@ -31,8 +31,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         release_source_tree_fingerprint,
     )
     from ops.scripts.public.export_public_repo import (
-        DEFAULT_PUBLIC_OUT,
-        export_public_repo,
+        _output_lock,
+        iter_public_files,
+        public_export_session,
     )
     from ops.scripts.public.public_surface_policy import (
         PUBLIC_INCLUDED_REPORT_FILES,
@@ -61,7 +62,11 @@ else:
     )
     from ops.scripts.test.test_execution_summary import parse_pytest_counts
 
-    from .export_public_repo import DEFAULT_PUBLIC_OUT, export_public_repo
+    from .export_public_repo import (
+        _output_lock,
+        iter_public_files,
+        public_export_session,
+    )
     from .public_surface_policy import (
         PUBLIC_INCLUDED_REPORT_FILES,
         find_public_local_path_leaks,
@@ -91,7 +96,7 @@ CommandRunner = Callable[[Sequence[str], Path, int], TimedProcessResult]
 @dataclass(frozen=True)
 class PublicCheckRequest:
     mode: str = "default"
-    public_out: str = DEFAULT_PUBLIC_OUT
+    public_out: str = ""
     public_python: str = sys.executable
     ruff_targets: str = "ops/scripts tests tools"
     mypy_targets: str = "ops/scripts"
@@ -230,10 +235,16 @@ def _public_pytest_summary_path(public_out: Path) -> Path:
     return public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH
 
 
-def _public_pytest_summary_cache_path() -> Path:
+def _public_pytest_summary_cache_path(vault: Path, request: PublicCheckRequest) -> Path:
+    key = _canonical_sha256({
+        "source": str(vault.resolve()),
+        "tree": release_source_tree_fingerprint(vault),
+        "config": _public_check_config_payload(vault, request),
+    })
     return (
         Path(tempfile.gettempdir())
         / PUBLIC_PYTEST_SUMMARY_CACHE_DIRNAME
+        / key
         / Path(PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).name
     )
 
@@ -244,7 +255,14 @@ def _persist_public_pytest_summary(temp_summary_path: Path, cache_path: Path) ->
     except OSError:
         return
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_path.write_bytes(payload)
+    # Writers using the same input key must never expose a partial cache file.
+    fd, staged = tempfile.mkstemp(dir=cache_path.parent)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(payload)
+        Path(staged).replace(cache_path)
+    finally:
+        Path(staged).unlink(missing_ok=True)
 
 
 def _remove_optional_file(path: Path) -> None:
@@ -273,15 +291,16 @@ def _public_check_config_payload(
     except ValueError:
         public_out_relative_to_vault = ""
         public_out_boundary = "outside_source_vault"
+    output_config = {
+        "boundary": public_out_boundary,
+        "relative_to_vault": public_out_relative_to_vault,
+        "resolved_path": resolved_public_out.as_posix(),
+    } if request.public_out else {"boundary": "invocation_private", "relative_to_vault": "", "resolved_path": ""}
     return {
-        "version": 2,
+        "version": 3,
         "mode": request.mode,
         "source_command": _public_check_source_command(request),
-        "public_out": {
-            "boundary": public_out_boundary,
-            "relative_to_vault": public_out_relative_to_vault,
-            "resolved_path": resolved_public_out.as_posix(),
-        },
+        "public_out": output_config,
         "public_python": {
             "identity": _resolve_public_python(vault, request.public_python),
         },
@@ -548,10 +567,8 @@ def _public_pytest_command(commands: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _collect_public_export_snapshot(
-    vault: Path, request: PublicCheckRequest
+    vault: Path, public_out_path: Path, manifest: dict[str, Any]
 ) -> _PublicExportSnapshot:
-    public_out_path = _resolve_out_dir(vault, request.public_out)
-    manifest = export_public_repo(vault, public_out_path)
     export_records = _export_file_records(public_out_path, manifest)
     negative_assertions = _public_export_negative_assertions(
         public_out_path,
@@ -618,7 +635,7 @@ def _run_public_check_commands(
 ) -> list[dict[str, Any]]:
     public_python = _resolve_public_python(vault, request.public_python)
     pytest_summary_path = _public_pytest_summary_path(public_out_path)
-    pytest_summary_cache_path = _public_pytest_summary_cache_path()
+    pytest_summary_cache_path = _public_pytest_summary_cache_path(vault, request)
     runner = command_runner or (
         lambda argv, cwd, timeout_seconds: _default_command_runner(
             argv,
@@ -873,29 +890,37 @@ def build_report(
     command_runner: CommandRunner | None = None,
 ) -> dict[str, Any]:
     request = request or PublicCheckRequest()
+    with tempfile.TemporaryDirectory(prefix="llm-wiki-public-check-") as temp:
+        output = _resolve_out_dir(vault, request.public_out) if request.public_out else Path(temp) / "export"
+        return _check_export(vault, output, request, context=context, command_runner=command_runner)
+
+
+def _check_export(
+    vault: Path, output: Path, request: PublicCheckRequest, *,
+    context: RuntimeContext | None, command_runner: CommandRunner | None,
+) -> dict[str, Any]:
+    source_identity = release_source_tree_fingerprint(vault)
     policy, resolved_policy_path = load_policy(vault, None)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    export = _collect_public_export_snapshot(vault, request)
-    source_history = scan_source_history(
-        vault,
-        requested=request.source_history_scan,
-    )
-    commands = _run_public_check_commands(
-        vault,
-        request=request,
-        public_out_path=export.public_out_path,
-        command_runner=command_runner,
-    )
-    return _render_public_check_report(
-        vault,
-        policy,
-        resolved_policy_path,
-        runtime_context,
-        export,
-        source_history,
-        commands,
-        request,
-    )
+    with public_export_session(vault, output) as manifest:
+        export = _collect_public_export_snapshot(vault, output, manifest)
+        source_history = scan_source_history(vault, requested=request.source_history_scan)
+        commands = _run_public_check_commands(vault, request, output, command_runner)
+        if (
+            source_identity != release_source_tree_fingerprint(vault)
+            or export.export_root_fingerprint != _canonical_sha256(_export_file_records(output, manifest))
+            or set(iter_public_files(output)) != set(export.manifest["files"])
+            or (output / ".git").exists()
+            or source_history["history_state_fingerprint"] != source_history_state_fingerprint(vault, requested=request.source_history_scan)
+        ):
+            raise ValueError("public check source or exported inputs changed during validation")
+        report = _render_public_check_report(
+            vault, policy, resolved_policy_path, runtime_context,
+            export, source_history, commands, request,
+        )
+        if not request.public_out:
+            report["public_export"]["output_dir"] = "<tmp>/invocation-private/export"
+        return report
 
 
 def write_report(
@@ -911,6 +936,27 @@ def write_report(
             context="public check summary schema validation failed",
         )
     )
+
+
+def _retained_export_is_current(vault: Path, request: PublicCheckRequest, payload: dict[str, Any]) -> bool:
+    output = _resolve_out_dir(vault, request.public_out).resolve()
+    source = vault.resolve()
+    metadata = payload.get("public_export", {})
+    if not output.is_dir() or output.is_relative_to(source) or source.is_relative_to(output) or not isinstance(metadata, dict):
+        return False
+    try:
+        with _output_lock(output):
+            manifest_path = output / "PUBLIC-EXPORT-MANIFEST.json"
+            if _sha256_file(manifest_path) != metadata.get("manifest_sha256"):
+                return False
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            return (
+                _canonical_sha256(_export_file_records(output, manifest)) == metadata.get("export_root_fingerprint")
+                and set(iter_public_files(output)) == set(manifest["files"])
+                and not (output / ".git").exists()
+            )
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError):
+        return False
 
 
 def reusable_summary_diagnostics(
@@ -947,6 +993,8 @@ def reusable_summary_diagnostics(
         == current_source_tree_fingerprint,
     }
     if request is not None:
+        if request.public_out:
+            checks["retained_export"] = _retained_export_is_current(vault, request, payload)
         expected_source_command = _public_check_source_command(request)
         observed_source_command = str(payload.get("source_command", ""))
         checks["source_command"] = observed_source_command == expected_source_command
@@ -1042,7 +1090,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vault", default=".")
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--mode", choices=("default", "full"), default="default")
-    parser.add_argument("--public-out", default=DEFAULT_PUBLIC_OUT)
+    parser.add_argument("--public-out", default="", help="Explicit locked export directory; default uses a disposable per-invocation directory.")
     parser.add_argument("--public-python", default=sys.executable)
     parser.add_argument("--ruff-targets", default="ops/scripts tests tools")
     parser.add_argument("--mypy-targets", default="ops/scripts")
