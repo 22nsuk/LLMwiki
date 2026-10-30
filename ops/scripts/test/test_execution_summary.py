@@ -17,8 +17,10 @@ import yaml
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.core.artifact_envelope_runtime import (
-        local_corpus_policy_dependency,
+        UNKNOWN_LOCAL_CORPUS_POLICY,
+        artifact_input_fingerprints,
         local_corpus_policy_is_current,
+        merge_local_corpus_policy_dependencies,
     )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
@@ -33,7 +35,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         run_with_timeout,
     )
     from ops.scripts.core.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        report_path,
+        resolve_policy_path,
+    )
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.core.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
@@ -55,6 +61,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         toolchain_fingerprint as _toolchain_fingerprint,
     )
     from ops.scripts.test.test_execution_derivation_runtime import (
+        COLLECTION_MANIFEST_SCHEMA_PATH,
         build_collection_manifest,
         derive_subset_summary,
         load_collection_manifest_digest,
@@ -111,8 +118,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
 else:
     from ops.scripts.core.artifact_envelope_runtime import (
-        local_corpus_policy_dependency,
+        UNKNOWN_LOCAL_CORPUS_POLICY,
+        artifact_input_fingerprints,
         local_corpus_policy_is_current,
+        merge_local_corpus_policy_dependencies,
     )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
@@ -127,7 +136,11 @@ else:
         run_with_timeout,
     )
     from ops.scripts.core.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        report_path,
+        resolve_policy_path,
+    )
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.core.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
@@ -149,6 +162,7 @@ else:
         toolchain_fingerprint as _toolchain_fingerprint,
     )
     from ops.scripts.test.test_execution_derivation_runtime import (
+        COLLECTION_MANIFEST_SCHEMA_PATH,
         build_collection_manifest,
         derive_subset_summary,
         load_collection_manifest_digest,
@@ -350,6 +364,12 @@ def collect_pytest_nodeid_digest(
     deselected_tests: list[dict[str, Any]] | None = None,
     deselection_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    collection_dependency = merge_local_corpus_policy_dependencies(vault, [{
+        "input_fingerprints": artifact_input_fingerprints(
+            vault, resolved_policy_path=resolve_policy_path(vault, policy_path),
+            schema_path=COLLECTION_MANIFEST_SCHEMA_PATH,
+        ),
+    }])
     selectors = _pytest_selector_args(command)
     collect_command = [
         sys.executable,
@@ -396,6 +416,7 @@ def collect_pytest_nodeid_digest(
         "sha256": _sha256_text(digest_input),
         "reason": "",
         "duration_ms": elapsed_ms,
+        "local_corpus_policy": collection_dependency,
     }
     if collection_manifest_out:
         manifest = build_collection_manifest(
@@ -413,6 +434,8 @@ def collect_pytest_nodeid_digest(
             deselected_tests=list(deselected_tests or []),
             deselection_lifecycle=dict(deselection_lifecycle or {}),
         )
+        if merge_local_corpus_policy_dependencies(vault, [manifest]) != collection_dependency:
+            raise ValueError("local corpus policy changed during collection")
         digest.update(write_collection_manifest(vault, manifest, collection_manifest_out))
     return digest
 
@@ -621,23 +644,34 @@ def _render_test_execution_summary(inputs: TestExecutionRenderInputs) -> dict[st
     vault = inputs.vault
     request = inputs.request
     observations = inputs.observations
+    envelope = build_canonical_report_envelope(
+        vault,
+        generated_at=inputs.generated_at,
+        artifact_kind="test_execution_summary",
+        producer=PRODUCER,
+        source_command=_test_execution_source_command(vault, request),
+        resolved_policy_path=inputs.resolved_policy_path,
+        schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
+        source_paths=[
+            "ops/scripts/test/test_execution_summary.py",
+            "ops/scripts/core/command_runtime.py",
+        ],
+        text_inputs=_test_execution_text_inputs(vault, request, observations),
+        file_inputs=_test_execution_file_inputs(request),
+        path_group_inputs={"test_targets": observations.target_paths} if observations.target_paths else None,
+    )
+    dependencies = [envelope]
+    digest = observations.collect_nodeid_digest
+    if "local_corpus_policy" in digest or any(key.startswith("manifest_") for key in digest):
+        dependencies.append({"input_fingerprints": {
+            "local_corpus_policy": digest.get("local_corpus_policy", UNKNOWN_LOCAL_CORPUS_POLICY),
+        }})
+    dependency = merge_local_corpus_policy_dependencies(vault, dependencies)
+    if dependency == UNKNOWN_LOCAL_CORPUS_POLICY:
+        raise ValueError("collection local corpus policy drift or missing binding; reload the manifest")
+    envelope["input_fingerprints"]["local_corpus_policy"] = dependency
     return {
-        **build_canonical_report_envelope(
-            vault,
-            generated_at=inputs.generated_at,
-            artifact_kind="test_execution_summary",
-            producer=PRODUCER,
-            source_command=_test_execution_source_command(vault, request),
-            resolved_policy_path=inputs.resolved_policy_path,
-            schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/test/test_execution_summary.py",
-                "ops/scripts/core/command_runtime.py",
-            ],
-            text_inputs=_test_execution_text_inputs(vault, request, observations),
-            file_inputs=_test_execution_file_inputs(request),
-            path_group_inputs={"test_targets": observations.target_paths} if observations.target_paths else None,
-        ),
+        **envelope,
         "vault": report_path(vault, vault),
         "policy": {
             "path": report_path(vault, inputs.resolved_policy_path),
@@ -920,9 +954,10 @@ def build_reused_report(
         deselection_policy_path=deselection_policy_path,
     )
     report["counts"] = dict(existing.get("counts", {}))
-    dependency = local_corpus_policy_dependency(vault, existing)
-    if dependency is not None:
-        report["input_fingerprints"]["local_corpus_policy"] = dependency
+    dependency = merge_local_corpus_policy_dependencies(vault, [report, existing])
+    if dependency == UNKNOWN_LOCAL_CORPUS_POLICY:
+        raise ValueError("reused summary local corpus policy drift or missing binding")
+    report["input_fingerprints"]["local_corpus_policy"] = dependency
     report["nodeid_outcome_consistency"] = _nodeid_outcome_consistency(
         report["counts"],
         collect_nodeid_digest or dict(existing.get("pytest_collect_nodeid_digest", {})),

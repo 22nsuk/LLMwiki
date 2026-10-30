@@ -285,6 +285,9 @@ def _derived_fixture(
         "manifest_sha256": serialized_report_sha256(full_manifest),
         "source_tree_fingerprint": full_manifest["source_tree_fingerprint"],
         "source_revision": full_manifest["source_revision"],
+        "local_corpus_policy": full_manifest["input_fingerprints"].get(
+            "local_corpus_policy", "independent" if policy_path else "missing"
+        ),
     }
     result = TimedProcessResult(
         args=["python", "-m", "pytest"],
@@ -496,6 +499,13 @@ def test_collection_manifest_reference_rejects_input_digest_drift(
     )
     assert loaded_digest["sha256"] == manifest["nodeids_sha256"]
     assert loaded_digest["manifest_sha256"] == identity["manifest_sha256"]
+    assert loaded_digest["local_corpus_policy"] == "missing"
+    for dependency in ("independent", "0" * 64):
+        inconsistent = {**digest, "local_corpus_policy": dependency}
+        assert not collection_manifest_reference_is_current(vault, inconsistent)
+        assert not collection_manifest_reference_is_rebindable(vault, inconsistent)
+    legacy_digest = {key: value for key, value in digest.items() if key != "local_corpus_policy"}
+    assert collection_manifest_reference_is_current(vault, legacy_digest)
 
     with pytest.raises(ValueError, match="semantic_command mismatch"):
         load_collection_manifest_digest(

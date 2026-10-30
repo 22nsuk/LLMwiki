@@ -77,12 +77,23 @@ and cached test summaries and collection manifests are invalidated when the
 overlay is created, changed, or removed. Derived test summaries preserve the
 parent's policy fingerprints, including the base policy binding when no overlay
 exists, so they follow the same invalidation lifecycle as direct summaries.
-Test aggregates and reused summaries retain the overlay dependencies of their
-input evidence, including `missing` for an overlay that was absent. This binding
-survives nested aggregation and subset derivation even with a custom output
+Collection digests carry their overlay dependency into direct summaries even
+when collection and execution use different policies. Direct, aggregate,
+reused, and derived summaries share one dependency-composition rule: preserve
+every input's recorded state instead of fingerprinting today's overlay again.
+They record `missing` for confirmed absence, `independent` when every input is
+independent, and `unknown` for incomplete or conflicting dependencies; unknown
+evidence cannot be reused. This binding survives nested aggregation and subset derivation even with a custom output
 policy; evidence composed entirely from independent custom policies stays
 independent. Subset derivation treats legacy omitted absence and explicit
 `missing` as the same input state, while preserving collection dependencies.
+Older custom-policy summaries that reference a collection manifest or were
+aggregated, reused, or derived without a recorded overlay state require
+regeneration. Their own policy scope cannot establish their inputs' independence.
+Legacy collection manifests can still be loaded to obtain a bound digest;
+standalone custom-policy summaries and historical snapshots retain their
+existing behavior. Older readers may reject bound collection digests or the
+explicit `independent` state; regenerate composed evidence with the reader's matching producer after rollback.
 Only a confirmed file absence satisfies this dependency. Directories and other
 overlay read errors invalidate dependent evidence, including legacy reports
 that omit the absence fingerprint; independent custom-policy evidence is unaffected.

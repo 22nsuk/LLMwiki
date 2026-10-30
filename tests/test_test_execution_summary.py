@@ -19,6 +19,7 @@ import hypothesis.strategies as st
 import pytest
 from hypothesis import given
 
+from ops.scripts.core.artifact_envelope_runtime import local_corpus_policy_is_current
 from ops.scripts.core.artifact_freshness_runtime import (
     build_report as build_freshness_report,
 )
@@ -247,8 +248,10 @@ def test_reuse_diagnostics_reports_each_mismatch_code(
 
 @pytest.mark.parametrize("transition", ["create", "edit", "remove", "directory", "permission"])
 @pytest.mark.parametrize("custom_shard", [False, True], ids=["default-shard", "custom-shard"])
+@pytest.mark.parametrize("collection_policy", [None, "default", "custom"])
 def test_composed_summary_preserves_shard_overlay_dependency(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transition: str, custom_shard: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transition: str, custom_shard: bool,
+    collection_policy: str | None,
 ) -> None:
     seed_minimal_vault(tmp_path)
     custom = "ops/policies/custom-policy.yaml"
@@ -262,13 +265,45 @@ def test_composed_summary_preserves_shard_overlay_dependency(
         result=_result(returncode=0, stdout="1 passed in 0.01s"),
         policy_path=custom if custom_shard else None, context=_fixed_context(),
     )
+    manifest = build_collection_manifest(
+        tmp_path, suite="unit", semantic_command="-m pytest",
+        nodeids=["tests/test_sample.py::test_ok"], selection_kind="selector_subset",
+        deselected_tests=[], deselection_lifecycle=shard["deselection_lifecycle"],
+        policy_path=custom if collection_policy == "custom" or (collection_policy is None and custom_shard) else None,
+        context=_fixed_context(),
+    )
+    manifest_path = "ops/reports/policy-collection.json"
+    write_collection_manifest(tmp_path, manifest, manifest_path)
+    digest = load_collection_manifest_digest(
+        tmp_path, manifest_path, expected_suite="unit", expected_semantic_command="-m pytest"
+    )
+    assert collection_manifest_reference_is_current(tmp_path, digest)
+    assert collection_manifest_reference_is_rebindable(tmp_path, digest)
+
+    if collection_policy is not None:
+        shard = build_report(
+            tmp_path, command=command, suite="unit", duration_ms=1,
+            result=_result(returncode=0, stdout="1 passed in 0.01s"),
+            policy_path=custom if custom_shard else None, context=_fixed_context(),
+            collect_nodeids=True, collect_nodeid_digest=digest,
+        )
+    independent = custom_shard and collection_policy != "default"
+    collection_independent = collection_policy == "custom" or (collection_policy is None and custom_shard)
     paths = ["ops/reports/policy-shard.json"]
     (tmp_path / paths[0]).parent.mkdir(parents=True, exist_ok=True)
     (tmp_path / paths[0]).write_text(json.dumps(shard), encoding="utf-8")
-    # A second aggregate exercises propagation through an already-custom parent.
-    for name in ("aggregate", "nested"):
+    control_path = "ops/reports/independent-shard.json"
+    control = build_report(
+        tmp_path, command=command, suite="unit", duration_ms=1,
+        result=_result(returncode=0, stdout="1 passed in 0.01s"),
+        policy_path=custom, context=_fixed_context(),
+    )
+    (tmp_path / control_path).write_text(json.dumps(control), encoding="utf-8")
+    # Multiple shards drop the single-manifest reference; the dependency must
+    # still survive both that composition and a subsequent custom aggregate.
+    for name in ("aggregate", "mixed", "nested"):
         report = build_aggregate_report(
-            tmp_path, shard_paths=[paths[-1]], suite="unit",
+            tmp_path, shard_paths=[paths[-1], *([control_path] if name == "mixed" else [])], suite="unit",
             policy_path=custom, context=_fixed_context(),
         )
         path = f"ops/reports/policy-{name}.json"
@@ -279,22 +314,11 @@ def test_composed_summary_preserves_shard_overlay_dependency(
     reused = build_reused_report(
         tmp_path, existing=shard, command=command, suite="unit",
         policy_path=custom, context=_fixed_context(),
+        collect_nodeids=collection_policy is not None,
+        collect_nodeid_digest=digest if collection_policy is not None else None,
     )
     reused_path = "ops/reports/policy-reused.json"
     (tmp_path / reused_path).write_text(json.dumps(reused), encoding="utf-8")
-    manifest = build_collection_manifest(
-        tmp_path, suite="unit", semantic_command="-m pytest",
-        nodeids=["tests/test_sample.py::test_ok"], selection_kind="selector_subset",
-        deselected_tests=[], deselection_lifecycle=shard["deselection_lifecycle"],
-        policy_path=custom if custom_shard else None, context=_fixed_context(),
-    )
-    manifest_path = "ops/reports/policy-collection.json"
-    write_collection_manifest(tmp_path, manifest, manifest_path)
-    digest = load_collection_manifest_digest(
-        tmp_path, manifest_path, expected_suite="unit", expected_semantic_command="-m pytest"
-    )
-    assert collection_manifest_reference_is_current(tmp_path, digest)
-    assert collection_manifest_reference_is_rebindable(tmp_path, digest)
 
     if transition == "remove":
         local.unlink()
@@ -325,18 +349,19 @@ def test_composed_summary_preserves_shard_overlay_dependency(
         assert summary_main([
             "--vault", str(tmp_path), "--aggregate", "--suite", "unit",
             "--reuse-only", "--reuse-from", path, "--out", str(out_path),
-        ]) == (0 if custom_shard else 1)
+        ]) == (0 if independent else 1)
         assert not out_path.exists()
         diagnostics = reusable_aggregate_summary_diagnostics(tmp_path, path, suite="unit")
-        assert diagnostics["reusable"] is custom_shard
-        assert diagnostics["result_reusable"] is custom_shard
+        assert diagnostics["reusable"] is independent
+        assert diagnostics["result_reusable"] is independent
     assert reuse_currentness_diagnostics(
         reused, vault=tmp_path, command=command, suite="unit",
-        collect_nodeids=False, collect_nodeid_digest=None,
-    )["reusable"] is custom_shard
-    assert collection_manifest_reference_is_current(tmp_path, digest) is custom_shard
-    assert collection_manifest_reference_is_rebindable(tmp_path, digest) is custom_shard
-    if not custom_shard:
+        collect_nodeids=collection_policy is not None,
+        collect_nodeid_digest=digest if collection_policy is not None else None,
+    )["reusable"] is independent
+    assert collection_manifest_reference_is_current(tmp_path, digest) is collection_independent
+    assert collection_manifest_reference_is_rebindable(tmp_path, digest) is collection_independent
+    if not collection_independent:
         with pytest.raises(ValueError, match="local corpus policy drift"):
             load_collection_manifest_digest(
                 tmp_path, manifest_path, expected_suite="unit", expected_semantic_command="-m pytest"
@@ -348,11 +373,178 @@ def test_composed_summary_preserves_shard_overlay_dependency(
     for path in [*paths, reused_path]:
         assert records[path]["schema_validation_status"] == "pass"
         assert records[path]["source_tree_fingerprint_status"] == "current"
-        assert records[path]["currentness_status"] == ("current" if custom_shard else "stale")
+        assert records[path]["currentness_status"] == ("current" if independent else "stale")
     rebuilt = build_aggregate_report(
         tmp_path, shard_paths=[paths[0]], suite="unit", policy_path=custom, context=_fixed_context()
     )
-    assert rebuilt["status"] == ("pass" if custom_shard else "fail")
+    assert rebuilt["status"] == ("pass" if independent else "fail")
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("collection_mode", ["default", "custom", "inline"])
+def test_cross_policy_collection_cli_reuse_lifecycle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    transition: str, collection_mode: str,
+) -> None:
+    """Exercise real pytest collection/execution, persisted evidence and cache-only CLI."""
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
+    local = tmp_path / "ops/policies/wiki-maintainer-policy.local.yaml"
+    if transition != "create":
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    test_path = tmp_path / "tests/test_policy_flow.py"
+    test_path.parent.mkdir(exist_ok=True)
+    test_path.write_text(
+        "from pathlib import Path\n"
+        "def test_ok():\n"
+        "    counter = Path('tmp/executions.txt')\n"
+        "    counter.parent.mkdir(exist_ok=True)\n"
+        "    counter.write_text(str(int(counter.read_text()) + 1) if counter.exists() else '1')\n",
+        encoding="utf-8",
+    )
+    command = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_policy_flow.py"]
+    manifest_path = "ops/reports/native-collection.json"
+    summary_path = "ops/reports/native-summary.json"
+    common = ["--vault", str(tmp_path), "--suite", "unit", "--collect-nodeids"]
+    collection_args = [*common, "--collection-only", "--out", manifest_path]
+    independent = collection_mode != "default"
+    if collection_mode == "custom":
+        collection_args += ["--policy", custom]
+    execution_args = [*common, "--policy", custom, "--out", summary_path]
+    if collection_mode != "inline":
+        execution_args += ["--collection-manifest", manifest_path]
+        assert summary_main([*collection_args, "--", *command]) == 0
+    assert summary_main([*execution_args, "--", *command]) == 0
+    stored = tmp_path / summary_path
+    original = stored.read_bytes()
+    original_mtime = stored.stat().st_mtime_ns
+    assert summary_main([*execution_args, "--reuse-only", "--", *command]) == 0
+
+    if transition == "remove":
+        local.unlink()
+    else:
+        local.write_text("schema_version: 1\noverrides: {}\n# updated\n", encoding="utf-8")
+    assert summary_main([*execution_args, "--reuse-only", "--", *command]) == (0 if independent else 1)
+    assert stored.read_bytes() == original
+    assert stored.stat().st_mtime_ns == original_mtime
+    assert (tmp_path / "tmp/executions.txt").read_text() == "1"
+    # Refresh the actual collection input, then let the normal fallback run.
+    if collection_mode != "inline":
+        assert summary_main([*collection_args, "--", *command]) == 0
+    assert summary_main([*execution_args, "--reuse-if-current", "--", *command]) == 0
+    assert (tmp_path / "tmp/executions.txt").read_text() == ("1" if independent else "2")
+    assert summary_main([*execution_args, "--reuse-only", "--", *command]) == 0
+
+
+@pytest.mark.parametrize("write_manifest", [False, True])
+def test_collection_preserves_its_original_policy_snapshot(tmp_path: Path, write_manifest: bool) -> None:
+    seed_minimal_vault(tmp_path)
+    local = tmp_path / "ops/policies/wiki-maintainer-policy.local.yaml"
+    command = [sys.executable, "-m", "pytest"]
+
+    def collect_with_policy_change(*args: Any, **kwargs: Any) -> TimedProcessResult:
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+        return _result(returncode=0, stdout="tests/test_sample.py::test_ok\n")
+
+    output = "ops/reports/changing-collection.json"
+    with patch("ops.scripts.test.test_execution_summary.run_with_timeout", side_effect=collect_with_policy_change):
+        if write_manifest:
+            with pytest.raises(ValueError, match="policy changed during collection"):
+                collect_pytest_nodeid_digest(
+                    tmp_path, command, timeout_seconds=30,
+                    collection_manifest_out=output, context=_fixed_context(),
+                )
+            assert not (tmp_path / output).exists()
+        else:
+            digest = collect_pytest_nodeid_digest(tmp_path, command, timeout_seconds=30)
+            assert digest["local_corpus_policy"] == "missing"
+            with pytest.raises(ValueError, match="local corpus policy drift"):
+                build_report(
+                    tmp_path, command=command, suite="unit", duration_ms=1,
+                    result=_result(returncode=0, stdout="1 passed in 0.01s"),
+                    collect_nodeids=True, collect_nodeid_digest=digest, context=_fixed_context(),
+                )
+
+
+@pytest.mark.parametrize("composition", ["direct", "collection", "aggregate", "reused", "derived"])
+def test_legacy_custom_evidence_requires_known_composed_dependencies(
+    tmp_path: Path, composition: str,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
+    report = build_report(
+        tmp_path, command=[sys.executable, "-m", "pytest"], suite="unit", duration_ms=1,
+        result=_result(returncode=0, stdout="1 passed in 0.01s"),
+        policy_path=custom, context=_fixed_context(),
+    )
+    # These are the fields an older writer emitted without transitive binding.
+    report["input_fingerprints"].pop("local_corpus_policy", None)
+    if composition == "collection":
+        manifest = build_collection_manifest(
+            tmp_path, suite="unit", semantic_command="-m pytest",
+            nodeids=["tests/test_sample.py::test_ok"], selection_kind="selector_subset",
+            deselected_tests=[], deselection_lifecycle=report["deselection_lifecycle"],
+            context=_fixed_context(),
+        )
+        path = "ops/reports/old-collection.json"
+        write_collection_manifest(tmp_path, manifest, path)
+        digest = load_collection_manifest_digest(
+            tmp_path, path, expected_suite="unit", expected_semantic_command="-m pytest",
+        )
+        digest.pop("local_corpus_policy", None)
+        report["pytest_collect_nodeid_digest"] = digest
+    elif composition != "direct":
+        report["summary_mode"] = composition
+    for legacy_scope in (False, True):
+        if legacy_scope:
+            report["input_fingerprints"].pop("custom_policy_path", None)
+        assert local_corpus_policy_is_current(tmp_path, report) is (composition == "direct")
+        path = "ops/reports/legacy-policy-summary.json"
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).write_text(json.dumps(report), encoding="utf-8")
+        aggregate = build_aggregate_report(
+            tmp_path, shard_paths=[path], suite="unit", policy_path=custom, context=_fixed_context(),
+        )
+        assert aggregate["status"] == ("pass" if composition == "direct" else "fail")
+        assert local_corpus_policy_is_current(tmp_path, aggregate) is (composition == "direct")
+
+
+@pytest.mark.parametrize("initial_overlay", [False, True])
+def test_composition_rejects_conflicting_policy_snapshots(tmp_path: Path, initial_overlay: bool) -> None:
+    seed_minimal_vault(tmp_path)
+    local = tmp_path / "ops/policies/wiki-maintainer-policy.local.yaml"
+    if initial_overlay:
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    command = [sys.executable, "-m", "pytest"]
+    kwargs = {
+        "command": command, "suite": "unit", "duration_ms": 1,
+        "result": _result(returncode=0, stdout="1 passed in 0.01s"), "context": _fixed_context(),
+    }
+    before = build_report(tmp_path, **kwargs)
+    manifest = build_collection_manifest(
+        tmp_path, suite="unit", semantic_command="-m pytest",
+        nodeids=["tests/test_sample.py::test_ok"], selection_kind="selector_subset",
+        deselected_tests=[], deselection_lifecycle=before["deselection_lifecycle"], context=_fixed_context(),
+    )
+    path = "ops/reports/snapshot-collection.json"
+    write_collection_manifest(tmp_path, manifest, path)
+    digest = load_collection_manifest_digest(tmp_path, path, expected_suite="unit", expected_semantic_command="-m pytest")
+    local.write_text("schema_version: 1\noverrides: {}\n# different snapshot\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="local corpus policy drift"):
+        build_report(tmp_path, **kwargs, collect_nodeids=True, collect_nodeid_digest=digest)
+    with pytest.raises(ValueError, match="local corpus policy drift"):
+        build_reused_report(tmp_path, existing=before, command=command, suite="unit", context=_fixed_context())
+    after = build_report(tmp_path, **kwargs)
+    paths = ["ops/reports/before.json", "ops/reports/after.json"]
+    for path, report in zip(paths, (before, after), strict=True):
+        (tmp_path / path).write_text(json.dumps(report), encoding="utf-8")
+    aggregate = build_aggregate_report(tmp_path, shard_paths=paths, suite="unit", context=_fixed_context())
+    assert aggregate["status"] == "fail"
+    assert not local_corpus_policy_is_current(tmp_path, aggregate)
+    assert aggregate["input_fingerprints"]["local_corpus_policy"] != after["input_fingerprints"]["local_corpus_policy"]
 
 
 @pytest.mark.parametrize("relocation", ["delete", "move", "invalid-yaml", "invalid-schema"])

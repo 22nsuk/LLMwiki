@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from ops.scripts.core.artifact_envelope_runtime import (
-    local_corpus_policy_dependency,
+    UNKNOWN_LOCAL_CORPUS_POLICY,
     local_corpus_policy_is_current,
+    merge_local_corpus_policy_dependencies,
 )
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.policy_runtime import (
-    LOCAL_CORPUS_POLICY_PATH,
     load_policy,
     report_path,
 )
@@ -433,44 +433,42 @@ def build_aggregate_report(
         counts=counts,
         evidence_artifacts=evidence_artifacts,
     )
+    envelope = build_canonical_report_envelope(
+        vault,
+        generated_at=generated_at,
+        artifact_kind="test_execution_summary",
+        producer=PRODUCER,
+        source_command=aggregate_source_command(suite, shard_paths),
+        resolved_policy_path=resolved_policy_path,
+        schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
+        source_paths=[
+            "ops/scripts/test/test_execution_summary.py",
+            "ops/scripts/core/command_runtime.py",
+        ],
+        file_inputs={f"shard_{index}": path for index, path in enumerate(shard_paths, start=1)},
+        text_inputs={
+            "summary_mode": "aggregate",
+            "suite": suite,
+            "shard_statuses": json.dumps(statuses, sort_keys=True, separators=(",", ":")),
+            "suite_coverage": json.dumps(coverage, sort_keys=True, separators=(",", ":")),
+            "deselection_lifecycle": json.dumps(
+                deselection_lifecycle,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+            "evidence_artifact_consistency": json.dumps(
+                evidence_artifact_consistency,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+        },
+    )
+    dependency = merge_local_corpus_policy_dependencies(vault, [envelope, *shards])
+    envelope["input_fingerprints"]["local_corpus_policy"] = dependency
+    if dependency == UNKNOWN_LOCAL_CORPUS_POLICY:
+        status = "fail"
     return {
-        **build_canonical_report_envelope(
-            vault,
-            generated_at=generated_at,
-            artifact_kind="test_execution_summary",
-            producer=PRODUCER,
-            source_command=aggregate_source_command(suite, shard_paths),
-            resolved_policy_path=resolved_policy_path,
-            schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/test/test_execution_summary.py",
-                "ops/scripts/core/command_runtime.py",
-            ],
-            file_inputs={
-                **{f"shard_{index}": path for index, path in enumerate(shard_paths, start=1)},
-                **(
-                    {"local_corpus_policy": LOCAL_CORPUS_POLICY_PATH}
-                    if any(local_corpus_policy_dependency(vault, shard) is not None for shard in shards)
-                    else {}
-                ),
-            },
-            text_inputs={
-                "summary_mode": "aggregate",
-                "suite": suite,
-                "shard_statuses": json.dumps(statuses, sort_keys=True, separators=(",", ":")),
-                "suite_coverage": json.dumps(coverage, sort_keys=True, separators=(",", ":")),
-                "deselection_lifecycle": json.dumps(
-                    deselection_lifecycle,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-                "evidence_artifact_consistency": json.dumps(
-                    evidence_artifact_consistency,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-            },
-        ),
+        **envelope,
         "vault": report_path(vault, vault),
         "policy": {
             "path": report_path(vault, resolved_policy_path),

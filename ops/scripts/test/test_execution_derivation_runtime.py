@@ -9,7 +9,11 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.core.artifact_envelope_runtime import local_corpus_policy_is_current
+from ops.scripts.core.artifact_envelope_runtime import (
+    UNKNOWN_LOCAL_CORPUS_POLICY,
+    local_corpus_policy_is_current,
+    merge_local_corpus_policy_dependencies,
+)
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
@@ -162,6 +166,7 @@ def write_collection_manifest(
         "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
         "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
         "source_revision": str(manifest["source_revision"]),
+        "local_corpus_policy": merge_local_corpus_policy_dependencies(vault, [manifest]),
     }
 
 
@@ -187,7 +192,8 @@ def load_collection_manifest_digest(
     expected_semantic_command: str,
 ) -> dict[str, Any]:
     path = _resolve_collection_manifest_path(vault, path_value)
-    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest_bytes = path.read_bytes()
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
     if not isinstance(manifest, dict):
         raise ValueError("test execution collection manifest must be a JSON object")
     validate_collection_manifest_schema(vault, manifest)
@@ -212,11 +218,12 @@ def load_collection_manifest_digest(
         "reason": "reused exact schema-backed collection manifest",
         "duration_ms": 0,
         "manifest_path": report_path(vault, path),
-        "manifest_sha256": sha256_file(path),
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
         "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
         "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
         "source_revision": str(manifest["source_revision"]),
+        "local_corpus_policy": merge_local_corpus_policy_dependencies(vault, [manifest]),
     }
 
 
@@ -344,21 +351,27 @@ def _collection_manifest_reference(
     except ValueError:
         return None
     try:
-        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest_bytes = path.read_bytes()
+        manifest = json.loads(manifest_bytes.decode("utf-8"))
         if not isinstance(manifest, dict):
             return None
         validate_collection_manifest_schema(vault, manifest)
-    except (OSError, json.JSONDecodeError, ValueError):
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
         return None
     matches = (
         not validate_collection_manifest_payload(manifest)
         and local_corpus_policy_is_current(vault, manifest)
-        and sha256_file(path) == digest.get("manifest_sha256")
+        and hashlib.sha256(manifest_bytes).hexdigest() == digest.get("manifest_sha256")
         and manifest.get("source_tree_fingerprint")
         == digest.get("source_tree_fingerprint")
         and manifest.get("source_revision") == digest.get("source_revision")
         and manifest.get("nodeid_count") == digest.get("nodeid_count")
         and manifest.get("nodeids_sha256") == digest.get("sha256")
+        and (
+            "local_corpus_policy" not in digest
+            or digest["local_corpus_policy"]
+            == merge_local_corpus_policy_dependencies(vault, [manifest])
+        )
     )
     return (path, manifest) if matches else None
 
@@ -771,17 +784,12 @@ def _derived_input_fingerprints(
         value = full_summary.get("input_fingerprints", {}).get(key)
         if value is not None:
             fingerprints[key] = str(value)
-    # Independent custom inputs impose no overlay constraint. All inputs that
-    # do depend on it must agree, including legacy implicit absence.
-    local_dependencies: set[str] = set()
-    for artifact in (full_summary, collection_manifest, selected_manifest):
-        inputs = artifact.get("input_fingerprints", {})
-        if "local_corpus_policy" in inputs or "custom_policy_path" not in inputs:
-            local_dependencies.add(str(inputs.get("local_corpus_policy", "missing")))
-    if len(local_dependencies) > 1:
+    dependency = merge_local_corpus_policy_dependencies(
+        None, [full_summary, collection_manifest, selected_manifest]
+    )
+    if dependency == UNKNOWN_LOCAL_CORPUS_POLICY:
         raise ValueError("collection local corpus policy drift")
-    if local_dependencies:
-        fingerprints["local_corpus_policy"] = local_dependencies.pop()
+    fingerprints["local_corpus_policy"] = dependency
     return fingerprints
 
 
