@@ -75,6 +75,7 @@
     },
     "input_fingerprints": {
       "type": "object",
+      "description": "Policy and scan dependencies. New reports always include local_corpus_policy (SHA-256, or 'missing' when absent), including when the scan uses a custom policy.",
       "additionalProperties": {
         "type": "string",
         "minLength": 1

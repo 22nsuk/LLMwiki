@@ -153,14 +153,24 @@ def test_custom_policy_freshness_is_independent_of_default_local_policy(
 
 
 @pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("custom_policy", [False, True], ids=["default", "custom"])
 def test_cached_freshness_consumers_reject_local_policy_drift(
-    tmp_path: Path, transition: str
+    tmp_path: Path, transition: str, custom_policy: bool
 ) -> None:
     seed_minimal_vault(tmp_path)
+    policy_path = "ops/policies/custom-policy.yaml" if custom_policy else None
+    if policy_path:
+        (tmp_path / policy_path).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
     policy, _ = load_policy(tmp_path)
     if transition != "create":
         write_local_corpus_policy(tmp_path, policy)
-    original = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    lint_path = tmp_path / "ops/reports/lint-report.json"
+    lint_path.parent.mkdir(parents=True, exist_ok=True)
+    lint_path.write_text(json.dumps(lint(tmp_path, context=fixed_context())), encoding="utf-8")
+    original = build_report(
+        tmp_path, policy_path=policy_path, context=fixed_context(), mtime_source="embedded_currentness"
+    )
+    assert original["summary"]["stale_artifact_count"] == 0
     write_report(tmp_path, original)
     spec = next(item for item in SOURCE_SPECS if item.name == "artifact_freshness")
     assert load_closeout_source(tmp_path, spec)[1] == "ok"
@@ -181,10 +191,43 @@ def test_cached_freshness_consumers_reject_local_policy_drift(
     assert state["stale_artifact_count"] is None
     assert state["total_artifact_count"] is None
 
-    refreshed = build_report(tmp_path, context=fixed_context(), mtime_source="embedded_currentness")
+    refreshed = build_report(
+        tmp_path, policy_path=policy_path, context=fixed_context(), mtime_source="embedded_currentness"
+    )
+    assert validate_with_schema(refreshed, load_schema(REPORT_SCHEMA_PATH)) == []
+    assert refreshed["summary"]["stale_artifact_count"] == 1
     write_report(tmp_path, refreshed)
     assert load_closeout_source(tmp_path, spec)[1] == "ok"
-    assert canonical_artifact_freshness_state(tmp_path)["evidence_status"] == "current"
+    refreshed_state = canonical_artifact_freshness_state(tmp_path)
+    assert refreshed_state["evidence_status"] == "current"
+    assert refreshed_state["stale_artifact_count"] == 1
+
+
+@pytest.mark.parametrize("legacy_policy_metadata", [False, True])
+@pytest.mark.parametrize("overlay_present", [False, True])
+def test_custom_freshness_without_overlay_binding_requires_regeneration(
+    tmp_path: Path, legacy_policy_metadata: bool, overlay_present: bool
+) -> None:
+    seed_minimal_vault(tmp_path)
+    policy_path = "ops/policies/custom-policy.yaml"
+    (tmp_path / policy_path).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    if overlay_present:
+        policy, _ = load_policy(tmp_path)
+        write_local_corpus_policy(tmp_path, policy)
+    report = build_report(
+        tmp_path, policy_path=policy_path, context=fixed_context(), mtime_source="embedded_currentness"
+    )
+    # Older custom-policy aggregates never recorded this indirect dependency.
+    report["input_fingerprints"].pop("local_corpus_policy", None)
+    if legacy_policy_metadata:
+        report["input_fingerprints"].pop("custom_policy_path")
+    write_report(tmp_path, report)
+
+    spec = next(item for item in SOURCE_SPECS if item.name == "artifact_freshness")
+    assert load_closeout_source(tmp_path, spec)[1] == "unusable"
+    state = canonical_artifact_freshness_state(tmp_path)
+    assert state["evidence_status"] == "stale"
+    assert state["stale_artifact_count"] is None
 
 
 def test_environment_report_without_effective_policy_inputs_stays_current(tmp_path: Path) -> None:

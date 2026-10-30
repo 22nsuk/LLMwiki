@@ -70,7 +70,7 @@ from .artifact_io_runtime import (
     write_schema_backed_report,
 )
 from .output_runtime import display_path
-from .policy_runtime import load_policy, report_path
+from .policy_runtime import LOCAL_CORPUS_POLICY_PATH, load_policy, report_path
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import ARTIFACT_FRESHNESS_REPORT_SCHEMA_PATH
 from .schema_runtime import (
@@ -1164,11 +1164,15 @@ def _assemble_artifact_freshness_payload(
             "ops/scripts/core/artifact_freshness_runtime.py",
             "ops/scripts/core/artifact_freshness_debt_runtime.py",
         ],
-        file_inputs=(
-            {"zip_metadata": scan_inputs.resolved_zip_metadata_path}
-            if scan_inputs.resolved_zip_metadata_path is not None
-            else None
-        ),
+        file_inputs={
+            # The scan includes default-policy evidence even with --policy-path.
+            "local_corpus_policy": LOCAL_CORPUS_POLICY_PATH,
+            **(
+                {"zip_metadata": scan_inputs.resolved_zip_metadata_path}
+                if scan_inputs.resolved_zip_metadata_path is not None
+                else {}
+            ),
+        },
         text_inputs={
             "mtime_source": mtime_source,
             "root_ephemeral_patterns": "\n".join(ROOT_EPHEMERAL_PATTERNS),

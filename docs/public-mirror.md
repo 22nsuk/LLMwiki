@@ -84,7 +84,12 @@ default overlay; archived reports and historical run snapshots retain their
 existing lifecycle treatment. Release closeout routes policy mismatches in
 release-owned reports through its existing freshness review gate. Closeout and
 external-report lifecycle readers reject a cached freshness aggregate whose
-local policy inputs have changed until it is regenerated. Environment-only
+local policy inputs have changed until it is regenerated. Freshness aggregates
+always record the scanned vault's `local_corpus_policy` fingerprint, using
+`missing` when the overlay is absent, even with an explicit custom scan policy:
+the scan also evaluates default-policy reports. Older custom-policy aggregates
+without this binding require regeneration; direct custom-policy reports retain
+their independence from the default overlay. Environment-only
 diagnostics without effective-policy inputs remain independent of the overlay.
 Public source fingerprints, Git tracking, public exports, wheels, and sdists
 exclude the local file.

@@ -186,21 +186,24 @@ def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bo
     fingerprints = report.get("input_fingerprints", {})
     if not isinstance(fingerprints, dict):
         return False
-    if "custom_policy_path" in fingerprints:
-        return True
+    local_policy = vault / LOCAL_CORPUS_POLICY_PATH
+    # An explicit dependency also applies to custom-policy aggregates that scan
+    # default-policy reports. File inputs record absence as "missing".
+    if "local_corpus_policy" in fingerprints:
+        return fingerprints["local_corpus_policy"] == _sha256_file(local_policy)
     # Reports written before local overlays used only policy.path for scope.
     policy = report.get("policy", {})
     path = policy.get("path") if isinstance(policy, dict) else None
-    if (
-        "local_corpus_policy" not in fingerprints
-        and isinstance(path, str)
+    custom_policy = "custom_policy_path" in fingerprints or (
+        isinstance(path, str)
         and path
         and local_corpus_policy_path(vault, resolve_policy_path(vault, path)) is None
-    ):
-        return True
-    local_policy = vault / LOCAL_CORPUS_POLICY_PATH
-    current = _sha256_file(local_policy) if local_policy.exists() else None
-    return fingerprints.get("local_corpus_policy") == current
+    )
+    if custom_policy:
+        # Older custom-policy freshness aggregates did not bind the scanned
+        # overlay, so even its absence cannot establish their currentness.
+        return report.get("artifact_kind") != "artifact_freshness_report"
+    return not local_policy.exists()
 
 
 def build_canonical_report_envelope(
