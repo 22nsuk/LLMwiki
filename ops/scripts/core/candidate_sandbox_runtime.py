@@ -4,6 +4,7 @@ import os
 import shutil
 import stat
 import sys
+import tempfile
 from pathlib import Path
 
 from .command_runtime import TimedProcessResult, run_with_timeout
@@ -227,4 +228,13 @@ def run_candidate_command(
             timeout_seconds=timeout_seconds,
             termination_reason="sandbox_unavailable",
             launch_succeeded=False,
+        )
+
+
+def probe_candidate_sandbox(*, timeout_seconds: int = 30) -> TimedProcessResult:
+    """Exercise the production namespace boundary and required runtime imports."""
+    with tempfile.TemporaryDirectory(prefix="candidate-sandbox-smoke-") as workspace:
+        return run_candidate_command(
+            [str(LAUNCHER_PYTHON), "-c", "import jsonschema, pytest, yaml; print('candidate sandbox ready')"],
+            cwd=Path(workspace), timeout_seconds=timeout_seconds,
         )

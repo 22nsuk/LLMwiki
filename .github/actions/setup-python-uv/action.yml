@@ -63,17 +63,10 @@ runs:
       run: |
         python - <<'PY'
         import sys
-        import tempfile
-        from pathlib import Path
 
-        from ops.scripts.core.candidate_sandbox_runtime import run_candidate_command
+        from ops.scripts.core.candidate_sandbox_runtime import probe_candidate_sandbox
 
-        with tempfile.TemporaryDirectory(prefix="candidate-sandbox-smoke-") as workspace:
-            result = run_candidate_command(
-                [sys.executable, "-c", "import jsonschema, pytest, yaml; print('candidate sandbox ready')"],
-                cwd=Path(workspace),
-                timeout_seconds=30,
-            )
+        result = probe_candidate_sandbox(timeout_seconds=30)
         sys.stdout.write(result.stdout)
         sys.stderr.write(result.stderr)
         raise SystemExit(result.returncode)

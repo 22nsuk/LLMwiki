@@ -18,6 +18,7 @@ from ops.scripts.core.bootstrap_preflight import (
     main,
     write_report,
 )
+from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.core.schema_constants_runtime import (
     BOOTSTRAP_PREFLIGHT_REPORT_SCHEMA_PATH,
 )
@@ -31,6 +32,31 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def _module_available(missing: set[str]) -> Callable[[str], bool]:
     return lambda module: module not in missing
+
+
+@pytest.mark.parametrize("failure", ["missing_bwrap", "namespace_denied", "missing_import"])
+def test_goal_preflight_blocks_unusable_production_sandbox(tmp_path: Path, failure: str) -> None:
+    seed_minimal_vault(tmp_path)
+    venv = tmp_path / ".venv" / ("Scripts" if os.name == "nt" else "bin")
+    venv.mkdir(parents=True)
+    (venv / ("python.exe" if os.name == "nt" else "python")).write_text("synthetic interpreter")
+    outer = tmp_path / "tools"
+    outer.mkdir()
+    codex = outer / ("codex.exe" if os.name == "nt" else "codex")
+    codex.write_text("#!/bin/sh\nexit 0\n")
+    codex.chmod(0o755)
+    result = TimedProcessResult(args=[], returncode=1, stdout="", stderr=failure,
+                                timed_out=False, timeout_seconds=30, termination_reason="completed")
+    boundary = mock.patch("ops.scripts.core.candidate_sandbox_runtime.BWRAP", tmp_path / "absent") if failure == "missing_bwrap" else mock.patch(
+        "ops.scripts.core.candidate_sandbox_runtime.run_candidate_command", return_value=result
+    )
+    with mock.patch.dict(os.environ, {"PATH": str(outer)}), boundary:
+        report = build_report(vault=tmp_path, environment_class="goal-runtime", module_available=_module_available(set()))
+    assert report["status"] == "fail"
+    assert "candidate_sandbox_unavailable" in report["summary"]["executor_tooling_failures"]
+    assert report["environment"]["executor_tooling"]["sandbox"]["status"] == "fail"
+    assert "Bubblewrap" in report["guidance"]
+    assert validate_with_schema(report, load_schema(REPO_ROOT / BOOTSTRAP_PREFLIGHT_REPORT_SCHEMA_PATH)) == []
 
 
 class BootstrapPreflightTests(unittest.TestCase):
@@ -195,9 +221,12 @@ class BootstrapPreflightTests(unittest.TestCase):
             outer_codex.write_text("#!/bin/sh\n", encoding="utf-8")
             outer_codex.chmod(0o755)
 
-            with mock.patch.dict(
-                os.environ,
-                {"PATH": f"{venv_bin}{os.pathsep}{outer_codex.parent}"},
+            with (
+                mock.patch.dict(os.environ, {"PATH": f"{venv_bin}{os.pathsep}{outer_codex.parent}"}),
+                mock.patch("ops.scripts.core.candidate_sandbox_runtime.run_candidate_command", return_value=TimedProcessResult(
+                    args=[], returncode=0, stdout="ready", stderr="", timed_out=False,
+                    timeout_seconds=30, termination_reason="completed",
+                )),
             ):
                 report = build_report(
                     vault=vault,

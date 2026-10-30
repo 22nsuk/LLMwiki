@@ -228,6 +228,23 @@ def _dependency_rows(
     return rows
 
 
+def _check_executor_sandbox(vault: Path, tooling: dict[str, Any]) -> None:
+    # Keep bootstrap importable before optional runtime packages are installed.
+    from ops.scripts.core.candidate_sandbox_runtime import probe_candidate_sandbox
+
+    result = probe_candidate_sandbox(timeout_seconds=30)
+    ready = result.returncode == 0 and not result.timed_out
+    tooling["sandbox"] = {
+        "status": "pass" if ready else "fail",
+        "returncode": result.returncode,
+        "timed_out": result.timed_out,
+        "detail": sanitize_report_text(vault, result.stderr[-2000:]),
+    }
+    if not ready:
+        tooling["status"] = "fail"
+        tooling["failures"].append("candidate_sandbox_unavailable")
+
+
 def build_report(
     *,
     vault: Path | None = None,
@@ -261,6 +278,8 @@ def build_report(
         )
     missing = [row for row in dependency_rows if not bool(row["installed"])]
     executor_tooling = _executor_tooling(resolved_vault, environment_class=environment_class)
+    if environment_class == "goal-runtime" and python_ok and not missing and executor_tooling["status"] == "pass":
+        _check_executor_sandbox(resolved_vault, executor_tooling)
     executor_tooling_failures = [
         str(item) for item in executor_tooling.get("failures", []) if str(item).strip()
     ]
@@ -270,6 +289,8 @@ def build_report(
             "Run make dev-install, then rerun make goal-runtime-python-preflight "
             "before goal-runtime execution."
         )
+    elif "candidate_sandbox_unavailable" in executor_tooling_failures:
+        guidance = "Install Bubblewrap and load its packaged AppArmor profile; verify namespaces and sandbox dependency imports before goal-runtime execution."
     elif executor_tooling_failures:
         guidance = (
             "Expose the operator Codex CLI outside the repository virtualenv and remove "

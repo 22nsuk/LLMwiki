@@ -7,9 +7,12 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
+import threading
 import unittest
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any
@@ -22,6 +25,7 @@ from ops.scripts.core.command_runtime import TimedProcessResult
 from ops.scripts.core.policy_runtime import LOCAL_CORPUS_POLICY_PATH
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+from ops.scripts.public.export_public_repo import public_export_session
 from ops.scripts.public.public_check_summary import (
     PublicCheckRequest,
     _default_command_runner,
@@ -116,6 +120,274 @@ def fake_runner(
         timeout_seconds=timeout_seconds,
         termination_reason="completed",
     )
+
+
+def test_default_public_checks_have_independent_workspaces_and_caches(tmp_path: Path) -> None:
+    barrier = threading.Barrier(2)
+    directories: list[Path] = []
+    requests = PublicCheckRequest(source_history_scan=False)
+    vaults = [tmp_path / name for name in ("a", "b")]
+    for vault in vaults:
+        vault.mkdir()
+        seed_minimal_vault(vault)
+        seed_public_policy_file(vault)
+        (vault / "README.md").write_text(vault.name, encoding="utf-8")
+
+    def check(vault: Path) -> dict[str, Any]:
+        def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+            if argv[2] == "ruff":
+                directories.append(cwd)
+                barrier.wait(timeout=15)
+            read = subprocess.run([sys.executable, "-I", "-c", "from pathlib import Path; print(Path('README.md').read_text())"], cwd=cwd, capture_output=True, text=True, check=True, timeout=10)
+            assert read.stdout.strip() == vault.name
+            return fake_runner(argv, cwd, timeout)
+        return build_report(vault, requests, context=fixed_context(), command_runner=runner)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        reports = list(pool.map(check, vaults))
+    assert all(report["status"] == "pass" for report in reports)
+    assert len(set(directories)) == 2
+    assert all(not path.exists() for path in directories)
+    assert _public_pytest_summary_cache_path(vaults[0], requests) != _public_pytest_summary_cache_path(vaults[1], requests)
+    assert reports[0]["public_export"]["output_dir"] == "<tmp>/invocation-private/export"
+
+
+@pytest.mark.parametrize("changed", ["source", "export"])
+@pytest.mark.parametrize("relative", ["README.md", "ops/script-output-surfaces.json"])
+@pytest.mark.parametrize("existing_cache", [False, True])
+def test_public_check_rejects_input_changes_during_validation(
+    tmp_path: Path, changed: str, relative: str, existing_cache: bool
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    (vault / relative).write_text("original input\n", encoding="utf-8")
+
+    def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+        if argv[2] == "ruff":
+            target = vault if changed == "source" else cwd
+            (target / relative).write_text("changed after snapshot\n", encoding="utf-8")
+        return fake_runner(argv, cwd, timeout)
+
+    cache = tmp_path / "pytest-summary-cache.json"
+    if existing_cache:
+        cache.write_text('{"prior": "cache"}\n', encoding="utf-8")
+    original = cache.read_bytes() if existing_cache else None
+    with (
+        patch.object(public_check_summary_module, "_public_pytest_summary_cache_path", return_value=cache),
+        pytest.raises(ValueError, match="inputs changed"),
+    ):
+        build_report(vault, context=fixed_context(), command_runner=runner)
+    assert (cache.read_bytes() if cache.exists() else None) == original
+
+
+@pytest.mark.parametrize("mode", ["default", "full"])
+@pytest.mark.parametrize("retained", [False, True])
+@pytest.mark.parametrize("change", ["create", "edit", "remove", "rename", "rewrite", "excluded"])
+def test_public_source_inputs_bind_summary_reuse_and_pytest_cache(
+    tmp_path: Path, mode: str, retained: bool, change: str
+) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    source = vault / "ops/script-output-surfaces.json"
+    if change != "create":
+        source.write_text('{"version": 1}\n', encoding="utf-8")
+    request = PublicCheckRequest(
+        mode=mode, public_out=str(output) if retained else "", source_history_scan=False,
+    )
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    summary = write_report(vault, report)
+    saved = summary.read_bytes(), summary.stat().st_mtime_ns
+    cache = _public_pytest_summary_cache_path(vault, request)
+    assert cache.is_file()
+    assert reusable_summary_diagnostics(vault, summary, request)["reusable"] is True
+
+    if change == "remove":
+        source.unlink()
+    elif change == "rename":
+        source.rename(source.with_name("renamed-output-surfaces.json"))
+    elif change == "rewrite":
+        source.write_bytes(source.read_bytes())
+    elif change == "excluded":
+        generated = vault / "ops/reports/generated.json"
+        generated.parent.mkdir(parents=True, exist_ok=True)
+        generated.write_text("{}\n", encoding="utf-8")
+    else:
+        source.write_text("{}\n", encoding="utf-8")
+
+    unchanged = change in {"rewrite", "excluded"}
+    for checked_request in (None, request):
+        diagnostics = reusable_summary_diagnostics(vault, summary, checked_request)
+        assert diagnostics["reusable"] is unchanged
+        if not unchanged:
+            assert diagnostics["checks"]["public_export_source"] is False
+    with redirect_stdout(io.StringIO()):
+        exit_code = public_check_summary_module.main([
+            "--vault", str(vault), "--out", str(summary), "--mode", mode,
+            "--public-out", request.public_out, "--skip-source-history-scan", "--reuse-only",
+        ])
+    assert exit_code == (0 if unchanged else 1)
+    assert (_public_pytest_summary_cache_path(vault, request) == cache) is unchanged
+    assert (summary.read_bytes(), summary.stat().st_mtime_ns) == saved
+
+
+def test_public_summary_without_export_source_identity_requires_refresh(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    request = PublicCheckRequest(source_history_scan=False)
+    report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+    report["input_fingerprints"].pop("public_export_source", None)
+    summary = write_report(tmp_path, report)
+    diagnostics = reusable_summary_diagnostics(tmp_path, summary, request)
+    assert diagnostics["reusable"] is False
+    assert diagnostics["checks"]["public_export_source"] is False
+
+
+def test_public_source_read_failure_cannot_prove_currentness(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    source = tmp_path / "ops/script-output-surfaces.json"
+    source.write_text("{}\n", encoding="utf-8")
+    request = PublicCheckRequest(source_history_scan=False)
+    report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+    summary = write_report(tmp_path, report)
+    original_read = Path.read_bytes
+
+    def unreadable(path: Path) -> bytes:
+        if path == source:
+            raise PermissionError("synthetic public input read failure")
+        return original_read(path)
+
+    with patch.object(Path, "read_bytes", unreadable):
+        diagnostics = reusable_summary_diagnostics(tmp_path, summary, request)
+        assert diagnostics["reusable"] is False
+        assert diagnostics["reason"] == "public_export_source_unavailable:PermissionError"
+        with pytest.raises(PermissionError, match="public input read failure"):
+            build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+
+
+def test_explicit_export_lock_excludes_other_processes(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    (vault / "README.md").write_text("source\n", encoding="utf-8")
+    code = "from pathlib import Path; from ops.scripts.public.export_public_repo import export_public_repo; import sys; export_public_repo(Path(sys.argv[1]), Path(sys.argv[2]))"
+    command = [sys.executable, "-c", code, str(vault), str(output)]
+    with public_export_session(vault, output):
+        result = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, timeout=20, check=False)
+        assert result.returncode != 0
+        assert "output lock" in result.stderr
+        assert (output / "README.md").read_text() == "source\n"
+    subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, timeout=20, check=True)
+
+
+def test_reuse_rejects_retained_export_content_drift(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(output), source_history_scan=False)
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    path = write_report(vault, report)
+    assert reusable_summary_diagnostics(vault, path, request)["reusable"] is True
+    (output / "README.md").write_text("replaced by another invocation\n", encoding="utf-8")
+    diagnostics = reusable_summary_diagnostics(vault, path, request)
+    assert diagnostics["reusable"] is False
+    assert diagnostics["checks"]["retained_export"] is False
+
+
+def _add_export_entry(output: Path, relative: str, kind: str) -> None:
+    path = output / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if kind == "directory":
+        path.mkdir()
+    elif kind == "file":
+        path.write_text("synthetic extra content\n", encoding="utf-8")
+    else:
+        if path.exists():
+            path.unlink()
+        target = output / "README.md" if kind == "internal_link" else output.parent / "outside"
+        if kind == "external_link":
+            target.write_text("synthetic external content\n", encoding="utf-8")
+        try:
+            path.symlink_to(target)
+        except OSError as exc:
+            pytest.skip(f"symlink creation unavailable: {exc}")
+
+
+@pytest.mark.parametrize("boundary", ["during_validation", "reuse"])
+@pytest.mark.parametrize(
+    ("relative", "kind"),
+    [
+        ("raw/synthetic-private.md", "file"),
+        ("wiki", "directory"),
+        ("ops/policies/wiki-maintainer-policy.local.yaml", "file"),
+        ("ops/reports/unexpected.json", "file"),
+        (".git/config", "file"),
+        (".venv", "directory"),
+        ("unexpected.txt", "file"),
+        ("docs/added.md", "file"),
+        ("docs/added.md", "external_link"),
+        ("docs/added.md", "internal_link"),
+        ("docs/added.md", "dangling_link"),
+        ("PUBLIC-EXPORT-MANIFEST.json", "internal_link"),
+        ("README.md", "internal_link"),
+        (".pytest_cache/added", "external_link"),
+        (".mypy_cache", "dangling_link"),
+    ],
+)
+def test_public_check_rejects_unexpected_physical_entries(
+    tmp_path: Path, boundary: str, relative: str, kind: str
+) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(output), source_history_scan=False)
+
+    def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+        result = fake_runner(argv, cwd, timeout)
+        if argv[2] == "ops.scripts.test_execution_summary":
+            _add_export_entry(cwd, relative, kind)
+        return result
+
+    if boundary == "during_validation":
+        with pytest.raises(ValueError, match="inputs changed"):
+            build_report(vault, request, context=fixed_context(), command_runner=runner)
+    else:
+        report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+        summary = write_report(vault, report)
+        original = summary.read_bytes(), summary.stat().st_mtime_ns
+        assert reusable_summary_diagnostics(vault, summary, request)["reusable"] is True
+        _add_export_entry(output, relative, kind)
+        diagnostics = reusable_summary_diagnostics(vault, summary, request)
+        assert diagnostics["reusable"] is False
+        assert diagnostics["checks"]["retained_export"] is False
+        assert (summary.read_bytes(), summary.stat().st_mtime_ns) == original
+
+
+def test_public_check_allows_validation_caches_at_both_boundaries(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(output), source_history_scan=False)
+
+    def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+        for relative in (
+            ".ruff_cache/version/entry", ".mypy_cache/version/entry",
+            ".pytest_cache/v/cache/nodeids", ".hypothesis/constants/entry",
+            "ops/scripts/public/__pycache__/public_surface_policy.cpython-312.pyc",
+        ):
+            _add_export_entry(cwd, relative, "file")
+        return fake_runner(argv, cwd, timeout)
+
+    report = build_report(vault, request, context=fixed_context(), command_runner=runner)
+    assert report["status"] == "pass"
+    summary = write_report(vault, report)
+    assert reusable_summary_diagnostics(vault, summary, request)["reusable"] is True
 
 
 def failing_pytest_runner(
@@ -466,7 +738,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
             self.assertTrue(
                 report["public_export"]["output_dir"].endswith(f"/{public_out.name}")
             )
-            self.assertTrue(_public_pytest_summary_cache_path().exists())
+            self.assertTrue(_public_pytest_summary_cache_path(vault, PublicCheckRequest(
+                public_out=str(public_out), public_python="python", pytest_flags="-q"
+            )).exists())
             self.assertFalse(
                 (public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).exists()
             )
@@ -1799,55 +2073,6 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 self.assertFalse(diagnostics["reusable"])
                 self.assertIn("source_command", diagnostics["reason"])
                 self.assertIn("public_check_config", diagnostics["reason"])
-
-    def test_script_output_surfaces_refresh_does_not_stale_public_summary_without_source_drift(
-        self,
-    ) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault = Path(temp_dir) / "vault"
-            vault.mkdir()
-            seed_minimal_vault(vault)
-            seed_public_policy_file(vault)
-
-            report = build_report(
-                vault,
-                PublicCheckRequest(
-                    public_out=str(Path(temp_dir) / "public"),
-                    public_python="python",
-                ),
-                context=fixed_context(),
-                command_runner=fake_runner,
-            )
-            destination = write_report(vault, report)
-
-            script_output_surfaces = vault / "ops" / "script-output-surfaces.json"
-            script_output_surfaces.parent.mkdir(parents=True, exist_ok=True)
-            script_output_surfaces.write_text(
-                json.dumps(
-                    {
-                        "$schema": "ops/schemas/script-output-surfaces.schema.json",
-                        "artifact_kind": "script_output_surfaces",
-                        "producer": "ops.scripts.script_output_surfaces",
-                        "source_tree_scope": {
-                            "mode": "include_prefixes",
-                            "include_prefixes": ["ops/scripts"],
-                        },
-                        "version": 1,
-                        "description": "test fixture",
-                        "classification_values": ["repo_artifact"],
-                        "surfaces": [],
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-
-            reusable = reusable_summary_diagnostics(vault, destination)
-
-            self.assertTrue(reusable["reusable"])
-            self.assertEqual(reusable["reason"], "current_passing_public_check_summary")
 
     def test_relative_public_python_resolves_against_source_vault(self) -> None:
         captured_argv: list[list[str]] = []

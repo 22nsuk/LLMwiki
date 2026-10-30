@@ -39,6 +39,13 @@ from tests.test_mechanism_run_repo_health_step_runtime import _resolution
 pytestmark = pytest.mark.subprocess
 
 
+def test_shared_sandbox_probe_uses_production_launcher() -> None:
+    result = sandbox.probe_candidate_sandbox(timeout_seconds=30)
+    assert result.returncode == 0, result.stderr
+    assert result.timed_out is False
+    assert "candidate sandbox ready" in result.stdout
+
+
 @pytest.fixture
 def candidate(tmp_path: Path) -> Path:
     workspace = tmp_path / "candidate"

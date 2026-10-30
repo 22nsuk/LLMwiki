@@ -42,6 +42,12 @@
     "source_tree_fingerprint": { "type": "string", "minLength": 1 },
     "input_fingerprints": {
       "type": "object",
+      "properties": {
+        "public_export_source": {
+          "$ref": "#/$defs/sha256",
+          "description": "Identity of all selected public source paths and contents; required for summary reuse."
+        }
+      },
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
     "schema_version": { "type": "integer", "minimum": 1 },
