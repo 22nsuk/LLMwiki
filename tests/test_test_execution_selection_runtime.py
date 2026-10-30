@@ -1,11 +1,35 @@
 from __future__ import annotations
 
+import pytest
+
+from ops.scripts.test.test_execution_command_runtime import collection_semantic_command
 from ops.scripts.test.test_execution_selection_runtime import (
     apply_toolchain_contract_to_coverage,
     pytest_deselected_nodeids,
     pytest_selector_args,
     suite_coverage,
 )
+
+
+@pytest.mark.parametrize("option", ["--junit-xml", "--junitxml"])
+@pytest.mark.parametrize("joined", [False, True], ids=["separate", "equals"])
+@pytest.mark.parametrize(
+    ("scope", "selectors"),
+    [([], []), (["tests/test_sample.py"], ["tests/test_sample.py"]),
+     (["tests/test_sample.py::test_one"], ["tests/test_sample.py::test_one"]),
+     (["-m", "smoke"], [])],
+    ids=["full", "file", "nodeid", "marker"],
+)
+def test_junit_output_option_preserves_pytest_selection(
+    option: str, joined: bool, scope: list[str], selectors: list[str],
+) -> None:
+    output = "tmp/junit results.xml"
+    output_args = [f"{option}={output}"] if joined else [option, output]
+    command = ["python", "-m", "pytest", *output_args, *scope, "-q"]
+
+    assert pytest_selector_args(command) == selectors
+    assert collection_semantic_command(command) == ["-m", "pytest", *scope, "-q"]
+    assert suite_coverage(suite="full", command=command)["represents_full_suite"] is (not scope)
 
 
 def test_pytest_selector_args_ignore_option_values() -> None:
