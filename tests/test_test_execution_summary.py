@@ -4,6 +4,7 @@ import datetime as dt
 import hashlib
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -244,16 +245,16 @@ def test_reuse_diagnostics_reports_each_mismatch_code(
     assert diagnostics["reason"] == expected_reason
 
 
-@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("transition", ["create", "edit", "remove", "directory", "permission"])
 @pytest.mark.parametrize("custom_shard", [False, True], ids=["default-shard", "custom-shard"])
 def test_composed_summary_preserves_shard_overlay_dependency(
-    tmp_path: Path, transition: str, custom_shard: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transition: str, custom_shard: bool
 ) -> None:
     seed_minimal_vault(tmp_path)
     custom = "ops/policies/custom-policy.yaml"
     (tmp_path / custom).write_bytes((tmp_path / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
     local = tmp_path / "ops/policies/wiki-maintainer-policy.local.yaml"
-    if transition != "create":
+    if transition in {"edit", "remove"}:
         local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
     command = [sys.executable, "-m", "pytest"]
     shard = build_report(
@@ -281,12 +282,51 @@ def test_composed_summary_preserves_shard_overlay_dependency(
     )
     reused_path = "ops/reports/policy-reused.json"
     (tmp_path / reused_path).write_text(json.dumps(reused), encoding="utf-8")
+    manifest = build_collection_manifest(
+        tmp_path, suite="unit", semantic_command="-m pytest",
+        nodeids=["tests/test_sample.py::test_ok"], selection_kind="selector_subset",
+        deselected_tests=[], deselection_lifecycle=shard["deselection_lifecycle"],
+        policy_path=custom if custom_shard else None, context=_fixed_context(),
+    )
+    manifest_path = "ops/reports/policy-collection.json"
+    write_collection_manifest(tmp_path, manifest, manifest_path)
+    digest = load_collection_manifest_digest(
+        tmp_path, manifest_path, expected_suite="unit", expected_semantic_command="-m pytest"
+    )
+    assert collection_manifest_reference_is_current(tmp_path, digest)
+    assert collection_manifest_reference_is_rebindable(tmp_path, digest)
 
     if transition == "remove":
         local.unlink()
+    elif transition == "directory":
+        local.mkdir()
+    elif transition == "permission":
+        # Model an inaccessible parent without depending on the runner's UID.
+        # Path.exists() also hides this stat failure on supported Python 3.14.
+        original_stat = Path.stat
+        original_read_bytes = Path.read_bytes
+
+        def denied_stat(path: Path, *, follow_symlinks: bool = True) -> os.stat_result:
+            if path == local:
+                raise PermissionError("synthetic overlay access denied")
+            return original_stat(path, follow_symlinks=follow_symlinks)
+
+        def denied_read_bytes(path: Path) -> bytes:
+            if path == local:
+                raise PermissionError("synthetic overlay access denied")
+            return original_read_bytes(path)
+
+        monkeypatch.setattr(Path, "stat", denied_stat)
+        monkeypatch.setattr(Path, "read_bytes", denied_read_bytes)
     else:
         local.write_text("schema_version: 1\noverrides: {}\n# changed\n", encoding="utf-8")
     for path in paths[1:]:
+        out_path = tmp_path / "ops/reports/reuse-only-output.json"
+        assert summary_main([
+            "--vault", str(tmp_path), "--aggregate", "--suite", "unit",
+            "--reuse-only", "--reuse-from", path, "--out", str(out_path),
+        ]) == (0 if custom_shard else 1)
+        assert not out_path.exists()
         diagnostics = reusable_aggregate_summary_diagnostics(tmp_path, path, suite="unit")
         assert diagnostics["reusable"] is custom_shard
         assert diagnostics["result_reusable"] is custom_shard
@@ -294,8 +334,15 @@ def test_composed_summary_preserves_shard_overlay_dependency(
         reused, vault=tmp_path, command=command, suite="unit",
         collect_nodeids=False, collect_nodeid_digest=None,
     )["reusable"] is custom_shard
+    assert collection_manifest_reference_is_current(tmp_path, digest) is custom_shard
+    assert collection_manifest_reference_is_rebindable(tmp_path, digest) is custom_shard
+    if not custom_shard:
+        with pytest.raises(ValueError, match="local corpus policy drift"):
+            load_collection_manifest_digest(
+                tmp_path, manifest_path, expected_suite="unit", expected_semantic_command="-m pytest"
+            )
     freshness = build_freshness_report(
-        tmp_path, context=_fixed_context(), mtime_source="embedded_currentness"
+        tmp_path, policy_path=custom, context=_fixed_context(), mtime_source="embedded_currentness"
     )
     records = {row["path"]: row for row in freshness["artifact_records"]}
     for path in [*paths, reused_path]:

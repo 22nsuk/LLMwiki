@@ -211,9 +211,14 @@ def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bo
         # Older custom-policy freshness aggregates did not bind their inputs.
         return report.get("artifact_kind") != "artifact_freshness_report"
     local_policy = vault / LOCAL_CORPUS_POLICY_PATH
-    if "local_corpus_policy" not in fingerprints:
-        return not local_policy.exists()
-    return dependency == _sha256_file(local_policy)
+    try:
+        local_bytes = local_policy.read_bytes()
+    except FileNotFoundError:
+        return dependency == "missing"
+    except OSError:
+        # Currentness requires known inputs; a read failure cannot prove absence.
+        return False
+    return dependency == hashlib.sha256(local_bytes).hexdigest()
 
 
 def build_canonical_report_envelope(

@@ -81,6 +81,9 @@ survives nested aggregation and subset derivation even with a custom output
 policy; evidence composed entirely from independent custom policies stays
 independent. Subset derivation treats legacy omitted absence and explicit
 `missing` as the same input state, while preserving collection dependencies.
+Only a confirmed file absence satisfies this dependency. Directories and other
+overlay read errors invalidate dependent evidence, including legacy reports
+that omit the absence fingerprint; independent custom-policy evidence is unaffected.
 An unreadable or invalid policy referenced by cached test evidence makes the
 cache unusable. `--reuse-if-current` executes with the requested valid policy;
 `--reuse-only` fails without running tests or writing replacement evidence.

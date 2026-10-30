@@ -203,6 +203,38 @@ def test_cached_freshness_consumers_reject_local_policy_drift(
     assert refreshed_state["stale_artifact_count"] == 1
 
 
+@pytest.mark.parametrize("custom_policy", [False, True], ids=["default", "custom"])
+def test_cached_freshness_consumers_reject_overlay_directory(
+    tmp_path: Path, custom_policy: bool
+) -> None:
+    seed_minimal_vault(tmp_path)
+    policy_path = "ops/policies/custom-policy.yaml" if custom_policy else None
+    if policy_path:
+        (tmp_path / policy_path).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    original = build_report(
+        tmp_path, policy_path=policy_path, context=fixed_context(), mtime_source="embedded_currentness"
+    )
+    write_report(tmp_path, original)
+    spec = next(item for item in SOURCE_SPECS if item.name == "artifact_freshness")
+    assert load_closeout_source(tmp_path, spec)[1] == "ok"
+    assert canonical_artifact_freshness_state(tmp_path)["evidence_status"] == "current"
+
+    local = tmp_path / LOCAL_CORPUS_POLICY_PATH
+    local.mkdir()
+    assert release_source_tree_fingerprint(tmp_path) == original["source_tree_fingerprint"]
+    _, load_status, blockers = load_closeout_source(tmp_path, spec)
+    assert load_status == "unusable"
+    assert blockers[0]["code"] == "artifact_freshness_report_not_current"
+    state = canonical_artifact_freshness_state(tmp_path)
+    assert state["evidence_status"] == "stale"
+    assert state["stale_artifact_count"] is None
+    assert state["total_artifact_count"] is None
+
+    local.rmdir()
+    assert load_closeout_source(tmp_path, spec)[1] == "ok"
+    assert canonical_artifact_freshness_state(tmp_path)["evidence_status"] == "current"
+
+
 @pytest.mark.parametrize("legacy_policy_metadata", [False, True])
 @pytest.mark.parametrize("overlay_present", [False, True])
 def test_custom_freshness_without_overlay_binding_requires_regeneration(
