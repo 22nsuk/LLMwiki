@@ -16,6 +16,9 @@ from typing import Any
 
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.artifact_envelope_runtime import (
+        local_corpus_policy_is_current,
+    )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -45,6 +48,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.test.test_execution_summary import parse_pytest_counts
 else:
+    from ops.scripts.core.artifact_envelope_runtime import (
+        local_corpus_policy_is_current,
+    )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -945,6 +951,7 @@ def reusable_summary_diagnostics(
         "public_check_status": summary.get("public_check_status") == "pass",
         "source_tree_fingerprint": payload.get("source_tree_fingerprint")
         == current_source_tree_fingerprint,
+        "local_corpus_policy": local_corpus_policy_is_current(vault, payload),
     }
     if request is not None:
         expected_source_command = _public_check_source_command(request)

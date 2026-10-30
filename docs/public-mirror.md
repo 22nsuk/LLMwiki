@@ -105,6 +105,13 @@ their independence from the default overlay. Environment-only
 diagnostics without effective-policy inputs remain independent of the overlay.
 Public source fingerprints, Git tracking, public exports, wheels, and sdists
 exclude the local file.
+Default and full public-check summaries use the same local-policy currentness
+check before reuse. Creating, changing, removing, or failing to read the overlay
+rejects reuse even when public source, command configuration, and history are
+unchanged. `--reuse-only` leaves the stored report untouched and exits nonzero;
+`make release-public-current` refreshes the default report through its existing
+current-or-refresh path. An unchanged overlay, including confirmed absence,
+still permits reuse. The inner exported pytest cache remains corpus-free.
 Full and sparse candidate workspaces retain the overlay whenever they copy the
 default policy, so local validation uses the same effective corpus settings.
 Tests and examples must use synthetic corpus names; never copy an operator's local inventory into

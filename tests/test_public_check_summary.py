@@ -15,8 +15,11 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+import pytest
+
 import ops.scripts.public.public_check_summary as public_check_summary_module
 from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.policy_runtime import LOCAL_CORPUS_POLICY_PATH
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.public.public_check_summary import (
@@ -152,6 +155,91 @@ def timeout_pytest_runner(
         quiet_seconds=30 if timed_out else 0,
         observation_mode="process_heartbeat" if timed_out else "communicate",
     )
+
+
+@pytest.mark.parametrize("mode", ["default", "full"])
+@pytest.mark.parametrize(
+    "transition",
+    ["absent", "unchanged", "create", "edit", "remove", "unreadable"],
+)
+def test_public_summary_reuse_tracks_local_policy(
+    tmp_path: Path, mode: str, transition: str
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    local_policy = vault / LOCAL_CORPUS_POLICY_PATH
+    local_text = '{"schema_version": 1, "overrides": {}}\n'
+    if transition in {"unchanged", "edit", "remove"}:
+        local_policy.write_text(local_text, encoding="utf-8")
+    request = PublicCheckRequest(
+        mode=mode, public_out=str(tmp_path / "public"), public_python="python"
+    )
+    report = build_report(
+        vault, request, context=fixed_context(), command_runner=fake_runner
+    )
+    suffix = "-full" if mode == "full" else ""
+    destination = write_report(
+        vault, report, f"ops/reports/public-check-summary{suffix}.json"
+    )
+    before = (destination.read_bytes(), destination.stat().st_mtime_ns)
+    assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
+
+    if transition == "create":
+        local_policy.write_text(local_text, encoding="utf-8")
+    elif transition == "edit":
+        local_policy.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "overrides": {
+                        "page_shape": {
+                            "special_page_required_sections": {
+                                "system/system-index.md": ["Summary", "Synthetic section"]
+                            }
+                        }
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+    elif transition == "remove":
+        local_policy.unlink()
+    elif transition == "unreadable":
+        local_policy.mkdir()
+
+    expected_current = transition in {"absent", "unchanged"}
+    for selector in (None, request):
+        diagnostics = reusable_summary_diagnostics(vault, destination, selector)
+        assert diagnostics["reusable"] == expected_current
+        if not expected_current:
+            assert diagnostics["reason"] == "not_current:local_corpus_policy"
+
+    stdout = io.StringIO()
+    with redirect_stdout(stdout):
+        exit_code = public_check_summary_module.main(
+            [
+                "--vault", str(vault),
+                "--mode", mode,
+                "--reuse-only",
+                "--reuse-from", str(destination),
+                "--public-out", request.public_out,
+                "--public-python", "python",
+            ]
+        )
+    assert exit_code == (0 if expected_current else 1)
+    assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+    if not expected_current:
+        assert json.loads(stdout.getvalue())["reuse_diagnostics"]["reason"] == (
+            "not_current:local_corpus_policy"
+        )
+        if transition != "unreadable":
+            refreshed = build_report(
+                vault, request, context=fixed_context(), command_runner=fake_runner
+            )
+            write_report(vault, refreshed, str(destination))
+            assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
 
 
 class PublicCheckSummaryTests(unittest.TestCase):

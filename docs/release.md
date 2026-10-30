@@ -639,7 +639,7 @@ fingerprints, accepted risk, gate attention, or learning blockers.
   `public-check-summary-current-check` and `release-run-ready` use only the
   default artifact, while `public-check-all-check` uses only the full artifact.
   Each caller reuses its report only when the same mode, source command, pytest
-  selector, `source_tree_fingerprint`, and
+  selector, `source_tree_fingerprint`, local corpus policy dependency, and
   `input_fingerprints.public_check_config` still
   match; stale evidence must be refreshed by its matching writer. The config
   fingerprint binds the resolved public export directory and boundary, public
