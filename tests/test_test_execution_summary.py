@@ -91,6 +91,74 @@ def _fixed_context() -> RuntimeContext:
     )
 
 
+@pytest.mark.parametrize("option", ["--junit-xml", "--junitxml"])
+@pytest.mark.parametrize("joined", [False, True], ids=["separate", "equals"])
+@pytest.mark.parametrize("collect", [False, True], ids=["execution", "collection-manifest"])
+def test_junit_output_alias_full_suite_evidence_lifecycle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, option: str, joined: bool, collect: bool,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    tests = tmp_path / "tests"
+    tests.mkdir(exist_ok=True)
+    (tests / "test_sample.py").write_text(
+        "from pathlib import Path\n"
+        "counter = Path('tmp/imports.txt')\n"
+        "counter.parent.mkdir(exist_ok=True)\n"
+        "counter.write_text(str(int(counter.read_text()) + 1) if counter.exists() else '1')\n"
+        "def test_one():\n    assert True\n"
+        "def test_two():\n    assert True\n",
+        encoding="utf-8",
+    )
+    junit_path = "tmp/junit results.xml"
+    manifest_path = "ops/reports/full.collection.json"
+    report_path = "ops/reports/full.json"
+    output_args = [f"{option}={junit_path}"] if joined else [option, junit_path]
+    command = [sys.executable, "-m", "pytest", *output_args, "-q", "-p", "no:cacheprovider"]
+    common = [
+        "--vault", str(tmp_path), "--suite", "full-shard-1",
+        "--timeout-seconds", "30", "--collect-timeout-seconds", "30",
+    ]
+    if collect:
+        assert summary_main([
+            *common, "--collect-nodeids", "--collection-only", "--out", manifest_path,
+            "--", *command,
+        ]) == 0
+        manifest = json.loads((tmp_path / manifest_path).read_bytes())
+        assert manifest["selection_kind"] == "full_suite"
+        assert manifest["nodeid_count"] == 2
+        assert manifest["semantic_command"] == "-m pytest -q -p no:cacheprovider"
+        assert not (tmp_path / junit_path).exists()
+    execution_args = [*common, "--out", report_path, "--junit-xml-path", junit_path]
+    if collect:
+        execution_args += ["--collect-nodeids", "--collection-manifest", manifest_path]
+    assert summary_main([*execution_args, "--", *command]) == 0
+    stored = tmp_path / report_path
+    report = json.loads(stored.read_bytes())
+    assert report["counts"]["passed"] == 2
+    assert report["represents_full_suite"] is True
+    assert report["test_target_fingerprints"] == []
+    assert report["evidence_artifact_consistency"]["status"] == "pass"
+    if collect:
+        assert report["nodeid_outcome_consistency"]["status"] == "pass"
+        assert summary_main([
+            "--vault", str(tmp_path), "--validate-full-suite-sidecars", "--full-summary", report_path,
+            "--full-collection-manifest", manifest_path, "--junit-xml-path", junit_path,
+        ]) == 0
+    aggregate = build_aggregate_report(
+        tmp_path, shard_paths=[report_path], suite="full", context=_fixed_context(),
+    )
+    assert aggregate["status"] == "pass"
+    assert aggregate["represents_full_suite"] is True
+    original = stored.read_bytes()
+    original_mtime = stored.stat().st_mtime_ns
+    assert summary_main([*execution_args, "--reuse-only", "--", *command]) == 0
+    assert stored.read_bytes() == original
+    assert stored.stat().st_mtime_ns == original_mtime
+    assert (tmp_path / "tmp/imports.txt").read_text() == ("2" if collect else "1")
+
+
 def _reusable_existing_summary() -> dict[str, object]:
     return {
         "artifact_kind": "test_execution_summary",

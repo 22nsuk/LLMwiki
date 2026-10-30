@@ -38,6 +38,22 @@ def _bare_pytest_command(*args: str) -> list[str]:
     return [sys.executable, "-c", BARE_PYTEST_SIMULATION, *args]
 
 
+@pytest.mark.parametrize("option", ["--junit-xml", "--junitxml"])
+@pytest.mark.parametrize("joined", [False, True], ids=["separate", "equals"])
+@pytest.mark.parametrize("focused", [False, True], ids=["broad", "focused"])
+def test_junit_output_option_does_not_supply_focused_scope(
+    option: str, joined: bool, focused: bool,
+) -> None:
+    output = "tmp/junit results.xml"
+    output_args = [f"{option}={output}"] if joined else [option, output]
+    scope = ["tests/test_command_runtime.py"] if focused else ["tests"]
+    conftest = _load_repo_conftest()
+
+    assert conftest._argv_has_focused_pytest_scope(
+        ["pytest/__main__.py", *output_args, *scope],
+    ) is focused
+
+
 class PytestEntrypointGuidanceTests(unittest.TestCase):
     def test_bare_pytest_fails_with_supported_entrypoint_guidance(self) -> None:
         env = os.environ.copy()

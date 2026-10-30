@@ -187,6 +187,10 @@ be applied without changing every recipe. Override those variables to
 `$(PYTEST_SERIAL_FLAGS)` only when investigating a parallel-isolation failure.
 Volatile counts and durations belong in the generated execution summaries,
 JUnit XML, and logs, not in durable docs.
+Both `--junit-xml PATH` and `--junitxml PATH` (including `=PATH` forms)
+are output options: their paths do not restrict collection, become test-target
+fingerprints, or supply a focused selector for the pytest entrypoint guard.
+The wrapped execution keeps the requested JUnit output; collect-only omits it.
 
 Before spending release-grade runtime, prefer the check/plan targets:
 `make release-run-ready-check`, `make release-sealed-run-ready-check`,
