@@ -72,7 +72,9 @@ surfaces. Verify `load_policy(vault)` equals the retained effective policy.
 Canonical report input fingerprints include `local_corpus_policy` whenever the
 default policy has a local overlay. The `policy` fingerprint binds both files,
 and cached test summaries and collection manifests are invalidated when the
-overlay changes or is removed.
+overlay is created, changed, or removed. Derived test summaries preserve the
+parent's policy fingerprints, including the base policy binding when no overlay
+exists, so they follow the same invalidation lifecycle as direct summaries.
 The shared artifact freshness scan also marks policy-bound live canonical reports stale
 when the overlay is created, changed, or removed, including reports generated
 before overlays were supported. It records

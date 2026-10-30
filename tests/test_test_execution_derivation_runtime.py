@@ -9,7 +9,16 @@ from pathlib import Path
 
 import pytest
 
+from ops.scripts.core.artifact_freshness_runtime import (
+    build_report as build_freshness_report,
+)
 from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.policy_runtime import (
+    DEFAULT_POLICY_PATH,
+    LOCAL_CORPUS_POLICY_PATH,
+    load_policy,
+    write_local_corpus_policy,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.test.test_execution_derivation_runtime import (
@@ -26,7 +35,7 @@ from ops.scripts.test.test_execution_derivation_runtime import (
     validate_full_suite_evidence_bindings,
     write_collection_manifest,
 )
-from ops.scripts.test.test_execution_summary import build_report
+from ops.scripts.test.test_execution_summary import build_report, write_report
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.report_contract, pytest.mark.report_contract_core]
@@ -245,6 +254,7 @@ def _derived_fixture(
     *,
     junit_xml: bytes | None = None,
     stdout: str = "2 passed in 0.01s",
+    policy_path: str | None = None,
 ) -> tuple[dict, dict, dict, dict]:
     nodeids = [
         "tests/test_sample.py::test_function[value-a]",
@@ -258,6 +268,7 @@ def _derived_fixture(
         selection_kind="full_suite",
         deselected_tests=[],
         deselection_lifecycle=_lifecycle(),
+        policy_path=policy_path,
         context=FIXED_CONTEXT,
     )
     digest = {
@@ -288,6 +299,7 @@ def _derived_fixture(
         suite="full-shard-1",
         collect_nodeids=True,
         collect_nodeid_digest=digest,
+        policy_path=policy_path,
         context=FIXED_CONTEXT,
     )
     xml = junit_xml if junit_xml is not None else _junit_xml()
@@ -313,6 +325,7 @@ def _derived_fixture(
         selection_kind="selector_subset",
         deselected_tests=[],
         deselection_lifecycle=_lifecycle(),
+        policy_path=policy_path,
         context=FIXED_CONTEXT,
     )
     derived = derive_subset_summary(
@@ -628,6 +641,70 @@ def test_derivation_preserves_and_checks_local_policy_inputs(tmp_path: Path) -> 
         drifted["input_fingerprints"] = fingerprints
         with pytest.raises(ValueError, match="local corpus policy drift"):
             derive_subset_summary(full_summary, junit, full_manifest, drifted)
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("selection", ["manifest", "nodeids"])
+@pytest.mark.parametrize("custom_policy", [False, True], ids=["default", "custom"])
+def test_derived_summary_freshness_tracks_parent_policy_scope(
+    tmp_path: Path, transition: str, selection: str, custom_policy: bool
+) -> None:
+    seed_minimal_vault(tmp_path)
+    policy_path = "ops/policies/custom-policy.yaml" if custom_policy else None
+    if policy_path:
+        (tmp_path / policy_path).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    policy, _ = load_policy(tmp_path)
+    if transition != "create":
+        write_local_corpus_policy(tmp_path, policy)
+    derived, parent, full_manifest, selected_manifest = _derived_fixture(
+        tmp_path, policy_path=policy_path
+    )
+    if selection == "nodeids":
+        derived = derive_subset_summary(
+            parent,
+            parse_junit_testcases(_junit_xml(), expected_nodeids=full_manifest["nodeids"]),
+            full_manifest,
+            selected_manifest["nodeids"],
+        )
+    relative_path = "ops/reports/test-execution-summary-report-contract-derived.json"
+    write_report(tmp_path, derived, relative_path)
+    before = build_freshness_report(
+        tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness"
+    )
+    record = next(row for row in before["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["currentness_status"] == "current"
+
+    if transition == "remove":
+        (tmp_path / LOCAL_CORPUS_POLICY_PATH).unlink()
+    else:
+        policy["page_shape"]["special_page_required_sections"]["system/system-index.md"].append(
+            "Synthetic required section"
+        )
+        write_local_corpus_policy(tmp_path, policy)
+    after = build_freshness_report(
+        tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness"
+    )
+    record = next(row for row in after["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["source_tree_fingerprint_status"] == "current"
+    assert record["currentness_status"] == ("current" if custom_policy else "stale")
+    assert record["input_fingerprint_mismatch_keys"] == (
+        [] if custom_policy else ["local_corpus_policy"]
+    )
+    assert after["summary"]["stale_artifact_count"] == (0 if custom_policy else 1)
+    if not custom_policy:
+        assert record["recommended_next_action"] == "regenerate_canonical_report"
+        assert record["safe_to_backfill"] is False
+    refreshed, _, _, _ = _derived_fixture(tmp_path, policy_path=policy_path)
+    write_report(tmp_path, refreshed, relative_path)
+    current = build_freshness_report(
+        tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness"
+    )
+    record = next(row for row in current["artifact_records"] if row["path"] == relative_path)
+    assert record["currentness_status"] == "current"
+    assert record["input_fingerprint_mismatch_keys"] == []
+    assert current["summary"]["stale_artifact_count"] == 0
 
 
 def test_derivation_fails_closed_across_authority_boundaries(tmp_path: Path) -> None:

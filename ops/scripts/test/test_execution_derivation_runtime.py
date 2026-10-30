@@ -765,7 +765,9 @@ def _derived_input_fingerprints(
             selected_manifest["semantic_command_sha256"]
         ),
     }
-    for key in ("local_corpus_policy", "custom_policy_path"):
+    # Keep policy binding even without an overlay so its creation invalidates
+    # derived evidence through the same freshness checks as direct reports.
+    for key in ("policy", "local_corpus_policy", "custom_policy_path"):
         value = full_summary.get("input_fingerprints", {}).get(key)
         if value is not None:
             fingerprints[key] = str(value)
