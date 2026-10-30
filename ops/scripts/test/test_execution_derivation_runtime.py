@@ -144,6 +144,19 @@ def build_collection_manifest(
     }
 
 
+def _collection_manifest_identity(
+    manifest: dict[str, Any], *, vault: Path | None = None,
+) -> dict[str, str]:
+    """Keep a collection's recorded dependencies with every portable reference."""
+    return {
+        "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
+        "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
+        "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
+        "source_revision": str(manifest["source_revision"]),
+        "local_corpus_policy": merge_local_corpus_policy_dependencies(vault, [manifest]),
+    }
+
+
 def write_collection_manifest(
     vault: Path,
     manifest: dict[str, Any],
@@ -162,11 +175,7 @@ def write_collection_manifest(
     return {
         "manifest_path": report_path(vault, destination),
         "manifest_sha256": sha256_file(destination),
-        "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
-        "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
-        "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
-        "source_revision": str(manifest["source_revision"]),
-        "local_corpus_policy": merge_local_corpus_policy_dependencies(vault, [manifest]),
+        **_collection_manifest_identity(manifest, vault=vault),
     }
 
 
@@ -219,11 +228,7 @@ def load_collection_manifest_digest(
         "duration_ms": 0,
         "manifest_path": report_path(vault, path),
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
-        "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
-        "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
-        "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
-        "source_revision": str(manifest["source_revision"]),
-        "local_corpus_policy": merge_local_corpus_policy_dependencies(vault, [manifest]),
+        **_collection_manifest_identity(manifest, vault=vault),
     }
 
 
@@ -880,12 +885,7 @@ def _build_validated_subset_summary(
                 "nodeid_count": len(selected),
                 "sha256": selected_digest,
                 "reason": "exact selected collection manifest",
-                "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
-                "manifest_nodeids_sha256": selected_digest,
-                "source_tree_fingerprint": str(
-                    selected_manifest["source_tree_fingerprint"]
-                ),
-                "source_revision": str(selected_manifest["source_revision"]),
+                **_collection_manifest_identity(selected_manifest),
             },
             "nodeid_outcome_consistency": nodeid_outcome_consistency(
                 counts, {"status": "collected", "nodeid_count": len(selected)}

@@ -81,6 +81,11 @@ Collection digests carry their overlay dependency into direct summaries even
 when collection and execution use different policies. Direct, aggregate,
 reused, and derived summaries share one dependency-composition rule: preserve
 every input's recorded state instead of fingerprinting today's overlay again.
+Manifest writes, loads, revision rebinding, and subset derivation use the same
+portable collection identity. A derived summary records the selected collection's
+policy dependency in its digest as well as retaining all parent dependencies in
+the summary envelope. This allows same-tree revision reuse to preserve both
+scopes through subsequent reuse and aggregation without running pytest again.
 
 Before invoking the test command, the runner captures the selected policy's
 fingerprints and any inherited overlay dependency, including when
@@ -99,8 +104,10 @@ independent. Subset derivation treats legacy omitted absence and explicit
 Older custom-policy summaries that reference a collection manifest or were
 aggregated, reused, or derived without a recorded overlay state require
 regeneration. Their own policy scope cannot establish their inputs' independence.
-Legacy collection manifests can still be loaded to obtain a bound digest;
-standalone custom-policy summaries and historical snapshots retain their
+Legacy collection manifests can still be loaded to obtain a bound digest.
+Older derived summaries with an unbound collection digest require regeneration
+from the full-suite evidence and selection manifest before revision rebinding.
+Standalone custom-policy summaries and historical snapshots retain their
 existing behavior. Older readers may reject bound collection digests or the
 explicit `independent` state; regenerate composed evidence with the reader's matching producer after rollback.
 Only a confirmed file absence satisfies this dependency. Directories and other
