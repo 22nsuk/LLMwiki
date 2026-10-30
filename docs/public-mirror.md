@@ -201,6 +201,15 @@ change during validation, the check fails without publishing a passing report.
 Test-summary caches are atomic and keyed by source root, source contents, and
 check configuration. Reusing a summary for an explicit retained output also
 checks that output's current manifest and file contents under the lock.
+Both checks inspect the physical output tree, including paths the source export
+filter excludes. Private corpus/local-policy additions, unexpected files or
+directories, and symlinks (including dangling links and links inside caches)
+invalidate the result. Only root Ruff, mypy, pytest, and Hypothesis caches and
+Python `__pycache__` directories under exported packages are allowed as extra
+content; cache entries must be regular files or directories. Empty parent
+directories left by the temporary pytest summary are also allowed. A stale
+retained output is rebuilt by the normal refresh path; reuse-only checks fail
+without modifying the saved summary.
 `make public-export` still writes a retained mirror to
 the default system temporary location, overridable with `PUBLIC_EXPORT_OUT`
 or the existing `PUBLIC_OUT` override.

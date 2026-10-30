@@ -198,6 +198,98 @@ def test_reuse_rejects_retained_export_content_drift(tmp_path: Path) -> None:
     assert diagnostics["checks"]["retained_export"] is False
 
 
+def _add_export_entry(output: Path, relative: str, kind: str) -> None:
+    path = output / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if kind == "directory":
+        path.mkdir()
+    elif kind == "file":
+        path.write_text("synthetic extra content\n", encoding="utf-8")
+    else:
+        if path.exists():
+            path.unlink()
+        target = output / "README.md" if kind == "internal_link" else output.parent / "outside"
+        if kind == "external_link":
+            target.write_text("synthetic external content\n", encoding="utf-8")
+        try:
+            path.symlink_to(target)
+        except OSError as exc:
+            pytest.skip(f"symlink creation unavailable: {exc}")
+
+
+@pytest.mark.parametrize("boundary", ["during_validation", "reuse"])
+@pytest.mark.parametrize(
+    ("relative", "kind"),
+    [
+        ("raw/synthetic-private.md", "file"),
+        ("wiki", "directory"),
+        ("ops/policies/wiki-maintainer-policy.local.yaml", "file"),
+        ("ops/reports/unexpected.json", "file"),
+        (".git/config", "file"),
+        (".venv", "directory"),
+        ("unexpected.txt", "file"),
+        ("docs/added.md", "file"),
+        ("docs/added.md", "external_link"),
+        ("docs/added.md", "internal_link"),
+        ("docs/added.md", "dangling_link"),
+        ("PUBLIC-EXPORT-MANIFEST.json", "internal_link"),
+        ("README.md", "internal_link"),
+        (".pytest_cache/added", "external_link"),
+        (".mypy_cache", "dangling_link"),
+    ],
+)
+def test_public_check_rejects_unexpected_physical_entries(
+    tmp_path: Path, boundary: str, relative: str, kind: str
+) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(output), source_history_scan=False)
+
+    def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+        result = fake_runner(argv, cwd, timeout)
+        if argv[2] == "ops.scripts.test_execution_summary":
+            _add_export_entry(cwd, relative, kind)
+        return result
+
+    if boundary == "during_validation":
+        with pytest.raises(ValueError, match="inputs changed"):
+            build_report(vault, request, context=fixed_context(), command_runner=runner)
+    else:
+        report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+        summary = write_report(vault, report)
+        original = summary.read_bytes(), summary.stat().st_mtime_ns
+        assert reusable_summary_diagnostics(vault, summary, request)["reusable"] is True
+        _add_export_entry(output, relative, kind)
+        diagnostics = reusable_summary_diagnostics(vault, summary, request)
+        assert diagnostics["reusable"] is False
+        assert diagnostics["checks"]["retained_export"] is False
+        assert (summary.read_bytes(), summary.stat().st_mtime_ns) == original
+
+
+def test_public_check_allows_validation_caches_at_both_boundaries(tmp_path: Path) -> None:
+    vault, output = tmp_path / "vault", tmp_path / "public"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(output), source_history_scan=False)
+
+    def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+        for relative in (
+            ".ruff_cache/version/entry", ".mypy_cache/version/entry",
+            ".pytest_cache/v/cache/nodeids", ".hypothesis/constants/entry",
+            "ops/scripts/public/__pycache__/public_surface_policy.cpython-312.pyc",
+        ):
+            _add_export_entry(cwd, relative, "file")
+        return fake_runner(argv, cwd, timeout)
+
+    report = build_report(vault, request, context=fixed_context(), command_runner=runner)
+    assert report["status"] == "pass"
+    summary = write_report(vault, report)
+    assert reusable_summary_diagnostics(vault, summary, request)["reusable"] is True
+
+
 def failing_pytest_runner(
     argv: Sequence[str], cwd: Path, timeout_seconds: int
 ) -> TimedProcessResult:

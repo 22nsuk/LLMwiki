@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import shlex
+import stat
 import sys
 import tempfile
 import time
@@ -35,7 +36,6 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.public.export_public_repo import (
         _output_lock,
-        iter_public_files,
         public_export_session,
     )
     from ops.scripts.public.public_surface_policy import (
@@ -70,7 +70,6 @@ else:
 
     from .export_public_repo import (
         _output_lock,
-        iter_public_files,
         public_export_session,
     )
     from .public_surface_policy import (
@@ -228,6 +227,56 @@ def _export_file_records(
             }
         )
     return records
+
+
+def _export_inventory_is_current(public_out: Path, manifest: dict[str, Any]) -> bool:
+    """Check physical entries, including those omitted by the source export filter."""
+    expected_files = {
+        *manifest["files"],
+        str(manifest.get("manifest_file", "PUBLIC-EXPORT-MANIFEST.json")),
+    }
+    expected_dirs = {
+        parent.as_posix()
+        for relative in expected_files
+        for parent in Path(relative).parents
+    }
+    # The temporary pytest summary is removed after collection, leaving its parents.
+    summary_dirs = {
+        parent.as_posix() for parent in Path(PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH).parents
+    }
+    allowed_dirs = expected_dirs | summary_dirs
+    root_caches = {".ruff_cache", ".mypy_cache", ".pytest_cache", ".hypothesis"}
+    seen_files: set[str] = set()
+    pending = [(public_out, False)]
+    try:
+        while pending:
+            directory, in_cache = pending.pop()
+            for path in directory.iterdir():
+                relative = path.relative_to(public_out).as_posix()
+                mode = path.lstat().st_mode
+                if stat.S_ISDIR(mode):
+                    cache = (
+                        in_cache
+                        or relative in root_caches
+                        or (
+                            path.name == "__pycache__"
+                            and path.parent.relative_to(public_out).as_posix() in expected_dirs
+                        )
+                    )
+                    if not cache and relative not in allowed_dirs:
+                        return False
+                    pending.append((path, cache))
+                elif stat.S_ISREG(mode):
+                    if relative in expected_files:
+                        seen_files.add(relative)
+                    elif not in_cache:
+                        return False
+                else:
+                    # No links (even within caches), sockets, or other special files.
+                    return False
+    except OSError:
+        return False
+    return seen_files == expected_files
 
 
 def _read_public_text(path: Path) -> str:
@@ -914,9 +963,8 @@ def _check_export(
         commands = _run_public_check_commands(vault, request, output, command_runner)
         if (
             source_identity != release_source_tree_fingerprint(vault)
+            or not _export_inventory_is_current(output, manifest)
             or export.export_root_fingerprint != _canonical_sha256(_export_file_records(output, manifest))
-            or set(iter_public_files(output)) != set(export.manifest["files"])
-            or (output / ".git").exists()
             or source_history["history_state_fingerprint"] != source_history_state_fingerprint(vault, requested=request.source_history_scan)
         ):
             raise ValueError("public check source or exported inputs changed during validation")
@@ -957,9 +1005,8 @@ def _retained_export_is_current(vault: Path, request: PublicCheckRequest, payloa
                 return False
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             return (
-                _canonical_sha256(_export_file_records(output, manifest)) == metadata.get("export_root_fingerprint")
-                and set(iter_public_files(output)) == set(manifest["files"])
-                and not (output / ".git").exists()
+                _export_inventory_is_current(output, manifest)
+                and _canonical_sha256(_export_file_records(output, manifest)) == metadata.get("export_root_fingerprint")
             )
     except (OSError, ValueError, RuntimeError, KeyError, TypeError):
         return False
