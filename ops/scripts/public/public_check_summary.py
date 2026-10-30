@@ -36,6 +36,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.public.export_public_repo import (
         _output_lock,
+        iter_public_files,
         public_export_session,
     )
     from ops.scripts.public.public_surface_policy import (
@@ -70,6 +71,7 @@ else:
 
     from .export_public_repo import (
         _output_lock,
+        iter_public_files,
         public_export_session,
     )
     from .public_surface_policy import (
@@ -94,6 +96,7 @@ TAIL_LINE_COUNT = 80
 PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH = "ops/reports/test-execution-summary-public.json"
 PUBLIC_PYTEST_SUMMARY_CACHE_DIRNAME = "tmp-public-check-summary-cache"
 PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY = "public_check_config"
+PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY = "public_export_source"
 SOURCE_HISTORY_STATE_FINGERPRINT_KEY = "source_history_state"
 CommandRunner = Callable[[Sequence[str], Path, int], TimedProcessResult]
 
@@ -290,10 +293,20 @@ def _public_pytest_summary_path(public_out: Path) -> Path:
     return public_out / PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH
 
 
+def _public_export_source_inputs(vault: Path) -> str:
+    # Release manifests deliberately omit some public inputs, including generated
+    # registries. Use the exporter's selection and fail if selected bytes cannot be read.
+    return _canonical_json_text({
+        relative: hashlib.sha256((vault / relative).read_bytes()).hexdigest()
+        for relative in iter_public_files(vault)
+    })
+
+
 def _public_pytest_summary_cache_path(vault: Path, request: PublicCheckRequest) -> Path:
     key = _canonical_sha256({
         "source": str(vault.resolve()),
         "tree": release_source_tree_fingerprint(vault),
+        PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY: _public_export_source_inputs(vault),
         "config": _public_check_config_payload(vault, request),
     })
     return (
@@ -304,10 +317,8 @@ def _public_pytest_summary_cache_path(vault: Path, request: PublicCheckRequest) 
     )
 
 
-def _persist_public_pytest_summary(temp_summary_path: Path, cache_path: Path) -> None:
-    try:
-        payload = temp_summary_path.read_bytes()
-    except OSError:
+def _persist_public_pytest_summary(payload: bytes | None, cache_path: Path) -> None:
+    if payload is None:
         return
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     # Writers using the same input key must never expose a partial cache file.
@@ -687,10 +698,10 @@ def _run_public_check_commands(
     request: PublicCheckRequest,
     public_out_path: Path,
     command_runner: CommandRunner | None,
-) -> list[dict[str, Any]]:
+    pytest_summary_cache_path: Path,
+) -> tuple[list[dict[str, Any]], bytes | None]:
     public_python = _resolve_public_python(vault, request.public_python)
     pytest_summary_path = _public_pytest_summary_path(public_out_path)
-    pytest_summary_cache_path = _public_pytest_summary_cache_path(vault, request)
     runner = command_runner or (
         lambda argv, cwd, timeout_seconds: _default_command_runner(
             argv,
@@ -717,9 +728,12 @@ def _run_public_check_commands(
             pytest_summary_cache_path=pytest_summary_cache_path,
         )
     ]
-    _persist_public_pytest_summary(pytest_summary_path, pytest_summary_cache_path)
+    try:
+        pytest_summary = pytest_summary_path.read_bytes()
+    except OSError:
+        pytest_summary = None
     _remove_optional_file(pytest_summary_path)
-    return commands
+    return commands, pytest_summary
 
 
 def _public_check_status(
@@ -876,6 +890,7 @@ def _render_public_check_report(
     source_history: dict[str, Any],
     commands: list[dict[str, Any]],
     request: PublicCheckRequest,
+    public_source_inputs: str,
 ) -> dict[str, Any]:
     status = _public_check_status(commands, export.negative_assertions)
     source_paths = [
@@ -908,6 +923,7 @@ def _render_public_check_report(
             },
             text_inputs={
                 PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY: public_check_config_text,
+                PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY: public_source_inputs,
                 SOURCE_HISTORY_STATE_FINGERPRINT_KEY: str(
                     source_history["history_state_fingerprint"]
                 ),
@@ -955,14 +971,19 @@ def _check_export(
     context: RuntimeContext | None, command_runner: CommandRunner | None,
 ) -> dict[str, Any]:
     source_identity = release_source_tree_fingerprint(vault)
+    public_source_inputs = _public_export_source_inputs(vault)
+    pytest_summary_cache_path = _public_pytest_summary_cache_path(vault, request)
     policy, resolved_policy_path = load_policy(vault, None)
     runtime_context = context or RuntimeContext.from_policy(policy)
     with public_export_session(vault, output) as manifest:
         export = _collect_public_export_snapshot(vault, output, manifest)
         source_history = scan_source_history(vault, requested=request.source_history_scan)
-        commands = _run_public_check_commands(vault, request, output, command_runner)
+        commands, pytest_summary = _run_public_check_commands(
+            vault, request, output, command_runner, pytest_summary_cache_path,
+        )
         if (
             source_identity != release_source_tree_fingerprint(vault)
+            or public_source_inputs != _public_export_source_inputs(vault)
             or not _export_inventory_is_current(output, manifest)
             or export.export_root_fingerprint != _canonical_sha256(_export_file_records(output, manifest))
             or source_history["history_state_fingerprint"] != source_history_state_fingerprint(vault, requested=request.source_history_scan)
@@ -970,8 +991,9 @@ def _check_export(
             raise ValueError("public check source or exported inputs changed during validation")
         report = _render_public_check_report(
             vault, policy, resolved_policy_path, runtime_context,
-            export, source_history, commands, request,
+            export, source_history, commands, request, public_source_inputs,
         )
+        _persist_public_pytest_summary(pytest_summary, pytest_summary_cache_path)
         if not request.public_out:
             report["public_export"]["output_dir"] = "<tmp>/invocation-private/export"
         return report
@@ -1037,6 +1059,13 @@ def reusable_summary_diagnostics(
     input_fingerprints = (
         input_fingerprints if isinstance(input_fingerprints, dict) else {}
     )
+    try:
+        current_public_source_fingerprint = hashlib.sha256(
+            _public_export_source_inputs(vault).encode("utf-8")
+        ).hexdigest()
+    except OSError as exc:
+        diagnostics["reason"] = f"public_export_source_unavailable:{type(exc).__name__}"
+        return diagnostics
     checks = {
         "artifact_kind": payload.get("artifact_kind") == "public_check_summary",
         "producer": payload.get("producer") == PRODUCER,
@@ -1044,6 +1073,9 @@ def reusable_summary_diagnostics(
         "public_check_status": summary.get("public_check_status") == "pass",
         "source_tree_fingerprint": payload.get("source_tree_fingerprint")
         == current_source_tree_fingerprint,
+        PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY: input_fingerprints.get(
+            PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY
+        ) == current_public_source_fingerprint,
         "local_corpus_policy": local_corpus_policy_is_current(vault, payload),
     }
     if request is not None:

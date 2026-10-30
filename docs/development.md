@@ -293,6 +293,16 @@ candidate, check, and reuse paths; currentness also binds the mode, source
 command, and pytest selector identity. The
 temporary pytest summary cache path is intentionally not part of that
 fingerprint.
+Public validation also records `input_fingerprints.public_export_source`, using
+the exporter's complete source-file selection and file contents. This includes
+generated public inputs such as `ops/script-output-surfaces.json` that the shared
+release tree fingerprint deliberately excludes. Changes during validation reject
+the result; changes before reuse invalidate both the summary and its pytest cache
+key. The pytest cache is published only after the final input checks, so rejected
+executions preserve any previous cache. Byte-identical regeneration preserves reuse.
+Older summaries without this
+identity require a fresh public check; the shared release fingerprint retains its
+existing meaning.
 When CI public-check fails, inspect the printed `failure_causes` and uploaded
 `public-check-summary-*` candidate before rerunning the full lane. Keep release
 authority failures separate: missing finality attestation or sealed evidence is
