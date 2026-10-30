@@ -6,11 +6,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .policy_runtime import report_path
+from .policy_runtime import (
+    DEFAULT_POLICY_PATH,
+    local_corpus_policy_path,
+    read_local_corpus_policy_bytes,
+    report_path,
+    resolve_policy_path,
+)
 from .source_revision_runtime import resolve_source_revision
 from .source_tree_fingerprint_runtime import release_source_tree_fingerprint
 
 ARTIFACT_ENVELOPE_SCHEMA_PATH = "ops/schemas/artifact-envelope.schema.json"
+INDEPENDENT_LOCAL_CORPUS_POLICY = "independent"
+UNKNOWN_LOCAL_CORPUS_POLICY = "unknown"
 
 
 def _sha256_text(text: str) -> str:
@@ -165,7 +173,84 @@ def artifact_input_fingerprints(
         fingerprints[str(name)] = _fingerprint_paths(vault, [str(item) for item in rel_paths])
     for name, text in sorted((text_inputs or {}).items()):
         fingerprints[str(name)] = _sha256_text(str(text))
+    local_policy = local_corpus_policy_path(vault, resolved_policy_path)
+    if local_policy is not None:
+        local_bytes = read_local_corpus_policy_bytes(vault)
+        if local_bytes is not None:
+            local_digest = hashlib.sha256(local_bytes).hexdigest()
+            fingerprints["local_corpus_policy"] = local_digest
+            fingerprints["policy"] = _sha256_text(
+                f"{_sha256_file(resolved_policy_path)}\n{local_digest}"
+            )
+    else:
+        fingerprints["custom_policy_path"] = _sha256_text(report_path(vault, resolved_policy_path))
     return fingerprints
+
+
+def local_corpus_policy_dependency(vault: Path | None, report: Mapping[str, Any]) -> str | None:
+    """Return the recorded overlay state, including implicit legacy absence.
+
+    None means proven independence; "missing" is a dependency on absence.
+    Unknown legacy composition must not be inferred independent from its owner.
+    A None vault supports pure derivation of persisted, vault-relative evidence.
+    """
+    fingerprints = report.get("input_fingerprints", {})
+    if "local_corpus_policy" in fingerprints:
+        state = str(fingerprints["local_corpus_policy"])
+        return None if state == INDEPENDENT_LOCAL_CORPUS_POLICY else state
+    # Reports written before local overlays used only policy.path for scope.
+    policy = report.get("policy", {})
+    path = policy.get("path") if isinstance(policy, dict) else None
+    custom_policy = "custom_policy_path" in fingerprints
+    if not custom_policy and isinstance(path, str) and path:
+        if vault is not None:
+            custom_policy = local_corpus_policy_path(vault, resolve_policy_path(vault, path)) is None
+        elif Path(path).is_absolute():
+            return UNKNOWN_LOCAL_CORPUS_POLICY
+        else:
+            custom_policy = Path(path).as_posix() != DEFAULT_POLICY_PATH
+    digest = report.get("pytest_collect_nodeid_digest", {})
+    composed_summary = report.get("artifact_kind") == "test_execution_summary" and (
+        report.get("summary_mode") in {"aggregate", "reused", "derived"}
+        or (isinstance(digest, Mapping) and any(key.startswith("manifest_") for key in digest))
+    )
+    if custom_policy and composed_summary:
+        return UNKNOWN_LOCAL_CORPUS_POLICY
+    return None if custom_policy else "missing"
+
+
+def merge_local_corpus_policy_dependencies(
+    vault: Path | None, reports: Sequence[Mapping[str, Any]]
+) -> str:
+    """Compose recorded inputs, never replacing their state with today's bytes."""
+    dependencies = {
+        dependency
+        for report in reports
+        if (dependency := local_corpus_policy_dependency(vault, report)) is not None
+    }
+    if not dependencies:
+        return INDEPENDENT_LOCAL_CORPUS_POLICY
+    if len(dependencies) != 1:
+        return UNKNOWN_LOCAL_CORPUS_POLICY
+    return dependencies.pop()
+
+
+def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bool:
+    fingerprints = report.get("input_fingerprints", {})
+    if not isinstance(fingerprints, dict):
+        return False
+    dependency = local_corpus_policy_dependency(vault, report)
+    if dependency is None:
+        # Older custom-policy freshness aggregates did not bind their inputs.
+        return report.get("artifact_kind") != "artifact_freshness_report"
+    try:
+        local_bytes = read_local_corpus_policy_bytes(vault)
+    except OSError:
+        # Currentness requires known inputs; a read failure cannot prove absence.
+        return False
+    if local_bytes is None:
+        return dependency == "missing"
+    return dependency == hashlib.sha256(local_bytes).hexdigest()
 
 
 def build_canonical_report_envelope(

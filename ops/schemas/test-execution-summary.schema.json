@@ -88,6 +88,7 @@
     },
     "input_fingerprints": {
       "type": "object",
+      "description": "Dependencies of the execution and any composed evidence. Direct, aggregate, derived, and reused summaries preserve local_corpus_policy from every input: a digest, 'missing' for confirmed absence, 'independent' for proven independence, or 'unknown' for incomplete/conflicting inputs. Unknown evidence is never current.",
       "additionalProperties": {
         "type": "string",
         "minLength": 1
@@ -460,6 +461,11 @@
         "duration_ms": {
           "type": "integer",
           "minimum": 0
+        },
+        "local_corpus_policy": {
+          "description": "Recorded overlay dependency of inline collection or a referenced manifest. Optional for legacy digests; manifest-backed legacy digests must be reloaded before composition.",
+          "type": "string",
+          "pattern": "^(independent|missing|[a-f0-9]{64})$"
         },
         "manifest_path": { "type": "string", "minLength": 1 },
         "manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },

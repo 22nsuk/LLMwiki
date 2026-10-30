@@ -9,6 +9,11 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_envelope_runtime import (
+    UNKNOWN_LOCAL_CORPUS_POLICY,
+    local_corpus_policy_is_current,
+    merge_local_corpus_policy_dependencies,
+)
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
 from ops.scripts.core.artifact_io_runtime import (
     SchemaBackedReportWriteRequest,
@@ -139,6 +144,19 @@ def build_collection_manifest(
     }
 
 
+def _collection_manifest_identity(
+    manifest: dict[str, Any], *, vault: Path | None = None,
+) -> dict[str, str]:
+    """Keep a collection's recorded dependencies with every portable reference."""
+    return {
+        "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
+        "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
+        "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
+        "source_revision": str(manifest["source_revision"]),
+        "local_corpus_policy": merge_local_corpus_policy_dependencies(vault, [manifest]),
+    }
+
+
 def write_collection_manifest(
     vault: Path,
     manifest: dict[str, Any],
@@ -157,10 +175,7 @@ def write_collection_manifest(
     return {
         "manifest_path": report_path(vault, destination),
         "manifest_sha256": sha256_file(destination),
-        "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
-        "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
-        "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
-        "source_revision": str(manifest["source_revision"]),
+        **_collection_manifest_identity(manifest, vault=vault),
     }
 
 
@@ -186,7 +201,8 @@ def load_collection_manifest_digest(
     expected_semantic_command: str,
 ) -> dict[str, Any]:
     path = _resolve_collection_manifest_path(vault, path_value)
-    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest_bytes = path.read_bytes()
+    manifest = json.loads(manifest_bytes.decode("utf-8"))
     if not isinstance(manifest, dict):
         raise ValueError("test execution collection manifest must be a JSON object")
     validate_collection_manifest_schema(vault, manifest)
@@ -195,6 +211,8 @@ def load_collection_manifest_digest(
         raise ValueError("; ".join(blockers))
     if manifest.get("source_tree_fingerprint") != release_source_tree_fingerprint(vault):
         raise ValueError("collection manifest source_tree_fingerprint drift")
+    if not local_corpus_policy_is_current(vault, manifest):
+        raise ValueError("collection manifest local corpus policy drift")
     if manifest.get("source_revision") != resolve_source_revision(vault).revision:
         raise ValueError("collection manifest source_revision drift")
     if manifest.get("suite") != expected_suite:
@@ -209,11 +227,8 @@ def load_collection_manifest_digest(
         "reason": "reused exact schema-backed collection manifest",
         "duration_ms": 0,
         "manifest_path": report_path(vault, path),
-        "manifest_sha256": sha256_file(path),
-        "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
-        "manifest_nodeids_sha256": str(manifest["nodeids_sha256"]),
-        "source_tree_fingerprint": str(manifest["source_tree_fingerprint"]),
-        "source_revision": str(manifest["source_revision"]),
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        **_collection_manifest_identity(manifest, vault=vault),
     }
 
 
@@ -341,20 +356,27 @@ def _collection_manifest_reference(
     except ValueError:
         return None
     try:
-        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest_bytes = path.read_bytes()
+        manifest = json.loads(manifest_bytes.decode("utf-8"))
         if not isinstance(manifest, dict):
             return None
         validate_collection_manifest_schema(vault, manifest)
-    except (OSError, json.JSONDecodeError, ValueError):
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
         return None
     matches = (
         not validate_collection_manifest_payload(manifest)
-        and sha256_file(path) == digest.get("manifest_sha256")
+        and local_corpus_policy_is_current(vault, manifest)
+        and hashlib.sha256(manifest_bytes).hexdigest() == digest.get("manifest_sha256")
         and manifest.get("source_tree_fingerprint")
         == digest.get("source_tree_fingerprint")
         and manifest.get("source_revision") == digest.get("source_revision")
         and manifest.get("nodeid_count") == digest.get("nodeid_count")
         and manifest.get("nodeids_sha256") == digest.get("sha256")
+        and (
+            "local_corpus_policy" not in digest
+            or digest["local_corpus_policy"]
+            == merge_local_corpus_policy_dependencies(vault, [manifest])
+        )
     )
     return (path, manifest) if matches else None
 
@@ -752,7 +774,7 @@ def _derived_input_fingerprints(
     collection_manifest: dict[str, Any],
     selected_manifest: dict[str, Any],
 ) -> dict[str, str]:
-    return {
+    fingerprints = {
         "parent_summary": canonical_json_sha256(full_summary),
         "junit_xml": str(junit_evidence["sha256"]),
         "full_collection_manifest": canonical_json_sha256(collection_manifest),
@@ -761,6 +783,19 @@ def _derived_input_fingerprints(
             selected_manifest["semantic_command_sha256"]
         ),
     }
+    # Keep policy binding even without an overlay so its creation invalidates
+    # derived evidence through the same freshness checks as direct reports.
+    for key in ("policy", "custom_policy_path"):
+        value = full_summary.get("input_fingerprints", {}).get(key)
+        if value is not None:
+            fingerprints[key] = str(value)
+    dependency = merge_local_corpus_policy_dependencies(
+        None, [full_summary, collection_manifest, selected_manifest]
+    )
+    if dependency == UNKNOWN_LOCAL_CORPUS_POLICY:
+        raise ValueError("collection local corpus policy drift")
+    fingerprints["local_corpus_policy"] = dependency
+    return fingerprints
 
 
 def _build_validated_subset_summary(
@@ -850,12 +885,7 @@ def _build_validated_subset_summary(
                 "nodeid_count": len(selected),
                 "sha256": selected_digest,
                 "reason": "exact selected collection manifest",
-                "manifest_schema": COLLECTION_MANIFEST_SCHEMA_PATH,
-                "manifest_nodeids_sha256": selected_digest,
-                "source_tree_fingerprint": str(
-                    selected_manifest["source_tree_fingerprint"]
-                ),
-                "source_revision": str(selected_manifest["source_revision"]),
+                **_collection_manifest_identity(selected_manifest),
             },
             "nodeid_outcome_consistency": nodeid_outcome_consistency(
                 counts, {"status": "collected", "nodeid_count": len(selected)}
@@ -924,6 +954,14 @@ def derive_subset_summary(
             "deselected_tests": [],
             "deselection_lifecycle": deepcopy(full_summary.get("deselection_lifecycle", {})),
         }
+    if not isinstance(selected_nodeids, dict):
+        policy_inputs = {
+            key: value
+            for key, value in full_summary.get("input_fingerprints", {}).items()
+            if key in {"local_corpus_policy", "custom_policy_path"}
+        }
+        if policy_inputs:
+            selected_manifest["input_fingerprints"] = policy_inputs
     blockers = [
         *validate_collection_manifest_payload(collection_manifest),
         *validate_collection_manifest_payload(selected_manifest),

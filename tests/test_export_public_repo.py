@@ -20,6 +20,28 @@ pytestmark = pytest.mark.public
 
 
 class ExportPublicRepoTests(unittest.TestCase):
+    def test_export_omits_local_corpus_policy_and_atomic_staging_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir) / "vault"
+            policies = vault / "ops/policies"
+            policies.mkdir(parents=True)
+            (policies / "wiki-maintainer-policy.yaml").write_text("public: true\n")
+            private_names = (
+                "wiki-maintainer-policy.local.yaml",
+                ".wiki-maintainer-policy.local.yaml.synthetic.tmp",
+            )
+            for name in private_names:
+                (policies / name).write_text("private-corpus-sentinel\n")
+            public = Path(temp_dir) / "public"
+            manifest = export_public_repo(vault, public)
+            self.assertIn("ops/policies/wiki-maintainer-policy.yaml", manifest["files"])
+            for name in private_names:
+                self.assertFalse((public / "ops/policies" / name).exists())
+                self.assertNotIn(f"ops/policies/{name}", manifest["files"])
+            for path in public.rglob("*"):
+                if path.is_file():
+                    self.assertNotIn(b"private-corpus-sentinel", path.read_bytes())
+
     def test_public_export_retains_live_release_writer_single_source_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             public_dir = Path(temp_dir) / "public"

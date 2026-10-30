@@ -22,8 +22,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import (
         load_policy,
+        local_corpus_policy_path,
         report_path,
         resolve_policy_path,
+        write_local_corpus_policy,
     )
     from ops.scripts.core.runtime_context import RuntimeContext
 else:
@@ -38,8 +40,10 @@ else:
     from ops.scripts.core.output_runtime import display_path
     from ops.scripts.core.policy_runtime import (
         load_policy,
+        local_corpus_policy_path,
         report_path,
         resolve_policy_path,
+        write_local_corpus_policy,
     )
     from ops.scripts.core.runtime_context import RuntimeContext
 
@@ -372,6 +376,8 @@ def write_policy(vault: Path, policy_path: str) -> Path:
         )
     discovered = discover_raw_registry_shards(vault)
     synced = synchronized_policy(policy, discovered)
+    if local_corpus_policy_path(vault, resolved_policy_path) is not None:
+        return write_local_corpus_policy(vault, synced)
     resolved_policy_path.write_text(
         yaml.safe_dump(
             synced,
@@ -409,7 +415,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--write",
         action="store_true",
-        help="Rewrite the policy from discovered raw registry shard pages before reporting.",
+        help="Synchronize local corpus settings, or rewrite an explicit custom policy, before reporting.",
     )
     parser.add_argument(
         "--allow-drift",

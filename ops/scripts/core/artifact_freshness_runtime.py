@@ -15,6 +15,7 @@ from .artifact_envelope_runtime import (
     CanonicalReportEnvelopeRequest,
     artifact_input_fingerprints,
     build_canonical_report_envelope,
+    local_corpus_policy_is_current,
     resolve_artifact_path as _resolve_artifact_path,
 )
 from .artifact_freshness_debt_runtime import (
@@ -69,7 +70,7 @@ from .artifact_io_runtime import (
     write_schema_backed_report,
 )
 from .output_runtime import display_path
-from .policy_runtime import load_policy, report_path
+from .policy_runtime import LOCAL_CORPUS_POLICY_PATH, load_policy, report_path
 from .runtime_context import RuntimeContext
 from .schema_constants_runtime import ARTIFACT_FRESHNESS_REPORT_SCHEMA_PATH
 from .schema_runtime import (
@@ -773,6 +774,19 @@ def _artifact_record_currentness_state(
     )
     input_fingerprint_status = "not_applicable"
     input_fingerprint_mismatch_keys: list[str] = []
+    # Only effective-policy inputs depend on the overlay; environment-only
+    # preflight reports use file-path inputs without consuming corpus policy.
+    fingerprints = normalized_payload.get("input_fingerprints", {})
+    policy_bound = isinstance(fingerprints, dict) and any(
+        key in fingerprints for key in ("policy", "local_corpus_policy")
+    )
+    if (
+        source_tree_fingerprint_status != "not_applicable"
+        and policy_bound
+        and not local_corpus_policy_is_current(vault, normalized_payload)
+    ):
+        input_fingerprint_status = "stale"
+        input_fingerprint_mismatch_keys = ["local_corpus_policy"]
     currentness_status = _computed_currentness_status(
         declared_currentness_status=declared_currentness_status,
         source_tree_fingerprint_status=source_tree_fingerprint_status,
@@ -1150,11 +1164,15 @@ def _assemble_artifact_freshness_payload(
             "ops/scripts/core/artifact_freshness_runtime.py",
             "ops/scripts/core/artifact_freshness_debt_runtime.py",
         ],
-        file_inputs=(
-            {"zip_metadata": scan_inputs.resolved_zip_metadata_path}
-            if scan_inputs.resolved_zip_metadata_path is not None
-            else None
-        ),
+        file_inputs={
+            # The scan includes default-policy evidence even with --policy-path.
+            "local_corpus_policy": LOCAL_CORPUS_POLICY_PATH,
+            **(
+                {"zip_metadata": scan_inputs.resolved_zip_metadata_path}
+                if scan_inputs.resolved_zip_metadata_path is not None
+                else {}
+            ),
+        },
         text_inputs={
             "mtime_source": mtime_source,
             "root_ephemeral_patterns": "\n".join(ROOT_EPHEMERAL_PATTERNS),

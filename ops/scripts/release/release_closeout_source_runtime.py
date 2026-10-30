@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.artifact_envelope_runtime import local_corpus_policy_is_current
 from ops.scripts.core.artifact_freshness_runtime import canonical_report_loading_issue
 from ops.scripts.core.artifact_io_runtime import (
     load_optional_json_object_with_diagnostics,
@@ -114,6 +115,12 @@ def load_closeout_source(
         ]
 
     loading_issue = canonical_report_loading_issue(path, payload)
+    if (
+        loading_issue is None
+        and spec.artifact_kind == "artifact_freshness_report"
+        and not local_corpus_policy_is_current(vault, payload)
+    ):
+        loading_issue = "input_fingerprint_mismatch:local_corpus_policy"
     if loading_issue is not None:
         return payload, "unusable", [
             release_closeout_issue(

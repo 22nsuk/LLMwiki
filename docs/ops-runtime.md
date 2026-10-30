@@ -47,11 +47,18 @@ user-namespace restrictions also need the packaged Bubblewrap profile loaded:
 
 ```bash
 sudo apt-get install --yes bubblewrap apparmor-profiles
-sudo apparmor_parser -r /usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+bwrap_profile=/etc/apparmor.d/bwrap-userns-restrict
+if [ ! -f "$bwrap_profile" ]; then
+  bwrap_profile=/usr/share/apparmor/extra-profiles/bwrap-userns-restrict
+fi
+test -f "$bwrap_profile" && sudo apparmor_parser -r "$bwrap_profile"
 ```
 
 Installing Bubblewrap alone does not load this profile and can leave network
 namespace setup failing with `Failed RTM_NEWADDR: Operation not permitted`.
+The profile is under `/etc/apparmor.d/` on newer Ubuntu images; older packages
+place it under `/usr/share/apparmor/extra-profiles/`. Setup must fail if neither
+packaged profile exists or the parser rejects it.
 The shared CI setup action loads the profile and runs the production sandbox
 launcher with dependency imports before the test lanes start. Unsupported hosts
 or failed sandbox setup block validation; they never run the candidate on the host.

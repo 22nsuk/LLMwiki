@@ -12,8 +12,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from ops.scripts.core.artifact_envelope_runtime import (
+        UNKNOWN_LOCAL_CORPUS_POLICY,
+        artifact_input_fingerprints,
+        local_corpus_policy_is_current,
+        merge_local_corpus_policy_dependencies,
+    )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -27,7 +35,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         run_with_timeout,
     )
     from ops.scripts.core.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        report_path,
+        resolve_policy_path,
+    )
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.core.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
@@ -104,6 +116,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         suite_scope_for_key as _suite_scope_for_key,
     )
 else:
+    from ops.scripts.core.artifact_envelope_runtime import (
+        UNKNOWN_LOCAL_CORPUS_POLICY,
+        artifact_input_fingerprints,
+        local_corpus_policy_is_current,
+        merge_local_corpus_policy_dependencies,
+    )
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
     )
@@ -117,7 +135,11 @@ else:
         run_with_timeout,
     )
     from ops.scripts.core.output_runtime import display_path, sanitize_report_text
-    from ops.scripts.core.policy_runtime import load_policy, report_path
+    from ops.scripts.core.policy_runtime import (
+        load_policy,
+        report_path,
+        resolve_policy_path,
+    )
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.core.schema_constants_runtime import (
         TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
@@ -328,6 +350,53 @@ def _collect_nodeids(stdout: str) -> list[str]:
     )
 
 
+def _test_policy_dependency(
+    vault: Path, fingerprints: dict[str, str], digest: dict[str, Any] | None,
+) -> str:
+    dependencies: list[dict[str, Any]] = [{"input_fingerprints": fingerprints}]
+    if digest and (
+        "local_corpus_policy" in digest or any(key.startswith("manifest_") for key in digest)
+    ):
+        dependencies.append({
+            "input_fingerprints": {
+                "local_corpus_policy": digest.get("local_corpus_policy", UNKNOWN_LOCAL_CORPUS_POLICY),
+            },
+        })
+    dependency = merge_local_corpus_policy_dependencies(vault, dependencies)
+    if dependency == UNKNOWN_LOCAL_CORPUS_POLICY:
+        raise ValueError("collection local corpus policy drift or missing binding; reload the manifest")
+    return dependency
+
+
+def _capture_test_policy_inputs(
+    vault: Path, policy_path: str | None, digest: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    """Snapshot effective-policy inputs using the canonical envelope rules."""
+    fingerprints = artifact_input_fingerprints(
+        vault, resolved_policy_path=resolve_policy_path(vault, policy_path),
+        schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
+    )
+    inputs = {
+        key: value for key, value in fingerprints.items()
+        if key in {"policy", "custom_policy_path"}
+    }
+    inputs["local_corpus_policy"] = _test_policy_dependency(vault, fingerprints, digest)
+    if not local_corpus_policy_is_current(vault, {"input_fingerprints": inputs}):
+        raise ValueError("local corpus policy drift before test execution")
+    return inputs
+
+
+def _validate_test_policy_inputs(
+    vault: Path, before: dict[str, str], after: dict[str, str], *, operation: str,
+) -> None:
+    observed = {**after, "local_corpus_policy": _test_policy_dependency(vault, after, None)}
+    if (
+        any(observed.get(key) != value for key, value in before.items())
+        or not local_corpus_policy_is_current(vault, {"input_fingerprints": before})
+    ):
+        raise ValueError(f"policy changed during {operation}; rerun with stable policy inputs")
+
+
 def collect_pytest_nodeid_digest(
     vault: Path,
     command: list[str],
@@ -340,6 +409,7 @@ def collect_pytest_nodeid_digest(
     deselected_tests: list[dict[str, Any]] | None = None,
     deselection_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    policy_inputs = _capture_test_policy_inputs(vault, policy_path)
     selectors = _pytest_selector_args(command)
     collect_command = [
         sys.executable,
@@ -386,6 +456,7 @@ def collect_pytest_nodeid_digest(
         "sha256": _sha256_text(digest_input),
         "reason": "",
         "duration_ms": elapsed_ms,
+        "local_corpus_policy": policy_inputs["local_corpus_policy"],
     }
     if collection_manifest_out:
         manifest = build_collection_manifest(
@@ -402,6 +473,9 @@ def collect_pytest_nodeid_digest(
             context=context,
             deselected_tests=list(deselected_tests or []),
             deselection_lifecycle=dict(deselection_lifecycle or {}),
+        )
+        _validate_test_policy_inputs(
+            vault, policy_inputs, manifest["input_fingerprints"], operation="collection",
         )
         digest.update(write_collection_manifest(vault, manifest, collection_manifest_out))
     return digest
@@ -611,23 +685,27 @@ def _render_test_execution_summary(inputs: TestExecutionRenderInputs) -> dict[st
     vault = inputs.vault
     request = inputs.request
     observations = inputs.observations
+    envelope = build_canonical_report_envelope(
+        vault,
+        generated_at=inputs.generated_at,
+        artifact_kind="test_execution_summary",
+        producer=PRODUCER,
+        source_command=_test_execution_source_command(vault, request),
+        resolved_policy_path=inputs.resolved_policy_path,
+        schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
+        source_paths=[
+            "ops/scripts/test/test_execution_summary.py",
+            "ops/scripts/core/command_runtime.py",
+        ],
+        text_inputs=_test_execution_text_inputs(vault, request, observations),
+        file_inputs=_test_execution_file_inputs(request),
+        path_group_inputs={"test_targets": observations.target_paths} if observations.target_paths else None,
+    )
+    envelope["input_fingerprints"]["local_corpus_policy"] = _test_policy_dependency(
+        vault, envelope["input_fingerprints"], observations.collect_nodeid_digest,
+    )
     return {
-        **build_canonical_report_envelope(
-            vault,
-            generated_at=inputs.generated_at,
-            artifact_kind="test_execution_summary",
-            producer=PRODUCER,
-            source_command=_test_execution_source_command(vault, request),
-            resolved_policy_path=inputs.resolved_policy_path,
-            schema_path=TEST_EXECUTION_SUMMARY_SCHEMA_PATH,
-            source_paths=[
-                "ops/scripts/test/test_execution_summary.py",
-                "ops/scripts/core/command_runtime.py",
-            ],
-            text_inputs=_test_execution_text_inputs(vault, request, observations),
-            file_inputs=_test_execution_file_inputs(request),
-            path_group_inputs={"test_targets": observations.target_paths} if observations.target_paths else None,
-        ),
+        **envelope,
         "vault": report_path(vault, vault),
         "policy": {
             "path": report_path(vault, inputs.resolved_policy_path),
@@ -751,6 +829,21 @@ def _build_release_contract_diagnosis(
     return diagnosis
 
 
+def _unavailable_reuse_diagnostics(vault: Path, error: Exception) -> dict[str, Any]:
+    return {
+        "reusable": False,
+        "result_reusable": False,
+        "reason": REUSE_MISMATCH_MISSING_SUMMARY,
+        "load_error": type(error).__name__,
+        "current_source_revision": resolve_source_revision(vault).revision,
+        "observed_source_revision": "",
+        "current_source_tree_fingerprint": release_source_tree_fingerprint(vault),
+        "observed_source_tree_fingerprint": "",
+        "executable_path_differs_only": False,
+        "checks": {"artifact_kind": False, "status": False},
+    }
+
+
 def reuse_currentness_diagnostics(
     existing: dict[str, Any],
     *,
@@ -768,7 +861,16 @@ def reuse_currentness_diagnostics(
         vault=vault,
         deselection_policy_path=deselection_policy_path,
     )
-    policy, _ = load_policy(vault)
+    policy_metadata = existing.get("policy", {})
+    policy_path = policy_metadata.get("path") if isinstance(policy_metadata, dict) else None
+    try:
+        policy, _ = load_policy(vault, str(policy_path) if policy_path else None)
+    except (OSError, UnicodeError, ValueError, yaml.YAMLError) as exc:
+        # An unavailable input invalidates optional cached evidence. The normal
+        # execution path still loads and validates the requested policy.
+        diagnostics = _unavailable_reuse_diagnostics(vault, exc)
+        diagnostics["checks"] = {"policy": False}
+        return diagnostics
     generated_at = RuntimeContext.from_policy(policy).isoformat_z()
     current_lifecycle = _deselection_lifecycle(
         current_deselected_tests,
@@ -790,6 +892,7 @@ def reuse_currentness_diagnostics(
             current_deselection_lifecycle=current_lifecycle,
             collect_nodeids=collect_nodeids,
             collect_nodeid_digest=collect_nodeid_digest,
+            local_corpus_policy_current=local_corpus_policy_is_current(vault, existing),
         )
     )
 
@@ -809,16 +912,8 @@ def reusable_summary_diagnostics_for_path(
         existing = _load_summary(vault, path)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         return {
-            "reusable": False,
+            **_unavailable_reuse_diagnostics(vault, exc),
             "path": report_path(vault, path if path.is_absolute() else vault / path),
-            "reason": REUSE_MISMATCH_MISSING_SUMMARY,
-            "load_error": type(exc).__name__,
-            "current_source_revision": resolve_source_revision(vault).revision,
-            "observed_source_revision": "",
-            "current_source_tree_fingerprint": release_source_tree_fingerprint(vault),
-            "observed_source_tree_fingerprint": "",
-            "executable_path_differs_only": False,
-            "checks": {"artifact_kind": False, "status": False},
         }
     diagnostics = reuse_currentness_diagnostics(
         existing,
@@ -893,6 +988,10 @@ def build_reused_report(
         deselection_policy_path=deselection_policy_path,
     )
     report["counts"] = dict(existing.get("counts", {}))
+    dependency = merge_local_corpus_policy_dependencies(vault, [report, existing])
+    if dependency == UNKNOWN_LOCAL_CORPUS_POLICY:
+        raise ValueError("reused summary local corpus policy drift or missing binding")
+    report["input_fingerprints"]["local_corpus_policy"] = dependency
     report["nodeid_outcome_consistency"] = _nodeid_outcome_consistency(
         report["counts"],
         collect_nodeid_digest or dict(existing.get("pytest_collect_nodeid_digest", {})),
@@ -1293,37 +1392,6 @@ def _exact_reuse_only_diagnostics(
     }
 
 
-def _interrupted_report(
-    vault: Path,
-    args: argparse.Namespace,
-    *,
-    started_at: float,
-    collect_nodeid_digest: dict[str, Any] | None,
-) -> dict[str, Any]:
-    elapsed_ms = max(0, round((time.monotonic() - started_at) * 1000))
-    result = TimedProcessResult(
-        args=[str(item) for item in args.command],
-        returncode=130,
-        stdout="",
-        stderr="KeyboardInterrupt",
-        timed_out=False,
-        timeout_seconds=args.timeout_seconds,
-        termination_reason="interrupted",
-    )
-    return build_report(
-        vault,
-        command=args.command,
-        result=result,
-        duration_ms=elapsed_ms,
-        suite=args.suite,
-        policy_path=args.policy,
-        collect_nodeids=args.collect_nodeids,
-        collect_nodeid_digest=collect_nodeid_digest,
-        evidence_artifacts=[],
-        deselection_policy_path=args.deselection_policy,
-    )
-
-
 def _evidence_artifacts_for_args(
     vault: Path,
     args: argparse.Namespace,
@@ -1391,6 +1459,8 @@ def _executed_report_for_args(
     *,
     collect_nodeid_digest: dict[str, Any] | None,
 ) -> tuple[dict[str, Any], int]:
+    policy_inputs = _capture_test_policy_inputs(vault, args.policy, collect_nodeid_digest)
+    interrupted = False
     started_at = time.monotonic()
     try:
         heartbeat_callback = _execution_heartbeat_callback(vault, args)
@@ -1409,14 +1479,15 @@ def _executed_report_for_args(
                 heartbeat_callback=heartbeat_callback,
             )
     except KeyboardInterrupt:
-        return (
-            _interrupted_report(
-                vault,
-                args,
-                started_at=started_at,
-                collect_nodeid_digest=collect_nodeid_digest,
-            ),
-            130,
+        interrupted = True
+        result = TimedProcessResult(
+            args=[str(item) for item in args.command],
+            returncode=130,
+            stdout="",
+            stderr="KeyboardInterrupt",
+            timed_out=False,
+            timeout_seconds=args.timeout_seconds,
+            termination_reason="interrupted",
         )
 
     elapsed_ms = max(0, round((time.monotonic() - started_at) * 1000))
@@ -1429,10 +1500,13 @@ def _executed_report_for_args(
         policy_path=args.policy,
         collect_nodeids=args.collect_nodeids,
         collect_nodeid_digest=collect_nodeid_digest,
-        evidence_artifacts=_evidence_artifacts_for_args(vault, args, result),
+        evidence_artifacts=[] if interrupted else _evidence_artifacts_for_args(vault, args, result),
         deselection_policy_path=args.deselection_policy,
     )
-    return report, 0 if report["status"] == "pass" else 1
+    _validate_test_policy_inputs(
+        vault, policy_inputs, report["input_fingerprints"], operation="test execution",
+    )
+    return report, 130 if interrupted else (0 if report["status"] == "pass" else 1)
 
 
 def main(argv: list[str] | None = None) -> int:

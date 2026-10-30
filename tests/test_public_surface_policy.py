@@ -94,6 +94,8 @@ class PublicSurfacePolicyTests(unittest.TestCase):
             self.skipTest("git is required for public mirror .gitignore probes")
 
         ignored_paths = (
+            "ops/policies/wiki-maintainer-policy.local.yaml",
+            "ops/policies/.wiki-maintainer-policy.local.yaml.synthetic.tmp",
             "ops/reports/example.json",
             "ops/reports/nested/example.json",
             "ops/operator/summary.json",

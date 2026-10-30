@@ -23,6 +23,8 @@ tmp_*.txt
 
 # Local-only full-vault and generated evidence surfaces
 AGENTS.local.md
+ops/policies/wiki-maintainer-policy.local.yaml
+ops/policies/.wiki-maintainer-policy.local.yaml.*.tmp
 external-reports/
 raw/
 wiki/

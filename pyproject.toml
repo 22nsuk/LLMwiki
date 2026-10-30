@@ -134,3 +134,6 @@ ops = [
   "templates/mechanism-run/*.md",
   "templates/mechanism-run/*.yaml",
 ]
+
+[tool.setuptools.exclude-package-data]
+ops = ["policies/wiki-maintainer-policy.local.yaml"]

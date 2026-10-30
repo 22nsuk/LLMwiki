@@ -33,6 +33,7 @@ class ReuseCurrentnessRequest:
     current_deselection_lifecycle: dict[str, Any]
     collect_nodeids: bool
     collect_nodeid_digest: dict[str, Any] | None
+    local_corpus_policy_current: bool = True
 
 
 def _toolchain_fingerprint(execution_environment: dict[str, Any]) -> str:
@@ -149,7 +150,7 @@ def _command_identity_checks(
     existing_lifecycle = existing.get("deselection_lifecycle")
     if not isinstance(existing_lifecycle, dict):
         existing_lifecycle = {}
-    return {
+    checks = {
         "suite": existing.get("suite") == request.suite,
         "semantic_command": _existing_semantic_command(existing)
         == request.current_semantic_command,
@@ -174,6 +175,9 @@ def _command_identity_checks(
             or existing.get("nodeid_outcome_consistency", {}).get("status") == "pass"
         ),
     }
+    if not request.local_corpus_policy_current:
+        checks["local_corpus_policy"] = False
+    return checks
 
 
 def _reuse_currentness_diagnostics_from_request(

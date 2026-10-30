@@ -4,12 +4,23 @@ import datetime as dt
 import hashlib
 import json
 import shutil
+import subprocess
+import sys
 from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
+from ops.scripts.core.artifact_freshness_runtime import (
+    build_report as build_freshness_report,
+)
 from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.policy_runtime import (
+    DEFAULT_POLICY_PATH,
+    LOCAL_CORPUS_POLICY_PATH,
+    load_policy,
+    write_local_corpus_policy,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.test.test_execution_derivation_runtime import (
@@ -26,7 +37,12 @@ from ops.scripts.test.test_execution_derivation_runtime import (
     validate_full_suite_evidence_bindings,
     write_collection_manifest,
 )
-from ops.scripts.test.test_execution_summary import build_report
+from ops.scripts.test.test_execution_summary import (
+    build_aggregate_report,
+    build_report,
+    main as summary_main,
+    write_report,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.report_contract, pytest.mark.report_contract_core]
@@ -245,6 +261,7 @@ def _derived_fixture(
     *,
     junit_xml: bytes | None = None,
     stdout: str = "2 passed in 0.01s",
+    policy_path: str | None = None,
 ) -> tuple[dict, dict, dict, dict]:
     nodeids = [
         "tests/test_sample.py::test_function[value-a]",
@@ -258,6 +275,7 @@ def _derived_fixture(
         selection_kind="full_suite",
         deselected_tests=[],
         deselection_lifecycle=_lifecycle(),
+        policy_path=policy_path,
         context=FIXED_CONTEXT,
     )
     digest = {
@@ -270,6 +288,9 @@ def _derived_fixture(
         "manifest_sha256": serialized_report_sha256(full_manifest),
         "source_tree_fingerprint": full_manifest["source_tree_fingerprint"],
         "source_revision": full_manifest["source_revision"],
+        "local_corpus_policy": full_manifest["input_fingerprints"].get(
+            "local_corpus_policy", "independent" if policy_path else "missing"
+        ),
     }
     result = TimedProcessResult(
         args=["python", "-m", "pytest"],
@@ -288,6 +309,7 @@ def _derived_fixture(
         suite="full-shard-1",
         collect_nodeids=True,
         collect_nodeid_digest=digest,
+        policy_path=policy_path,
         context=FIXED_CONTEXT,
     )
     xml = junit_xml if junit_xml is not None else _junit_xml()
@@ -313,6 +335,7 @@ def _derived_fixture(
         selection_kind="selector_subset",
         deselected_tests=[],
         deselection_lifecycle=_lifecycle(),
+        policy_path=policy_path,
         context=FIXED_CONTEXT,
     )
     derived = derive_subset_summary(
@@ -439,12 +462,23 @@ def test_collection_manifest_and_derived_summary_are_schema_backed_and_determini
     assert derived["derivation"]["selected_collection_nodeid_count"] == 1
 
 
+@pytest.mark.parametrize("policy_scope", ["absent", "present", "independent"])
 def test_collection_manifest_reference_rejects_input_digest_drift(
-    tmp_path: Path,
+    tmp_path: Path, policy_scope: str,
 ) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()
     seed_minimal_vault(vault)
+    custom = "ops/policies/custom-policy.yaml" if policy_scope == "independent" else None
+    if custom:
+        (vault / custom).write_bytes((vault / DEFAULT_POLICY_PATH).read_bytes())
+    local = vault / LOCAL_CORPUS_POLICY_PATH
+    if policy_scope != "absent":
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    expected_dependency = (
+        "independent" if custom else
+        "missing" if policy_scope == "absent" else hashlib.sha256(local.read_bytes()).hexdigest()
+    )
     schema_name = "test-execution-collection-manifest.schema.json"
     shutil.copyfile(
         REPO_ROOT / "ops/schemas" / schema_name,
@@ -458,6 +492,7 @@ def test_collection_manifest_reference_rejects_input_digest_drift(
         selection_kind="full_suite",
         deselected_tests=[],
         deselection_lifecycle=_lifecycle(),
+        policy_path=custom,
         context=FIXED_CONTEXT,
     )
     identity = write_collection_manifest(
@@ -479,6 +514,14 @@ def test_collection_manifest_reference_rejects_input_digest_drift(
     )
     assert loaded_digest["sha256"] == manifest["nodeids_sha256"]
     assert loaded_digest["manifest_sha256"] == identity["manifest_sha256"]
+    assert loaded_digest["local_corpus_policy"] == expected_dependency
+    assert identity["local_corpus_policy"] == expected_dependency
+    for dependency in {"independent", "missing", "0" * 64} - {expected_dependency}:
+        inconsistent = {**digest, "local_corpus_policy": dependency}
+        assert not collection_manifest_reference_is_current(vault, inconsistent)
+        assert not collection_manifest_reference_is_rebindable(vault, inconsistent)
+    legacy_digest = {key: value for key, value in digest.items() if key != "local_corpus_policy"}
+    assert collection_manifest_reference_is_current(vault, legacy_digest)
 
     with pytest.raises(ValueError, match="semantic_command mismatch"):
         load_collection_manifest_digest(
@@ -608,6 +651,347 @@ def test_derivation_rejects_parent_and_input_digest_drift(tmp_path: Path) -> Non
         derive_subset_summary(
             full_summary, drifted_junit, full_manifest, selected_manifest
         )
+
+
+def test_derivation_preserves_and_checks_local_policy_inputs(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    (vault / "ops/policies/wiki-maintainer-policy.local.yaml").write_text(
+        "schema_version: 1\noverrides: {}\n", encoding="utf-8"
+    )
+    derived, full_summary, full_manifest, selected_manifest = _derived_fixture(vault)
+    expected = full_summary["input_fingerprints"]["local_corpus_policy"]
+    assert derived["input_fingerprints"]["local_corpus_policy"] == expected
+    junit = parse_junit_testcases(_junit_xml(), expected_nodeids=full_manifest["nodeids"])
+    exact = derive_subset_summary(full_summary, junit, full_manifest, selected_manifest["nodeids"])
+    assert exact["input_fingerprints"]["local_corpus_policy"] == expected
+    for fingerprints in ({}, {"local_corpus_policy": "stale"}):
+        drifted = deepcopy(selected_manifest)
+        drifted["input_fingerprints"] = fingerprints
+        with pytest.raises(ValueError, match="local corpus policy drift"):
+            derive_subset_summary(full_summary, junit, full_manifest, drifted)
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove", "unreadable"])
+@pytest.mark.parametrize("policy_scope", ["default", "independent", "inherited-selection", "inherited-execution"])
+def test_native_derived_evidence_reuse_and_aggregation_lifecycle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transition: str, policy_scope: str,
+) -> None:
+    """Carry real collection/JUnit evidence through derivation, reuse and aggregation."""
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    local = tmp_path / LOCAL_CORPUS_POLICY_PATH
+    if transition != "create":
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    parent_policy = custom if policy_scope in {"independent", "inherited-selection"} else DEFAULT_POLICY_PATH
+    selection_policy = custom if policy_scope in {"independent", "inherited-execution"} else DEFAULT_POLICY_PATH
+    independent = policy_scope == "independent"
+    (tmp_path / "pytest.ini").write_text(
+        "[pytest]\nmarkers =\n    selected: synthetic subset\n", encoding="utf-8",
+    )
+    tests = tmp_path / "tests"
+    tests.mkdir(exist_ok=True)
+    (tests / "test_policy_flow.py").write_text(
+        "from pathlib import Path\n"
+        "import pytest\n"
+        "def record(name):\n"
+        "    path = Path('tmp') / name\n"
+        "    path.parent.mkdir(exist_ok=True)\n"
+        "    path.write_text(str(int(path.read_text()) + 1) if path.exists() else '1')\n"
+        "record('collections.txt')\n"
+        "@pytest.mark.selected\n"
+        "def test_selected():\n"
+        "    record('executions.txt')\n"
+        "def test_other():\n"
+        "    record('executions.txt')\n",
+        encoding="utf-8",
+    )
+    git = [
+        "git", "-c", "core.hooksPath=disabled-hooks", "-c", "commit.gpgsign=false",
+        "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+    ]
+    for args in (["init", "--template="], ["commit", "--allow-empty", "-m", "initial"]):
+        subprocess.run([*git, *args], cwd=tmp_path, check=True, capture_output=True, timeout=30)
+    command = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"]
+    selected_command = [*command, "-m", "selected"]
+    full_path = "ops/reports/native-full.json"
+    full_manifest = "ops/reports/native-full.collection.json"
+    selected_manifest = "ops/reports/native-selected.collection.json"
+    derived_path = "ops/reports/native-derived.json"
+    junit_path = "tmp/native-full.junit.xml"
+    common = [
+        "--vault", str(tmp_path), "--collect-nodeids",
+        "--timeout-seconds", "30", "--collect-timeout-seconds", "30",
+    ]
+    full_args = [*common, "--suite", "full-shard-1", "--policy", parent_policy]
+    selected_args = [*common, "--suite", "report-contract-summary", "--policy", selection_policy]
+    assert summary_main([
+        *full_args, "--collection-only", "--out", full_manifest, "--", *command,
+    ]) == 0
+    assert summary_main([
+        *full_args, "--collection-manifest", full_manifest, "--out", full_path,
+        "--junit-xml-path", junit_path, "--", *command, "--junit-xml", junit_path,
+    ]) == 0
+    assert summary_main([
+        *selected_args, "--collection-only", "--out", selected_manifest, "--", *selected_command,
+    ]) == 0
+    assert summary_main([
+        "--vault", str(tmp_path), "--derive-subset-from-full", "--full-summary", full_path,
+        "--full-collection-manifest", full_manifest, "--selection-manifest", selected_manifest,
+        "--junit-xml-path", junit_path, "--out", derived_path,
+    ]) == 0
+    stored = tmp_path / derived_path
+    original = stored.read_bytes()
+    original_mtime = stored.stat().st_mtime_ns
+    derived = json.loads(original)
+    expected_dependency = (
+        "independent" if independent else
+        "missing" if transition == "create" else hashlib.sha256(local.read_bytes()).hexdigest()
+    )
+    assert derived["input_fingerprints"]["local_corpus_policy"] == expected_dependency
+    expected_collection_dependency = (
+        "independent" if selection_policy == custom else expected_dependency
+    )
+    assert derived["pytest_collect_nodeid_digest"]["local_corpus_policy"] == expected_collection_dependency
+    reuse_args = [
+        *common, "--suite", "report-contract-summary", "--policy", parent_policy,
+        "--out", derived_path, "--reuse-only",
+    ]
+    assert summary_main([*reuse_args, "--", *selected_command]) == 0
+    assert stored.read_bytes() == original
+    assert stored.stat().st_mtime_ns == original_mtime
+    subprocess.run(
+        [*git, "commit", "--allow-empty", "-m", "same tree"],
+        cwd=tmp_path, check=True, capture_output=True, timeout=30,
+    )
+    assert summary_main([*reuse_args, "--", *selected_command]) == 1
+    refresh_args = [*reuse_args, "--refresh-revision-if-same-tree"]
+    assert summary_main([*refresh_args, "--", *selected_command]) == 0
+    reused = json.loads(stored.read_bytes())
+    assert reused["summary_mode"] == "reused"
+    assert reused["source_revision"] != derived["source_revision"]
+    assert reused["source_tree_fingerprint"] == derived["source_tree_fingerprint"]
+    assert reused["input_fingerprints"]["local_corpus_policy"] == expected_dependency
+    assert reused["pytest_collect_nodeid_digest"] == derived["pytest_collect_nodeid_digest"]
+    assert reused["counts"] == derived["counts"]
+    assert summary_main([*reuse_args, "--", *selected_command]) == 0
+    aggregate_paths = []
+    shard_path = derived_path
+    for name in ("aggregate", "nested"):
+        report = build_aggregate_report(
+            tmp_path, shard_paths=[shard_path], suite="unit", policy_path=custom, context=FIXED_CONTEXT,
+        )
+        assert report["status"] == "pass"
+        assert report["input_fingerprints"]["local_corpus_policy"] == expected_dependency
+        shard_path = f"ops/reports/native-{name}.json"
+        write_report(tmp_path, report, shard_path)
+        aggregate_paths.append(shard_path)
+        assert summary_main([
+            "--vault", str(tmp_path), "--out", shard_path, "--suite", "unit",
+            "--aggregate", "--reuse-only",
+        ]) == 0
+
+    original = stored.read_bytes()
+    original_mtime = stored.stat().st_mtime_ns
+    if transition in {"remove", "unreadable"}:
+        local.unlink()
+        if transition == "unreadable":
+            local.mkdir()
+    else:
+        local.write_text("schema_version: 1\noverrides: {}\n# changed\n", encoding="utf-8")
+    assert summary_main([*reuse_args, "--", *selected_command]) == (0 if independent else 1)
+    assert stored.read_bytes() == original
+    assert stored.stat().st_mtime_ns == original_mtime
+    assert summary_main([*refresh_args, "--", *selected_command]) == (0 if independent else 1)
+    if not independent:
+        assert stored.read_bytes() == original
+        assert stored.stat().st_mtime_ns == original_mtime
+    for path in aggregate_paths:
+        aggregate = tmp_path / path
+        before = aggregate.read_bytes()
+        before_mtime = aggregate.stat().st_mtime_ns
+        assert summary_main([
+            "--vault", str(tmp_path), "--out", path, "--suite", "unit",
+            "--aggregate", "--reuse-only",
+        ]) == (0 if independent else 1)
+        assert aggregate.read_bytes() == before
+        assert aggregate.stat().st_mtime_ns == before_mtime
+    # Cache-only requests must not run either pytest or collection again.
+    assert (tmp_path / "tmp/executions.txt").read_text() == "2"
+    assert (tmp_path / "tmp/collections.txt").read_text() == "3"
+
+
+@pytest.mark.parametrize("custom_policy", [False, True], ids=["default", "custom"])
+def test_unbound_derived_collection_digest_requires_regeneration(
+    tmp_path: Path, custom_policy: bool,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    policy_path = "ops/policies/custom-policy.yaml" if custom_policy else DEFAULT_POLICY_PATH
+    if custom_policy:
+        (tmp_path / policy_path).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    derived, _, _, _ = _derived_fixture(tmp_path, policy_path=policy_path)
+    derived["pytest_collect_nodeid_digest"].pop("local_corpus_policy", None)
+    relative_path = "ops/reports/unbound-derived.json"
+    write_report(tmp_path, derived, relative_path)
+    stored = tmp_path / relative_path
+    original = stored.read_bytes()
+    original_mtime = stored.stat().st_mtime_ns
+    with pytest.raises(ValueError, match="missing binding"):
+        summary_main([
+            "--vault", str(tmp_path), "--policy", policy_path, "--out", relative_path,
+            "--suite", "report-contract-summary", "--collect-nodeids", "--reuse-only",
+            "--refresh-revision-if-same-tree", "--",
+            sys.executable, "-m", "pytest", "-m", "report_contract_core", "-p", "no:cacheprovider",
+        ])
+    assert stored.read_bytes() == original
+    assert stored.stat().st_mtime_ns == original_mtime
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("selection", ["manifest", "nodeids"])
+@pytest.mark.parametrize("custom_policy", [False, True], ids=["default", "custom"])
+def test_derived_summary_freshness_tracks_parent_policy_scope(
+    tmp_path: Path, transition: str, selection: str, custom_policy: bool
+) -> None:
+    seed_minimal_vault(tmp_path)
+    policy_path = "ops/policies/custom-policy.yaml" if custom_policy else None
+    if policy_path:
+        (tmp_path / policy_path).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    policy, _ = load_policy(tmp_path)
+    if transition != "create":
+        write_local_corpus_policy(tmp_path, policy)
+    derived, parent, full_manifest, selected_manifest = _derived_fixture(
+        tmp_path, policy_path=policy_path
+    )
+    if selection == "nodeids":
+        derived = derive_subset_summary(
+            parent,
+            parse_junit_testcases(_junit_xml(), expected_nodeids=full_manifest["nodeids"]),
+            full_manifest,
+            selected_manifest["nodeids"],
+        )
+    assert (
+        derived["pytest_collect_nodeid_digest"]["local_corpus_policy"]
+        == derived["input_fingerprints"]["local_corpus_policy"]
+    )
+    relative_path = "ops/reports/test-execution-summary-report-contract-derived.json"
+    write_report(tmp_path, derived, relative_path)
+    before = build_freshness_report(
+        tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness"
+    )
+    record = next(row for row in before["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["currentness_status"] == "current"
+
+    if transition == "remove":
+        (tmp_path / LOCAL_CORPUS_POLICY_PATH).unlink()
+    else:
+        policy["page_shape"]["special_page_required_sections"]["system/system-index.md"].append(
+            "Synthetic required section"
+        )
+        write_local_corpus_policy(tmp_path, policy)
+    after = build_freshness_report(
+        tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness"
+    )
+    record = next(row for row in after["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["source_tree_fingerprint_status"] == "current"
+    assert record["currentness_status"] == ("current" if custom_policy else "stale")
+    assert record["input_fingerprint_mismatch_keys"] == (
+        [] if custom_policy else ["local_corpus_policy"]
+    )
+    assert after["summary"]["stale_artifact_count"] == (0 if custom_policy else 1)
+    if not custom_policy:
+        assert record["recommended_next_action"] == "regenerate_canonical_report"
+        assert record["safe_to_backfill"] is False
+    refreshed, _, _, _ = _derived_fixture(tmp_path, policy_path=policy_path)
+    write_report(tmp_path, refreshed, relative_path)
+    current = build_freshness_report(
+        tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness"
+    )
+    record = next(row for row in current["artifact_records"] if row["path"] == relative_path)
+    assert record["currentness_status"] == "current"
+    assert record["input_fingerprint_mismatch_keys"] == []
+    assert current["summary"]["stale_artifact_count"] == 0
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("selection", ["manifest", "nodeids"])
+def test_derived_custom_aggregate_retains_default_shard_dependency(
+    tmp_path: Path, transition: str, selection: str
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    local = tmp_path / LOCAL_CORPUS_POLICY_PATH
+    if transition != "create":
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    _, parent, full_manifest, selected_manifest = _derived_fixture(tmp_path)
+    shard_path = "ops/reports/full-shard.json"
+    write_report(tmp_path, parent, shard_path)
+    aggregate = build_aggregate_report(
+        tmp_path, shard_paths=[shard_path], suite="full", policy_path=custom, context=FIXED_CONTEXT
+    )
+    assert aggregate["status"] == "pass"
+    assert aggregate["represents_full_suite"] is True
+    selected = selected_manifest if selection == "manifest" else selected_manifest["nodeids"]
+    derived = derive_subset_summary(
+        aggregate, parse_junit_testcases(_junit_xml(), expected_nodeids=full_manifest["nodeids"]),
+        full_manifest, selected,
+    )
+    relative_path = "ops/reports/derived-custom-aggregate.json"
+    write_report(tmp_path, derived, relative_path)
+    before = build_freshness_report(tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness")
+    record = next(row for row in before["artifact_records"] if row["path"] == relative_path)
+    assert record["currentness_status"] == "current"
+    if transition == "remove":
+        local.unlink()
+    else:
+        local.write_text("schema_version: 1\noverrides: {}\n# changed\n", encoding="utf-8")
+    after = build_freshness_report(tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness")
+    record = next(row for row in after["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["source_tree_fingerprint_status"] == "current"
+    assert record["currentness_status"] == "stale"
+    assert record["input_fingerprint_mismatch_keys"] == ["local_corpus_policy"]
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+def test_derived_custom_summary_retains_default_selector_dependency(
+    tmp_path: Path, transition: str
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    local = tmp_path / LOCAL_CORPUS_POLICY_PATH
+    if transition != "create":
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    _, parent, full_manifest, custom_selection = _derived_fixture(tmp_path, policy_path=custom)
+    selected = build_collection_manifest(
+        tmp_path, suite=custom_selection["suite"],
+        semantic_command=custom_selection["semantic_command"], nodeids=custom_selection["nodeids"],
+        selection_kind="selector_subset", deselected_tests=[],
+        deselection_lifecycle=_lifecycle(), context=FIXED_CONTEXT,
+    )
+    derived = derive_subset_summary(
+        parent, parse_junit_testcases(_junit_xml(), expected_nodeids=full_manifest["nodeids"]),
+        full_manifest, selected,
+    )
+    relative_path = "ops/reports/derived-custom-selection.json"
+    write_report(tmp_path, derived, relative_path)
+    if transition == "remove":
+        local.unlink()
+    else:
+        local.write_text("schema_version: 1\noverrides: {}\n# changed\n", encoding="utf-8")
+    freshness = build_freshness_report(tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness")
+    record = next(row for row in freshness["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["source_tree_fingerprint_status"] == "current"
+    assert record["currentness_status"] == "stale"
 
 
 def test_derivation_fails_closed_across_authority_boundaries(tmp_path: Path) -> None:

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Local corpus policy overlay",
+  "description": "Private corpus settings layered over the public maintainer policy. Maps merge recursively, null removes map entries, and lists replace their base value.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "overrides"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "page_shape": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "special_page_required_sections": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "frontmatter_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "special_pages": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "required": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "uniqueItems": true
+                      },
+                      "expected": {
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "registry_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "raw_registry_shard_pages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "raw_registry_entry_page_corpus": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "wiki",
+                  "system",
+                  null
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

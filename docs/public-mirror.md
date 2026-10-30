@@ -43,6 +43,114 @@ The public mirror excludes:
 - `ops/reports/`
 - `tmp/`
 - private inventory files such as `ops/manifest.json` and `ops/raw-registry.json`
+- `ops/policies/wiki-maintainer-policy.local.yaml` and its atomic-write staging files
+
+## Local Corpus Settings
+
+Keep the tracked `ops/policies/wiki-maintainer-policy.yaml` public-safe.
+Full vaults can store their corpus-specific additions in the ignored
+`ops/policies/wiki-maintainer-policy.local.yaml`. The default policy loader
+automatically applies this file, including when the default policy path is
+passed explicitly. A different explicit policy path remains self-contained.
+Only a confirmed missing file is optional: permission failures and other read
+errors propagate from policy loading and default-policy fingerprint generation.
+
+The local file uses `schema_version: 1` and an `overrides` mapping, validated by
+`ops/schemas/local-corpus-policy.schema.json`. Only special-page section rules,
+special-page frontmatter rules, raw-registry shard pages, and shard-to-corpus
+assignments can be overridden. Mappings merge recursively, `null` removes a
+mapping entry, and lists replace the corresponding public list. The complete
+effective policy still passes the normal schema and safety checks. Unrelated
+public runtime and routing updates continue to apply.
+
+`make raw-registry-shard-policy-sync-write` writes these differences to the
+local file without rewriting the tracked default policy. With an explicit
+custom `--policy` destination, the CLI continues to write that destination.
+For an existing locally edited policy, retain its loaded policy object, restore
+the public base, and use `write_local_corpus_policy(vault, effective_policy)`
+to produce the local overlay; it rejects changes outside the four corpus
+surfaces. Verify `load_policy(vault)` equals the retained effective policy.
+
+Canonical report input fingerprints include `local_corpus_policy` whenever the
+default policy has a local overlay. The `policy` fingerprint binds both files,
+and cached test summaries and collection manifests are invalidated when the
+overlay is created, changed, or removed. Derived test summaries preserve the
+parent's policy fingerprints, including the base policy binding when no overlay
+exists, so they follow the same invalidation lifecycle as direct summaries.
+Collection digests carry their overlay dependency into direct summaries even
+when collection and execution use different policies. Direct, aggregate,
+reused, and derived summaries share one dependency-composition rule: preserve
+every input's recorded state instead of fingerprinting today's overlay again.
+Manifest writes, loads, revision rebinding, and subset derivation use the same
+portable collection identity. A derived summary records the selected collection's
+policy dependency in its digest as well as retaining all parent dependencies in
+the summary envelope. This allows same-tree revision reuse to preserve both
+scopes through subsequent reuse and aggregation without running pytest again.
+
+Before invoking the test command, the runner captures the selected policy's
+fingerprints and any inherited overlay dependency, including when
+`--collect-nodeids` is omitted. It compares these inputs with the completed
+report and checks that the overlay remains readable and unchanged. A mismatch
+aborts before replacing the canonical summary; normal, failed, timed-out, and
+interrupted executions share this boundary. Independent custom-policy runs
+remain unaffected by changes to an unrelated default overlay.
+
+Summaries record `missing` for confirmed absence, `independent` when every input is
+independent, and `unknown` for incomplete or conflicting dependencies; unknown
+evidence cannot be reused. This binding survives nested aggregation and subset derivation even with a custom output
+policy; evidence composed entirely from independent custom policies stays
+independent. Subset derivation treats legacy omitted absence and explicit
+`missing` as the same input state, while preserving collection dependencies.
+Older custom-policy summaries that reference a collection manifest or were
+aggregated, reused, or derived without a recorded overlay state require
+regeneration. Their own policy scope cannot establish their inputs' independence.
+Legacy collection manifests can still be loaded to obtain a bound digest.
+Older derived summaries with an unbound collection digest require regeneration
+from the full-suite evidence and selection manifest before revision rebinding.
+Standalone custom-policy summaries and historical snapshots retain their
+existing behavior. Older readers may reject bound collection digests or the
+explicit `independent` state; regenerate composed evidence with the reader's matching producer after rollback.
+Only a confirmed file absence satisfies this dependency. Directories and other
+overlay read errors invalidate dependent evidence, including legacy reports
+that omit the absence fingerprint; independent custom-policy evidence is unaffected.
+An unreadable or invalid policy referenced by cached test evidence makes the
+cache unusable. `--reuse-if-current` executes with the requested valid policy;
+`--reuse-only` fails without running tests or writing replacement evidence.
+The shared artifact freshness scan also marks policy-bound live canonical reports stale
+when the overlay is created, changed, or removed, including reports generated
+before overlays were supported. It records
+`input_fingerprint_mismatch:local_corpus_policy` and requires the report owner
+to regenerate the evidence. Explicit custom policies stay independent of the
+default overlay; archived reports and historical run snapshots retain their
+existing lifecycle treatment. Release closeout routes policy mismatches in
+release-owned reports through its existing freshness review gate. Closeout and
+external-report lifecycle readers reject a cached freshness aggregate whose
+local policy inputs have changed until it is regenerated. Freshness aggregates
+always record the scanned vault's `local_corpus_policy` fingerprint, using
+`missing` when the overlay is absent, even with an explicit custom scan policy:
+the scan also evaluates default-policy reports. Older custom-policy aggregates
+without this binding require regeneration; direct custom-policy reports retain
+their independence from the default overlay. Environment-only
+diagnostics without effective-policy inputs remain independent of the overlay.
+Public source fingerprints, Git tracking, public exports, wheels, and sdists
+exclude the local file.
+Default and full public-check summaries use the same local-policy currentness
+check before reuse. Creating, changing, removing, or failing to read the overlay
+rejects reuse even when public source, command configuration, and history are
+unchanged. `--reuse-only` leaves the stored report untouched and exits nonzero;
+`make release-public-current` refreshes the default report through its existing
+current-or-refresh path. An unchanged overlay, including confirmed absence,
+still permits reuse. The inner exported pytest cache remains corpus-free.
+Full and sparse candidate workspaces retain the overlay whenever they copy the
+default policy, so local validation uses the same effective corpus settings.
+Both modes materialize readable overlay symlinks as regular files, retaining
+their bytes and permissions without letting candidate writes reach the source.
+Sparse preparation copies each selected file once, including overlaps between
+directory and file selectors, so read-only policies need no second write.
+Sparse preparation propagates overlay read failures instead of silently
+omitting the settings; other sparse entries keep their existing symlink rules.
+Tests and examples must use synthetic corpus names; never copy an operator's local inventory into
+public fixtures or documentation.
 
 The full-vault root `.gitignore` applies the same ownership boundary within
 `.agents/`: operator-local siblings are ignored while `.agents/skills/**`

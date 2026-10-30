@@ -1119,6 +1119,38 @@ class ReleaseCloseoutSummaryTests(unittest.TestCase):
         accepted = {item["code"] for item in report["accepted_risks"]}
         self.assertIn("artifact_freshness_attention", accepted)
 
+    def test_release_owned_local_policy_drift_requires_review(self) -> None:
+        self._write_happy_sources()
+        self._write_source_report(
+            "artifact_freshness",
+            {
+                "status": "attention",
+                "summary": {
+                    "stale_artifact_count": 1,
+                    "operational_attention_artifact_count": 1,
+                    "operational_attention_issue_count": 1,
+                },
+                "artifact_records": [{
+                    "path": "ops/reports/auto-improve-readiness.json",
+                    "issues": ["input_fingerprint_mismatch:local_corpus_policy"],
+                }],
+            },
+        )
+
+        report = build_report(self.vault, context=fixed_context())
+
+        self.assertTrue(report["checked_in_release_ready"])
+        self.assertFalse(report["clean_release_ready"])
+        self._assert_release_decision(
+            report,
+            state="conditional_pass",
+            machine_release_allowed=False,
+            operator_release_allowed=True,
+            requires_accepted_risk_review=True,
+        )
+        self.assertEqual(report["artifact_freshness_gate"]["gate_effect"], "advisory")
+        self.assertIn("artifact_freshness_attention", {item["code"] for item in report["accepted_risks"]})
+
     def test_release_owned_artifact_freshness_revision_attention_is_gate_advisory(self) -> None:
         self._write_happy_sources()
         self._write_source_report(
