@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from .policy_runtime import (
-    LOCAL_CORPUS_POLICY_PATH,
     local_corpus_policy_path,
+    read_local_corpus_policy_bytes,
     report_path,
     resolve_policy_path,
 )
@@ -171,13 +171,15 @@ def artifact_input_fingerprints(
     for name, text in sorted((text_inputs or {}).items()):
         fingerprints[str(name)] = _sha256_text(str(text))
     local_policy = local_corpus_policy_path(vault, resolved_policy_path)
-    if local_policy is not None and local_policy.exists():
-        local_digest = _sha256_file(local_policy)
-        fingerprints["local_corpus_policy"] = local_digest
-        fingerprints["policy"] = _sha256_text(
-            f"{_sha256_file(resolved_policy_path)}\n{local_digest}"
-        )
-    elif local_policy is None:
+    if local_policy is not None:
+        local_bytes = read_local_corpus_policy_bytes(vault)
+        if local_bytes is not None:
+            local_digest = hashlib.sha256(local_bytes).hexdigest()
+            fingerprints["local_corpus_policy"] = local_digest
+            fingerprints["policy"] = _sha256_text(
+                f"{_sha256_file(resolved_policy_path)}\n{local_digest}"
+            )
+    else:
         fingerprints["custom_policy_path"] = _sha256_text(report_path(vault, resolved_policy_path))
     return fingerprints
 
@@ -210,14 +212,13 @@ def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bo
     if dependency is None:
         # Older custom-policy freshness aggregates did not bind their inputs.
         return report.get("artifact_kind") != "artifact_freshness_report"
-    local_policy = vault / LOCAL_CORPUS_POLICY_PATH
     try:
-        local_bytes = local_policy.read_bytes()
-    except FileNotFoundError:
-        return dependency == "missing"
+        local_bytes = read_local_corpus_policy_bytes(vault)
     except OSError:
         # Currentness requires known inputs; a read failure cannot prove absence.
         return False
+    if local_bytes is None:
+        return dependency == "missing"
     return dependency == hashlib.sha256(local_bytes).hexdigest()
 
 

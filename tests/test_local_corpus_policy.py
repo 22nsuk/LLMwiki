@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import os
 import shutil
 import subprocess
 import sys
@@ -9,6 +10,8 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import yaml
 
@@ -101,6 +104,63 @@ class LocalCorpusPolicyTests(unittest.TestCase):
         self.assertEqual(resolved, custom)
         self.assertNotIn("local_corpus_policy", self._fingerprints(custom))
 
+    def test_unreadable_overlay_is_not_treated_as_absent(self) -> None:
+        expected = self._effective_policy()
+        write_local_corpus_policy(self.vault, expected)
+        self.assertEqual(load_policy(self.vault)[0], expected)
+        custom = self.vault / "custom-policy.yaml"
+        custom.write_bytes(self.base_bytes)
+        original_stat = os.stat
+        original_open = Path.open
+
+        def denied_stat(
+            path: Any, *, dir_fd: int | None = None, follow_symlinks: bool = True
+        ) -> os.stat_result:
+            if path == self.local_path or path == str(self.local_path):
+                raise PermissionError("synthetic overlay access denied")
+            return original_stat(path, dir_fd=dir_fd, follow_symlinks=follow_symlinks)
+
+        def denied_open(path: Path, *args: Any, **kwargs: Any) -> Any:
+            if path == self.local_path:
+                raise PermissionError("synthetic overlay access denied")
+            return original_open(path, *args, **kwargs)
+
+        # Python 3.14 hides stat errors in exists()/is_file(). Keep parsing and
+        # schema validation real, and inject only the inaccessible input.
+        with patch.object(os, "stat", denied_stat), patch.object(Path, "open", denied_open):
+            for selector in (None, DEFAULT_POLICY_PATH, str(self.base_path)):
+                with self.subTest(selector=selector), self.assertRaises(PermissionError):
+                    load_policy(self.vault, selector)
+            with self.subTest(consumer="fingerprints"), self.assertRaises(PermissionError):
+                self._fingerprints()
+            with (
+                tempfile.TemporaryDirectory() as workspace,
+                self.subTest(consumer="sparse-workspace"),
+                self.assertRaises(PermissionError),
+            ):
+                _prepare_workspace_copy(
+                    self.vault, run_id="synthetic-local-policy", workspace_root=workspace,
+                    mode="sparse_manifest", allowed_apply_roots=[DEFAULT_POLICY_PATH],
+                )
+            self.assertEqual(load_policy(self.vault, str(custom))[0], self.base)
+            self.assertNotIn("local_corpus_policy", self._fingerprints(custom))
+
+    def test_overlay_directory_is_rejected_by_policy_consumers(self) -> None:
+        self.local_path.mkdir()
+        with self.subTest(consumer="loader"), self.assertRaises(IsADirectoryError):
+            load_policy(self.vault)
+        with self.subTest(consumer="fingerprints"), self.assertRaises(IsADirectoryError):
+            self._fingerprints()
+        with (
+            tempfile.TemporaryDirectory() as workspace,
+            self.subTest(consumer="sparse-workspace"),
+            self.assertRaises(IsADirectoryError),
+        ):
+            _prepare_workspace_copy(
+                self.vault, run_id="synthetic-local-policy", workspace_root=workspace,
+                mode="sparse_manifest", allowed_apply_roots=[DEFAULT_POLICY_PATH],
+            )
+
     def test_local_file_does_not_shadow_unrelated_public_policy_updates(self) -> None:
         write_local_corpus_policy(self.vault, self._effective_policy())
         updated = copy.deepcopy(self.base)
@@ -173,16 +233,47 @@ class LocalCorpusPolicyTests(unittest.TestCase):
     def test_full_and_sparse_workspaces_preserve_effective_policy(self) -> None:
         expected = self._effective_policy()
         write_local_corpus_policy(self.vault, expected)
-        for mode in ("full_copy", "sparse_manifest"):
-            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as workspace:
-                prepared = _prepare_workspace_copy(
-                    self.vault,
-                    run_id="synthetic-local-policy",
-                    workspace_root=workspace,
-                    mode=mode,
-                    allowed_apply_roots=[DEFAULT_POLICY_PATH],
-                )
-                self.assertEqual(load_policy(prepared.workspace_vault)[0], expected)
+        local_bytes = self.local_path.read_bytes()
+        unrelated_link = self.base_path.with_name("unrelated-link.yaml")
+        unrelated_link.symlink_to(self.local_path)
+        with tempfile.TemporaryDirectory() as external:
+            # The internal target is intentionally excluded from full copies;
+            # both workspace modes must carry an independent policy snapshot.
+            for form, target in (
+                ("regular", None),
+                ("internal-link", self.vault / ".llmwiki" / "corpus.yaml"),
+                ("external-link", Path(external) / "corpus.yaml"),
+            ):
+                if target is not None:
+                    self.local_path.unlink()
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(local_bytes)
+                    target.chmod(0o600)
+                    link_target = os.path.relpath(target, self.local_path.parent) if form == "internal-link" else str(target)
+                    self.local_path.symlink_to(link_target)
+                source_mode = self.local_path.stat().st_mode & 0o777
+                for mode, root in (
+                    ("full_copy", DEFAULT_POLICY_PATH),
+                    ("sparse_manifest", DEFAULT_POLICY_PATH),
+                    ("sparse_manifest", "ops/policies/"),
+                ):
+                    with self.subTest(form=form, mode=mode, root=root), tempfile.TemporaryDirectory() as workspace:
+                        prepared = _prepare_workspace_copy(
+                            self.vault,
+                            run_id="synthetic-local-policy",
+                            workspace_root=workspace,
+                            mode=mode,
+                            allowed_apply_roots=[root],
+                        )
+                        copied = prepared.workspace_vault / LOCAL_CORPUS_POLICY_PATH
+                        self.assertEqual(load_policy(prepared.workspace_vault)[0], expected)
+                        self.assertFalse(copied.is_symlink())
+                        self.assertEqual(copied.read_bytes(), local_bytes)
+                        self.assertEqual(copied.stat().st_mode & 0o777, source_mode)
+                        if mode == "sparse_manifest":
+                            self.assertFalse((copied.parent / unrelated_link.name).exists())
+                        copied.write_bytes(local_bytes + b"# candidate-only edit\n")
+                        self.assertEqual(self.local_path.read_bytes(), local_bytes)
 
     def test_built_wheel_and_sdist_exclude_local_policy_bytes(self) -> None:
         for name in ("pyproject.toml", "README.md", "LICENSE"):

@@ -52,6 +52,8 @@ Full vaults can store their corpus-specific additions in the ignored
 `ops/policies/wiki-maintainer-policy.local.yaml`. The default policy loader
 automatically applies this file, including when the default policy path is
 passed explicitly. A different explicit policy path remains self-contained.
+Only a confirmed missing file is optional: permission failures and other read
+errors propagate from policy loading and default-policy fingerprint generation.
 
 The local file uses `schema_version: 1` and an `overrides` mapping, validated by
 `ops/schemas/local-corpus-policy.schema.json`. Only special-page section rules,
@@ -114,6 +116,10 @@ current-or-refresh path. An unchanged overlay, including confirmed absence,
 still permits reuse. The inner exported pytest cache remains corpus-free.
 Full and sparse candidate workspaces retain the overlay whenever they copy the
 default policy, so local validation uses the same effective corpus settings.
+Both modes materialize readable overlay symlinks as regular files, retaining
+their bytes and permissions without letting candidate writes reach the source.
+Sparse preparation propagates overlay read failures instead of silently
+omitting the settings; other sparse entries keep their existing symlink rules.
 Tests and examples must use synthetic corpus names; never copy an operator's local inventory into
 public fixtures or documentation.
 

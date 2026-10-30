@@ -32,6 +32,7 @@ from ops.scripts.core.path_runtime import normalize_repo_path_text
 from ops.scripts.core.policy_runtime import (
     DEFAULT_POLICY_PATH,
     LOCAL_CORPUS_POLICY_PATH,
+    read_local_corpus_policy_bytes,
     report_path,
 )
 from ops.scripts.core.runtime_context import RuntimeContext
@@ -679,9 +680,14 @@ def _prepare_sparse_workspace_copy(
     copy_started = time.monotonic()
     for rel_path in copy_entries:
         _copy_sparse_entry(vault, workspace_vault, rel_path, run_id=run_id)
-    local_policy = vault / LOCAL_CORPUS_POLICY_PATH
-    if (workspace_vault / DEFAULT_POLICY_PATH).is_file() and local_policy.is_file():
-        _copy_sparse_file(local_policy, workspace_vault / LOCAL_CORPUS_POLICY_PATH)
+    if (workspace_vault / DEFAULT_POLICY_PATH).is_file():
+        local_bytes = read_local_corpus_policy_bytes(vault)
+        if local_bytes is not None:
+            # Snapshot linked policy content without exposing its host target
+            # to candidate writes; generic sparse entries still exclude links.
+            local_destination = workspace_vault / LOCAL_CORPUS_POLICY_PATH
+            local_destination.write_bytes(local_bytes)
+            shutil.copystat(vault / LOCAL_CORPUS_POLICY_PATH, local_destination)
     _provision_workspace_python_shim(vault, workspace_vault)
     copy_seconds = round(time.monotonic() - copy_started, 3)
     baseline_file_digests = _snapshot_repo_file_digests(workspace_vault, run_id=run_id)

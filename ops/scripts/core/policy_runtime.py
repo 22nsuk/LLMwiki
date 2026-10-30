@@ -59,6 +59,14 @@ def local_corpus_policy_path(vault: Path, resolved_policy_path: Path) -> Path | 
     return vault / LOCAL_CORPUS_POLICY_PATH
 
 
+def read_local_corpus_policy_bytes(vault: Path) -> bytes | None:
+    """Read the optional overlay, propagating failures other than file absence."""
+    try:
+        return (vault / LOCAL_CORPUS_POLICY_PATH).read_bytes()
+    except FileNotFoundError:
+        return None
+
+
 def _merge_policy_overrides(base: dict, overrides: dict) -> dict:
     merged = deepcopy(base)
     for key, value in overrides.items():
@@ -169,11 +177,13 @@ def load_policy(vault: Path, policy_path: str | None = None) -> tuple[dict, Path
     policy = parse_simple_yaml(text)
     validate_policy_contract(policy, resolved_path, vault)
     local_path = local_corpus_policy_path(vault, resolved_path)
-    if local_path is not None and local_path.exists():
-        payload = parse_simple_yaml(local_path.read_text(encoding="utf-8"))
-        _validate_local_corpus_payload(vault, payload, local_path)
-        policy = _merge_policy_overrides(policy, payload["overrides"])
-        validate_policy_contract(policy, local_path, vault)
+    if local_path is not None:
+        local_bytes = read_local_corpus_policy_bytes(vault)
+        if local_bytes is not None:
+            payload = parse_simple_yaml(local_bytes.decode("utf-8"))
+            _validate_local_corpus_payload(vault, payload, local_path)
+            policy = _merge_policy_overrides(policy, payload["overrides"])
+            validate_policy_contract(policy, local_path, vault)
     return policy, resolved_path
 
 
