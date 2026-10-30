@@ -81,7 +81,16 @@ Collection digests carry their overlay dependency into direct summaries even
 when collection and execution use different policies. Direct, aggregate,
 reused, and derived summaries share one dependency-composition rule: preserve
 every input's recorded state instead of fingerprinting today's overlay again.
-They record `missing` for confirmed absence, `independent` when every input is
+
+Before invoking the test command, the runner captures the selected policy's
+fingerprints and any inherited overlay dependency, including when
+`--collect-nodeids` is omitted. It compares these inputs with the completed
+report and checks that the overlay remains readable and unchanged. A mismatch
+aborts before replacing the canonical summary; normal, failed, timed-out, and
+interrupted executions share this boundary. Independent custom-policy runs
+remain unaffected by changes to an unrelated default overlay.
+
+Summaries record `missing` for confirmed absence, `independent` when every input is
 independent, and `unknown` for incomplete or conflicting dependencies; unknown
 evidence cannot be reused. This binding survives nested aggregation and subset derivation even with a custom output
 policy; evidence composed entirely from independent custom policies stays

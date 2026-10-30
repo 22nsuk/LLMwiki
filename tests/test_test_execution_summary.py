@@ -468,6 +468,73 @@ def test_collection_preserves_its_original_policy_snapshot(tmp_path: Path, write
                 )
 
 
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("mode", ["direct", "inline", "inherited", "independent"])
+def test_cli_rejects_policy_changes_during_real_test_execution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transition: str, mode: str,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
+    local_path = "ops/policies/wiki-maintainer-policy.local.yaml"
+    before = None if transition == "create" else "schema_version: 1\noverrides: {}\n"
+    if before is not None:
+        (tmp_path / local_path).write_text(before, encoding="utf-8")
+    observed_path = custom if mode == "independent" else local_path
+    observed_file = tmp_path / observed_path
+    expected = hashlib.sha256(observed_file.read_bytes()).hexdigest() if observed_file.exists() else None
+    update = (
+        "local.unlink()" if transition == "remove" else
+        "local.write_text('schema_version: 1\\noverrides: {}\\n# changed during execution\\n', encoding='utf-8')"
+    )
+    test_file = tmp_path / "tests/test_policy_during_execution.py"
+    test_file.parent.mkdir(exist_ok=True)
+    test_file.write_text(
+        "import hashlib\n"
+        "from pathlib import Path\n"
+        "def test_consumes_policy_before_it_changes():\n"
+        f"    local = Path({local_path!r})\n"
+        f"    policy_input = Path({observed_path!r})\n"
+        "    observed = hashlib.sha256(policy_input.read_bytes()).hexdigest() if policy_input.exists() else None\n"
+        f"    assert observed == {expected!r}\n"
+        "    counter = Path('tmp/executions.txt')\n"
+        "    counter.parent.mkdir(exist_ok=True)\n"
+        "    counter.write_text(str(int(counter.read_text()) + 1) if counter.exists() else '1')\n"
+        "    if Path('tmp/change-policy').exists():\n"
+        f"        {update}\n",
+        encoding="utf-8",
+    )
+    command = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(test_file.relative_to(tmp_path))]
+    out_path = "ops/reports/during-execution.json"
+    args = ["--vault", str(tmp_path), "--suite", "unit", "--timeout-seconds", "30", "--out", out_path]
+    if mode in {"inherited", "independent"}:
+        args += ["--policy", custom]
+    if mode in {"inline", "inherited"}:
+        args += ["--collect-nodeids"]
+    if mode == "inherited":
+        manifest_path = "ops/reports/during-execution-collection.json"
+        assert summary_main([
+            "--vault", str(tmp_path), "--suite", "unit", "--collect-nodeids",
+            "--collection-only", "--out", manifest_path, "--", *command,
+        ]) == 0
+        args += ["--collection-manifest", manifest_path]
+    assert summary_main([*args, "--", *command]) == 0
+    stored = tmp_path / out_path
+    original, original_mtime = stored.read_bytes(), stored.stat().st_mtime_ns
+    (tmp_path / "tmp/change-policy").touch()
+    if mode == "independent":
+        assert summary_main([*args, "--", *command]) == 0
+    else:
+        with pytest.raises(ValueError, match="policy.*(changed|drift)"):
+            summary_main([*args, "--", *command])
+        assert stored.read_bytes() == original
+        assert stored.stat().st_mtime_ns == original_mtime
+    assert (tmp_path / "tmp/executions.txt").read_text() == "2"
+    assert summary_main([*args, "--reuse-only", "--", *command]) == (0 if mode == "independent" else 1)
+    assert (tmp_path / "tmp/executions.txt").read_text() == "2"
+
+
 @pytest.mark.parametrize("composition", ["direct", "collection", "aggregate", "reused", "derived"])
 def test_legacy_custom_evidence_requires_known_composed_dependencies(
     tmp_path: Path, composition: str,
@@ -510,6 +577,129 @@ def test_legacy_custom_evidence_requires_known_composed_dependencies(
         )
         assert aggregate["status"] == ("pass" if composition == "direct" else "fail")
         assert local_corpus_policy_is_current(tmp_path, aggregate) is (composition == "direct")
+
+
+@pytest.mark.parametrize("outcome", ["pass", "fail", "timeout", "interrupted"])
+@pytest.mark.parametrize("change", ["unchanged", "overlay", "base", "custom"])
+def test_execution_policy_guard_covers_every_completion_path(
+    tmp_path: Path, outcome: str, change: str,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = "ops/policies/custom-policy.yaml"
+    base = tmp_path / "ops/policies/wiki-maintainer-policy.yaml"
+    (tmp_path / custom).write_bytes(base.read_bytes())
+    local = tmp_path / "ops/policies/wiki-maintainer-policy.local.yaml"
+    local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    policy_path = custom if change == "custom" else None
+    command = [sys.executable, "-m", "pytest"]
+    prior = build_report(
+        tmp_path, command=command, suite="unit", duration_ms=1,
+        result=_result(returncode=0, stdout="1 passed in 0.01s"),
+        policy_path=policy_path, context=_fixed_context(),
+    )
+    output = tmp_path / "ops/reports/completion-summary.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    original = json.dumps(prior).encode()
+    output.write_bytes(original)
+
+    def complete(*args: Any, **kwargs: Any) -> TimedProcessResult:
+        if change != "unchanged":
+            changed_path = {"overlay": local, "base": base, "custom": tmp_path / custom}[change]
+            changed_path.write_bytes(changed_path.read_bytes() + b"\n# changed during execution\n")
+        if outcome == "interrupted":
+            raise KeyboardInterrupt
+        return _result(
+            returncode=0 if outcome == "pass" else 1,
+            stdout="1 passed in 0.01s" if outcome == "pass" else "1 failed in 0.01s",
+            timed_out=outcome == "timeout",
+            termination_reason="timeout" if outcome == "timeout" else "completed",
+        )
+
+    args = ["--vault", str(tmp_path), "--suite", "unit", "--out", str(output)]
+    if policy_path:
+        args += ["--policy", policy_path]
+    with patch("ops.scripts.test.test_execution_summary.run_with_timeout", side_effect=complete):
+        if change != "unchanged":
+            with pytest.raises(ValueError, match="policy changed during test execution"):
+                summary_main([*args, "--", *command])
+            assert output.read_bytes() == original
+        else:
+            expected_code = 130 if outcome == "interrupted" else (0 if outcome == "pass" else 1)
+            assert summary_main([*args, "--", *command]) == expected_code
+            report = json.loads(output.read_text())
+            assert report["status"] == outcome
+            assert report["input_fingerprints"]["policy"] == prior["input_fingerprints"]["policy"]
+            assert report["input_fingerprints"]["local_corpus_policy"] == prior["input_fingerprints"]["local_corpus_policy"]
+
+
+def test_changed_collection_policy_blocks_command_start(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    output = tmp_path / "ops/reports/blocked-summary.json"
+
+    def collect_with_changed_policy(*args: Any, **kwargs: Any) -> TimedProcessResult:
+        (tmp_path / "ops/policies/wiki-maintainer-policy.local.yaml").write_text(
+            "schema_version: 1\noverrides: {}\n", encoding="utf-8",
+        )
+        return _result(returncode=0, stdout="tests/test_sample.py::test_ok\n")
+
+    with patch("ops.scripts.test.test_execution_summary.run_with_timeout", side_effect=collect_with_changed_policy) as run:
+        with pytest.raises(ValueError, match="local corpus policy drift"):
+            summary_main([
+                "--vault", str(tmp_path), "--suite", "unit", "--collect-nodeids",
+                "--out", str(output), "--", sys.executable, "-m", "pytest",
+            ])
+        assert run.call_count == 1  # Collection ran; the test command never started.
+        assert "--collect-only" in run.call_args.args[0]
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("unreadable", ["directory", "permission"])
+def test_inherited_policy_read_failure_after_execution_preserves_cached_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, unreadable: str,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
+    command = [sys.executable, "-m", "pytest"]
+    bootstrap = build_report(
+        tmp_path, command=command, suite="unit", duration_ms=1,
+        result=_result(returncode=0, stdout="1 passed in 0.01s"), context=_fixed_context(),
+    )
+    manifest = build_collection_manifest(
+        tmp_path, suite="unit", semantic_command="-m pytest",
+        nodeids=["tests/test_sample.py::test_ok"], selection_kind="selector_subset",
+        deselected_tests=[], deselection_lifecycle=bootstrap["deselection_lifecycle"], context=_fixed_context(),
+    )
+    manifest_path = "ops/reports/unreadable-collection.json"
+    write_collection_manifest(tmp_path, manifest, manifest_path)
+    output = tmp_path / "ops/reports/unreadable-summary.json"
+    original = json.dumps(bootstrap).encode()
+    output.write_bytes(original)
+    local = tmp_path / "ops/policies/wiki-maintainer-policy.local.yaml"
+    original_read = Path.read_bytes
+
+    def deny_local(path: Path) -> bytes:
+        if path == local:
+            raise PermissionError("synthetic inaccessible overlay")
+        return original_read(path)
+
+    def complete(*args: Any, **kwargs: Any) -> TimedProcessResult:
+        if unreadable == "directory":
+            local.mkdir()
+        else:
+            monkeypatch.setattr(Path, "read_bytes", deny_local)
+        return _result(returncode=0, stdout="1 passed in 0.01s")
+
+    with (
+        patch("ops.scripts.test.test_execution_summary.run_with_timeout", side_effect=complete),
+        pytest.raises(ValueError, match="policy changed during test execution"),
+    ):
+        summary_main([
+            "--vault", str(tmp_path), "--suite", "unit", "--policy", custom,
+            "--collect-nodeids", "--collection-manifest", manifest_path,
+            "--out", str(output), "--", *command,
+        ])
+    assert output.read_bytes() == original
 
 
 @pytest.mark.parametrize("initial_overlay", [False, True])
