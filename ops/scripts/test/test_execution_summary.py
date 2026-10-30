@@ -12,9 +12,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from ops.scripts.core.artifact_envelope_runtime import (
+        local_corpus_policy_dependency,
         local_corpus_policy_is_current,
     )
     from ops.scripts.core.artifact_freshness_runtime import (
@@ -108,6 +111,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
 else:
     from ops.scripts.core.artifact_envelope_runtime import (
+        local_corpus_policy_dependency,
         local_corpus_policy_is_current,
     )
     from ops.scripts.core.artifact_freshness_runtime import (
@@ -757,6 +761,21 @@ def _build_release_contract_diagnosis(
     return diagnosis
 
 
+def _unavailable_reuse_diagnostics(vault: Path, error: Exception) -> dict[str, Any]:
+    return {
+        "reusable": False,
+        "result_reusable": False,
+        "reason": REUSE_MISMATCH_MISSING_SUMMARY,
+        "load_error": type(error).__name__,
+        "current_source_revision": resolve_source_revision(vault).revision,
+        "observed_source_revision": "",
+        "current_source_tree_fingerprint": release_source_tree_fingerprint(vault),
+        "observed_source_tree_fingerprint": "",
+        "executable_path_differs_only": False,
+        "checks": {"artifact_kind": False, "status": False},
+    }
+
+
 def reuse_currentness_diagnostics(
     existing: dict[str, Any],
     *,
@@ -776,7 +795,14 @@ def reuse_currentness_diagnostics(
     )
     policy_metadata = existing.get("policy", {})
     policy_path = policy_metadata.get("path") if isinstance(policy_metadata, dict) else None
-    policy, _ = load_policy(vault, str(policy_path) if policy_path else None)
+    try:
+        policy, _ = load_policy(vault, str(policy_path) if policy_path else None)
+    except (OSError, UnicodeError, ValueError, yaml.YAMLError) as exc:
+        # An unavailable input invalidates optional cached evidence. The normal
+        # execution path still loads and validates the requested policy.
+        diagnostics = _unavailable_reuse_diagnostics(vault, exc)
+        diagnostics["checks"] = {"policy": False}
+        return diagnostics
     generated_at = RuntimeContext.from_policy(policy).isoformat_z()
     current_lifecycle = _deselection_lifecycle(
         current_deselected_tests,
@@ -818,16 +844,8 @@ def reusable_summary_diagnostics_for_path(
         existing = _load_summary(vault, path)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         return {
-            "reusable": False,
+            **_unavailable_reuse_diagnostics(vault, exc),
             "path": report_path(vault, path if path.is_absolute() else vault / path),
-            "reason": REUSE_MISMATCH_MISSING_SUMMARY,
-            "load_error": type(exc).__name__,
-            "current_source_revision": resolve_source_revision(vault).revision,
-            "observed_source_revision": "",
-            "current_source_tree_fingerprint": release_source_tree_fingerprint(vault),
-            "observed_source_tree_fingerprint": "",
-            "executable_path_differs_only": False,
-            "checks": {"artifact_kind": False, "status": False},
         }
     diagnostics = reuse_currentness_diagnostics(
         existing,
@@ -902,6 +920,9 @@ def build_reused_report(
         deselection_policy_path=deselection_policy_path,
     )
     report["counts"] = dict(existing.get("counts", {}))
+    dependency = local_corpus_policy_dependency(vault, existing)
+    if dependency is not None:
+        report["input_fingerprints"]["local_corpus_policy"] = dependency
     report["nodeid_outcome_consistency"] = _nodeid_outcome_consistency(
         report["counts"],
         collect_nodeid_digest or dict(existing.get("pytest_collect_nodeid_digest", {})),

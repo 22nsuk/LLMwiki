@@ -182,15 +182,15 @@ def artifact_input_fingerprints(
     return fingerprints
 
 
-def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bool:
+def local_corpus_policy_dependency(vault: Path, report: Mapping[str, Any]) -> str | None:
+    """Return the recorded overlay state, including implicit legacy absence.
+
+    None means a custom-policy input is independent of the default overlay;
+    "missing" is a real dependency on its absence and must survive composition.
+    """
     fingerprints = report.get("input_fingerprints", {})
-    if not isinstance(fingerprints, dict):
-        return False
-    local_policy = vault / LOCAL_CORPUS_POLICY_PATH
-    # An explicit dependency also applies to custom-policy aggregates that scan
-    # default-policy reports. File inputs record absence as "missing".
     if "local_corpus_policy" in fingerprints:
-        return fingerprints["local_corpus_policy"] == _sha256_file(local_policy)
+        return str(fingerprints["local_corpus_policy"])
     # Reports written before local overlays used only policy.path for scope.
     policy = report.get("policy", {})
     path = policy.get("path") if isinstance(policy, dict) else None
@@ -199,11 +199,21 @@ def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bo
         and path
         and local_corpus_policy_path(vault, resolve_policy_path(vault, path)) is None
     )
-    if custom_policy:
-        # Older custom-policy freshness aggregates did not bind the scanned
-        # overlay, so even its absence cannot establish their currentness.
+    return None if custom_policy else "missing"
+
+
+def local_corpus_policy_is_current(vault: Path, report: Mapping[str, Any]) -> bool:
+    fingerprints = report.get("input_fingerprints", {})
+    if not isinstance(fingerprints, dict):
+        return False
+    dependency = local_corpus_policy_dependency(vault, report)
+    if dependency is None:
+        # Older custom-policy freshness aggregates did not bind their inputs.
         return report.get("artifact_kind") != "artifact_freshness_report"
-    return not local_policy.exists()
+    local_policy = vault / LOCAL_CORPUS_POLICY_PATH
+    if "local_corpus_policy" not in fingerprints:
+        return not local_policy.exists()
+    return dependency == _sha256_file(local_policy)
 
 
 def build_canonical_report_envelope(

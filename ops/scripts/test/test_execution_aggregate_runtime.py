@@ -7,9 +7,16 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from ops.scripts.core.artifact_envelope_runtime import local_corpus_policy_is_current
+from ops.scripts.core.artifact_envelope_runtime import (
+    local_corpus_policy_dependency,
+    local_corpus_policy_is_current,
+)
 from ops.scripts.core.artifact_freshness_runtime import build_canonical_report_envelope
-from ops.scripts.core.policy_runtime import load_policy, report_path
+from ops.scripts.core.policy_runtime import (
+    LOCAL_CORPUS_POLICY_PATH,
+    load_policy,
+    report_path,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
 from ops.scripts.core.schema_runtime import (
@@ -439,7 +446,14 @@ def build_aggregate_report(
                 "ops/scripts/test/test_execution_summary.py",
                 "ops/scripts/core/command_runtime.py",
             ],
-            file_inputs={f"shard_{index}": path for index, path in enumerate(shard_paths, start=1)},
+            file_inputs={
+                **{f"shard_{index}": path for index, path in enumerate(shard_paths, start=1)},
+                **(
+                    {"local_corpus_policy": LOCAL_CORPUS_POLICY_PATH}
+                    if any(local_corpus_policy_dependency(vault, shard) is not None for shard in shards)
+                    else {}
+                ),
+            },
             text_inputs={
                 "summary_mode": "aggregate",
                 "suite": suite,

@@ -88,6 +88,7 @@
     },
     "input_fingerprints": {
       "type": "object",
+      "description": "Dependencies of the execution and any composed evidence. Aggregate, derived, and reused summaries preserve local_corpus_policy, including 'missing' for a dependency on overlay absence, independently of their own policy scope.",
       "additionalProperties": {
         "type": "string",
         "minLength": 1

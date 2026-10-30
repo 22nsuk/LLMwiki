@@ -18,6 +18,9 @@ import hypothesis.strategies as st
 import pytest
 from hypothesis import given
 
+from ops.scripts.core.artifact_freshness_runtime import (
+    build_report as build_freshness_report,
+)
 from ops.scripts.core.command_runtime import CommandHeartbeat, TimedProcessResult
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_constants_runtime import TEST_EXECUTION_SUMMARY_SCHEMA_PATH
@@ -239,6 +242,155 @@ def test_reuse_diagnostics_reports_each_mismatch_code(
 
     assert diagnostics["reusable"] is False
     assert diagnostics["reason"] == expected_reason
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("custom_shard", [False, True], ids=["default-shard", "custom-shard"])
+def test_composed_summary_preserves_shard_overlay_dependency(
+    tmp_path: Path, transition: str, custom_shard: bool
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
+    local = tmp_path / "ops/policies/wiki-maintainer-policy.local.yaml"
+    if transition != "create":
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    command = [sys.executable, "-m", "pytest"]
+    shard = build_report(
+        tmp_path, command=command, suite="unit", duration_ms=1,
+        result=_result(returncode=0, stdout="1 passed in 0.01s"),
+        policy_path=custom if custom_shard else None, context=_fixed_context(),
+    )
+    paths = ["ops/reports/policy-shard.json"]
+    (tmp_path / paths[0]).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / paths[0]).write_text(json.dumps(shard), encoding="utf-8")
+    # A second aggregate exercises propagation through an already-custom parent.
+    for name in ("aggregate", "nested"):
+        report = build_aggregate_report(
+            tmp_path, shard_paths=[paths[-1]], suite="unit",
+            policy_path=custom, context=_fixed_context(),
+        )
+        path = f"ops/reports/policy-{name}.json"
+        (tmp_path / path).write_text(json.dumps(report), encoding="utf-8")
+        assert report["status"] == "pass"
+        assert reusable_aggregate_summary_diagnostics(tmp_path, path, suite="unit")["reusable"]
+        paths.append(path)
+    reused = build_reused_report(
+        tmp_path, existing=shard, command=command, suite="unit",
+        policy_path=custom, context=_fixed_context(),
+    )
+    reused_path = "ops/reports/policy-reused.json"
+    (tmp_path / reused_path).write_text(json.dumps(reused), encoding="utf-8")
+
+    if transition == "remove":
+        local.unlink()
+    else:
+        local.write_text("schema_version: 1\noverrides: {}\n# changed\n", encoding="utf-8")
+    for path in paths[1:]:
+        diagnostics = reusable_aggregate_summary_diagnostics(tmp_path, path, suite="unit")
+        assert diagnostics["reusable"] is custom_shard
+        assert diagnostics["result_reusable"] is custom_shard
+    assert reuse_currentness_diagnostics(
+        reused, vault=tmp_path, command=command, suite="unit",
+        collect_nodeids=False, collect_nodeid_digest=None,
+    )["reusable"] is custom_shard
+    freshness = build_freshness_report(
+        tmp_path, context=_fixed_context(), mtime_source="embedded_currentness"
+    )
+    records = {row["path"]: row for row in freshness["artifact_records"]}
+    for path in [*paths, reused_path]:
+        assert records[path]["schema_validation_status"] == "pass"
+        assert records[path]["source_tree_fingerprint_status"] == "current"
+        assert records[path]["currentness_status"] == ("current" if custom_shard else "stale")
+    rebuilt = build_aggregate_report(
+        tmp_path, shard_paths=[paths[0]], suite="unit", policy_path=custom, context=_fixed_context()
+    )
+    assert rebuilt["status"] == ("pass" if custom_shard else "fail")
+
+
+@pytest.mark.parametrize("relocation", ["delete", "move", "invalid-yaml", "invalid-schema"])
+@pytest.mark.parametrize("mode", ["rerun", "reuse-only", "rebind-only"])
+def test_unavailable_cached_policy_falls_back_without_bypassing_reuse_only(
+    tmp_path: Path, relocation: str, mode: str
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = tmp_path / "custom-policy.yaml"
+    custom.write_bytes((tmp_path / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
+    command = [sys.executable, "-m", "pytest"]
+    existing = build_report(
+        tmp_path, command=command, suite="unit", duration_ms=1,
+        result=_result(returncode=0, stdout="1 passed in 0.01s"),
+        policy_path="custom-policy.yaml", context=_fixed_context(),
+    )
+    cache_path = tmp_path / "ops/reports/cached-summary.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_bytes = json.dumps(existing).encode()
+    cache_path.write_bytes(cache_bytes)
+    if relocation == "delete":
+        custom.unlink()
+    elif relocation == "move":
+        custom.rename(tmp_path / "moved-policy.yaml")
+    elif relocation == "invalid-yaml":
+        custom.write_text("invalid: [", encoding="utf-8")
+    else:
+        custom.write_text("{}\n", encoding="utf-8")
+    flags = ["--reuse-if-current"]
+    if mode != "rerun":
+        flags.append("--reuse-only")
+    if mode == "rebind-only":
+        flags.append("--refresh-revision-if-same-tree")
+    out_path = tmp_path / "ops/reports/refreshed-summary.json"
+    with patch(
+        "ops.scripts.test.test_execution_summary.run_with_timeout",
+        return_value=_result(returncode=0, stdout="2 passed in 0.01s"),
+    ) as run:
+        result = summary_main([
+            "--vault", str(tmp_path), "--out", str(out_path), "--suite", "unit",
+            "--reuse-from", str(cache_path), *flags, "--", *command,
+        ])
+    assert cache_path.read_bytes() == cache_bytes
+    assert result == (0 if mode == "rerun" else 1)
+    assert run.call_count == (1 if mode == "rerun" else 0)
+    if mode == "rerun":
+        refreshed = json.loads(out_path.read_text(encoding="utf-8"))
+        assert refreshed["counts"]["passed"] == 2
+        assert refreshed["policy"]["path"] == "ops/policies/wiki-maintainer-policy.yaml"
+        assert refreshed.get("summary_mode") != "reused"
+    else:
+        assert not out_path.exists()
+
+
+def test_removed_cache_policy_runs_real_pytest_with_current_default_policy(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = tmp_path / "custom-policy.yaml"
+    custom.write_bytes((tmp_path / "ops/policies/wiki-maintainer-policy.yaml").read_bytes())
+    test_file = tmp_path / "tests/test_sample.py"
+    test_file.parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "tmp").mkdir(exist_ok=True)
+    test_file.write_text(
+        "from pathlib import Path\ndef test_ok():\n    Path('tmp/executed').write_text('yes')\n",
+        encoding="utf-8",
+    )
+    command = [sys.executable, "-m", "pytest", "tests/test_sample.py", "-p", "no:cacheprovider"]
+    existing = build_report(
+        tmp_path, command=command, suite="unit", duration_ms=1,
+        result=_result(returncode=0, stdout="2 passed in 0.01s"),
+        policy_path="custom-policy.yaml", context=_fixed_context(),
+    )
+    out_path = tmp_path / "ops/reports/test-execution-summary.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(existing), encoding="utf-8")
+    custom.unlink()
+
+    assert summary_main([
+        "--vault", str(tmp_path), "--out", str(out_path), "--suite", "unit",
+        "--reuse-if-current", "--timeout-seconds", "30", "--", *command,
+    ]) == 0
+    assert (tmp_path / "tmp/executed").read_text(encoding="utf-8") == "yes"
+    refreshed = json.loads(out_path.read_text(encoding="utf-8"))
+    assert refreshed["counts"]["passed"] == 1
+    assert refreshed["policy"]["path"] == "ops/policies/wiki-maintainer-policy.yaml"
+    assert refreshed.get("summary_mode") != "reused"
 
 
 class TestExecutionSummaryTest(unittest.TestCase):

@@ -35,7 +35,11 @@ from ops.scripts.test.test_execution_derivation_runtime import (
     validate_full_suite_evidence_bindings,
     write_collection_manifest,
 )
-from ops.scripts.test.test_execution_summary import build_report, write_report
+from ops.scripts.test.test_execution_summary import (
+    build_aggregate_report,
+    build_report,
+    write_report,
+)
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 pytestmark = [pytest.mark.report_contract, pytest.mark.report_contract_core]
@@ -705,6 +709,81 @@ def test_derived_summary_freshness_tracks_parent_policy_scope(
     assert record["currentness_status"] == "current"
     assert record["input_fingerprint_mismatch_keys"] == []
     assert current["summary"]["stale_artifact_count"] == 0
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+@pytest.mark.parametrize("selection", ["manifest", "nodeids"])
+def test_derived_custom_aggregate_retains_default_shard_dependency(
+    tmp_path: Path, transition: str, selection: str
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    local = tmp_path / LOCAL_CORPUS_POLICY_PATH
+    if transition != "create":
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    _, parent, full_manifest, selected_manifest = _derived_fixture(tmp_path)
+    shard_path = "ops/reports/full-shard.json"
+    write_report(tmp_path, parent, shard_path)
+    aggregate = build_aggregate_report(
+        tmp_path, shard_paths=[shard_path], suite="full", policy_path=custom, context=FIXED_CONTEXT
+    )
+    assert aggregate["status"] == "pass"
+    assert aggregate["represents_full_suite"] is True
+    selected = selected_manifest if selection == "manifest" else selected_manifest["nodeids"]
+    derived = derive_subset_summary(
+        aggregate, parse_junit_testcases(_junit_xml(), expected_nodeids=full_manifest["nodeids"]),
+        full_manifest, selected,
+    )
+    relative_path = "ops/reports/derived-custom-aggregate.json"
+    write_report(tmp_path, derived, relative_path)
+    before = build_freshness_report(tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness")
+    record = next(row for row in before["artifact_records"] if row["path"] == relative_path)
+    assert record["currentness_status"] == "current"
+    if transition == "remove":
+        local.unlink()
+    else:
+        local.write_text("schema_version: 1\noverrides: {}\n# changed\n", encoding="utf-8")
+    after = build_freshness_report(tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness")
+    record = next(row for row in after["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["source_tree_fingerprint_status"] == "current"
+    assert record["currentness_status"] == "stale"
+    assert record["input_fingerprint_mismatch_keys"] == ["local_corpus_policy"]
+
+
+@pytest.mark.parametrize("transition", ["create", "edit", "remove"])
+def test_derived_custom_summary_retains_default_selector_dependency(
+    tmp_path: Path, transition: str
+) -> None:
+    seed_minimal_vault(tmp_path)
+    custom = "ops/policies/custom-policy.yaml"
+    (tmp_path / custom).write_bytes((tmp_path / DEFAULT_POLICY_PATH).read_bytes())
+    local = tmp_path / LOCAL_CORPUS_POLICY_PATH
+    if transition != "create":
+        local.write_text("schema_version: 1\noverrides: {}\n", encoding="utf-8")
+    _, parent, full_manifest, custom_selection = _derived_fixture(tmp_path, policy_path=custom)
+    selected = build_collection_manifest(
+        tmp_path, suite=custom_selection["suite"],
+        semantic_command=custom_selection["semantic_command"], nodeids=custom_selection["nodeids"],
+        selection_kind="selector_subset", deselected_tests=[],
+        deselection_lifecycle=_lifecycle(), context=FIXED_CONTEXT,
+    )
+    derived = derive_subset_summary(
+        parent, parse_junit_testcases(_junit_xml(), expected_nodeids=full_manifest["nodeids"]),
+        full_manifest, selected,
+    )
+    relative_path = "ops/reports/derived-custom-selection.json"
+    write_report(tmp_path, derived, relative_path)
+    if transition == "remove":
+        local.unlink()
+    else:
+        local.write_text("schema_version: 1\noverrides: {}\n# changed\n", encoding="utf-8")
+    freshness = build_freshness_report(tmp_path, context=FIXED_CONTEXT, mtime_source="embedded_currentness")
+    record = next(row for row in freshness["artifact_records"] if row["path"] == relative_path)
+    assert record["schema_validation_status"] == "pass"
+    assert record["source_tree_fingerprint_status"] == "current"
+    assert record["currentness_status"] == "stale"
 
 
 def test_derivation_fails_closed_across_authority_boundaries(tmp_path: Path) -> None:

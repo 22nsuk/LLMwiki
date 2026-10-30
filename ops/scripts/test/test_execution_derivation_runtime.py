@@ -767,10 +767,21 @@ def _derived_input_fingerprints(
     }
     # Keep policy binding even without an overlay so its creation invalidates
     # derived evidence through the same freshness checks as direct reports.
-    for key in ("policy", "local_corpus_policy", "custom_policy_path"):
+    for key in ("policy", "custom_policy_path"):
         value = full_summary.get("input_fingerprints", {}).get(key)
         if value is not None:
             fingerprints[key] = str(value)
+    # Independent custom inputs impose no overlay constraint. All inputs that
+    # do depend on it must agree, including legacy implicit absence.
+    local_dependencies: set[str] = set()
+    for artifact in (full_summary, collection_manifest, selected_manifest):
+        inputs = artifact.get("input_fingerprints", {})
+        if "local_corpus_policy" in inputs or "custom_policy_path" not in inputs:
+            local_dependencies.add(str(inputs.get("local_corpus_policy", "missing")))
+    if len(local_dependencies) > 1:
+        raise ValueError("collection local corpus policy drift")
+    if local_dependencies:
+        fingerprints["local_corpus_policy"] = local_dependencies.pop()
     return fingerprints
 
 
@@ -965,8 +976,6 @@ def derive_subset_summary(
         ("full", collection_manifest),
         ("selected", selected_manifest),
     ):
-        if manifest.get("input_fingerprints", {}).get("local_corpus_policy") != full_summary.get("input_fingerprints", {}).get("local_corpus_policy"):
-            raise ValueError(f"{label} collection local corpus policy drift")
         if manifest.get("source_tree_fingerprint") != full_summary.get(
             "source_tree_fingerprint"
         ):

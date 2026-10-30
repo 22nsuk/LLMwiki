@@ -75,6 +75,15 @@ and cached test summaries and collection manifests are invalidated when the
 overlay is created, changed, or removed. Derived test summaries preserve the
 parent's policy fingerprints, including the base policy binding when no overlay
 exists, so they follow the same invalidation lifecycle as direct summaries.
+Test aggregates and reused summaries retain the overlay dependencies of their
+input evidence, including `missing` for an overlay that was absent. This binding
+survives nested aggregation and subset derivation even with a custom output
+policy; evidence composed entirely from independent custom policies stays
+independent. Subset derivation treats legacy omitted absence and explicit
+`missing` as the same input state, while preserving collection dependencies.
+An unreadable or invalid policy referenced by cached test evidence makes the
+cache unusable. `--reuse-if-current` executes with the requested valid policy;
+`--reuse-only` fails without running tests or writing replacement evidence.
 The shared artifact freshness scan also marks policy-bound live canonical reports stale
 when the overlay is created, changed, or removed, including reports generated
 before overlays were supported. It records
