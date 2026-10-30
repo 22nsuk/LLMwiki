@@ -22,7 +22,9 @@ PYTEST_COUNT_RE = re.compile(
     r"(?P<label>passed|failed|error|errors|skipped|xfailed|xpassed|warning|warnings)"
 )
 PYTEST_DESELECTED_RE = re.compile(r"(?P<count>\d+)\s+deselected")
+PYTEST_JUNIT_OUTPUT_FLAGS = {"--junit-xml", "--junitxml"}
 PYTEST_OPTION_VALUE_FLAGS = {
+    *PYTEST_JUNIT_OUTPUT_FLAGS,
     "-c",
     "-k",
     "-m",
@@ -34,7 +36,6 @@ PYTEST_OPTION_VALUE_FLAGS = {
     "--confcutdir",
     "--deselect",
     "--dist",
-    "--junit-xml",
     "--log-cli-level",
     "--maxfail",
     "--override-ini",
@@ -43,7 +44,6 @@ PYTEST_OPTION_VALUE_FLAGS = {
 }
 PYTEST_COLLECTION_FILTER_FLAGS = {"-k", "-m", "--deselect"}
 PYTEST_PLUGIN_AUTOLOAD_ENV = "PYTEST_DISABLE_PLUGIN_AUTOLOAD"
-PYTEST_JUNIT_OUTPUT_FLAGS = {"--junit-xml", "--junitxml"}
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:
