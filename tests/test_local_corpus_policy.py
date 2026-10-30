@@ -251,29 +251,41 @@ class LocalCorpusPolicyTests(unittest.TestCase):
                     target.chmod(0o600)
                     link_target = os.path.relpath(target, self.local_path.parent) if form == "internal-link" else str(target)
                     self.local_path.symlink_to(link_target)
-                source_mode = self.local_path.stat().st_mode & 0o777
-                for mode, root in (
-                    ("full_copy", DEFAULT_POLICY_PATH),
-                    ("sparse_manifest", DEFAULT_POLICY_PATH),
-                    ("sparse_manifest", "ops/policies/"),
-                ):
-                    with self.subTest(form=form, mode=mode, root=root), tempfile.TemporaryDirectory() as workspace:
-                        prepared = _prepare_workspace_copy(
-                            self.vault,
-                            run_id="synthetic-local-policy",
-                            workspace_root=workspace,
-                            mode=mode,
-                            allowed_apply_roots=[root],
-                        )
-                        copied = prepared.workspace_vault / LOCAL_CORPUS_POLICY_PATH
-                        self.assertEqual(load_policy(prepared.workspace_vault)[0], expected)
-                        self.assertFalse(copied.is_symlink())
-                        self.assertEqual(copied.read_bytes(), local_bytes)
-                        self.assertEqual(copied.stat().st_mode & 0o777, source_mode)
-                        if mode == "sparse_manifest":
-                            self.assertFalse((copied.parent / unrelated_link.name).exists())
-                        copied.write_bytes(local_bytes + b"# candidate-only edit\n")
-                        self.assertEqual(self.local_path.read_bytes(), local_bytes)
+                for source_mode in (0o600, 0o400):
+                    self.local_path.chmod(source_mode)
+                    self.base_path.chmod(source_mode)
+                    for mode, roots in (
+                        ("full_copy", [DEFAULT_POLICY_PATH]),
+                        ("sparse_manifest", [DEFAULT_POLICY_PATH]),
+                        ("sparse_manifest", ["ops/policies/"]),
+                        ("sparse_manifest", ["ops/policies/", LOCAL_CORPUS_POLICY_PATH, DEFAULT_POLICY_PATH]),
+                        ("sparse_manifest", [LOCAL_CORPUS_POLICY_PATH, "ops/policies/"]),
+                    ):
+                        with (
+                            self.subTest(form=form, source_mode=oct(source_mode), mode=mode, roots=roots),
+                            tempfile.TemporaryDirectory() as workspace,
+                        ):
+                            prepared = _prepare_workspace_copy(
+                                self.vault,
+                                run_id="synthetic-local-policy",
+                                workspace_root=workspace,
+                                mode=mode,
+                                allowed_apply_roots=roots,
+                            )
+                            copied = prepared.workspace_vault / LOCAL_CORPUS_POLICY_PATH
+                            self.assertEqual(load_policy(prepared.workspace_vault)[0], expected)
+                            self.assertFalse(copied.is_symlink())
+                            self.assertEqual(copied.read_bytes(), local_bytes)
+                            self.assertEqual(copied.stat().st_mode & 0o777, source_mode)
+                            if mode == "sparse_manifest":
+                                self.assertFalse((copied.parent / unrelated_link.name).exists())
+                            # Candidate-owned copies can change permissions and
+                            # bytes without mutating either source input.
+                            copied.chmod(0o600)
+                            copied.write_bytes(local_bytes + b"# candidate-only edit\n")
+                            self.assertEqual(self.local_path.read_bytes(), local_bytes)
+                            self.assertEqual(self.local_path.stat().st_mode & 0o777, source_mode)
+                            self.assertEqual(self.base_path.read_bytes(), self.base_bytes)
 
     def test_built_wheel_and_sdist_exclude_local_policy_bytes(self) -> None:
         for name in ("pyproject.toml", "README.md", "LICENSE"):

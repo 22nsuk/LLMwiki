@@ -118,6 +118,8 @@ Full and sparse candidate workspaces retain the overlay whenever they copy the
 default policy, so local validation uses the same effective corpus settings.
 Both modes materialize readable overlay symlinks as regular files, retaining
 their bytes and permissions without letting candidate writes reach the source.
+Sparse preparation copies each selected file once, including overlaps between
+directory and file selectors, so read-only policies need no second write.
 Sparse preparation propagates overlay read failures instead of silently
 omitting the settings; other sparse entries keep their existing symlink rules.
 Tests and examples must use synthetic corpus names; never copy an operator's local inventory into

@@ -280,14 +280,19 @@ def _sparse_copy_entries(
     return ordered
 
 
-def _copy_sparse_file(source: Path, destination: Path) -> None:
-    if source.is_symlink():
+def _copy_sparse_file(
+    source: Path, destination: Path, copied_files: set[Path]
+) -> None:
+    if destination in copied_files or source.is_symlink():
         return
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
+    copied_files.add(destination)
 
 
-def _copy_sparse_entry(vault: Path, workspace_vault: Path, rel_path: str, *, run_id: str) -> None:
+def _copy_sparse_entry(
+    vault: Path, workspace_vault: Path, rel_path: str, *, run_id: str, copied_files: set[Path]
+) -> None:
     source = vault / rel_path
     if not source.exists():
         raise RunMechanismExperimentUsageError(
@@ -297,7 +302,7 @@ def _copy_sparse_entry(vault: Path, workspace_vault: Path, rel_path: str, *, run
         return
     if source.is_file():
         if source.suffix not in WORKSPACE_IGNORE_SUFFIXES:
-            _copy_sparse_file(source, workspace_vault / rel_path)
+            _copy_sparse_file(source, workspace_vault / rel_path, copied_files)
         return
     if not source.is_dir():
         return
@@ -309,7 +314,7 @@ def _copy_sparse_entry(vault: Path, workspace_vault: Path, rel_path: str, *, run
             continue
         if child.suffix in WORKSPACE_IGNORE_SUFFIXES:
             continue
-        _copy_sparse_file(child, workspace_vault / child_rel)
+        _copy_sparse_file(child, workspace_vault / child_rel, copied_files)
 
 
 def _file_digest(path: Path) -> str:
@@ -678,14 +683,18 @@ def _prepare_sparse_workspace_copy(
     )
 
     copy_started = time.monotonic()
+    # Overlapping selectors share one snapshot; copy2 may make it read-only.
+    copied_files: set[Path] = set()
     for rel_path in copy_entries:
-        _copy_sparse_entry(vault, workspace_vault, rel_path, run_id=run_id)
-    if (workspace_vault / DEFAULT_POLICY_PATH).is_file():
+        _copy_sparse_entry(
+            vault, workspace_vault, rel_path, run_id=run_id, copied_files=copied_files
+        )
+    local_destination = workspace_vault / LOCAL_CORPUS_POLICY_PATH
+    if (workspace_vault / DEFAULT_POLICY_PATH).is_file() and local_destination not in copied_files:
         local_bytes = read_local_corpus_policy_bytes(vault)
         if local_bytes is not None:
             # Snapshot linked policy content without exposing its host target
             # to candidate writes; generic sparse entries still exclude links.
-            local_destination = workspace_vault / LOCAL_CORPUS_POLICY_PATH
             local_destination.write_bytes(local_bytes)
             shutil.copystat(vault / LOCAL_CORPUS_POLICY_PATH, local_destination)
     _provision_workspace_python_shim(vault, workspace_vault)
