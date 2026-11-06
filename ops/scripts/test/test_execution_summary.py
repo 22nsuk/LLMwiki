@@ -82,6 +82,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.test.test_execution_evidence_runtime import (
         evidence_artifact_consistency as _evidence_artifact_consistency,
+        execution_evidence_failures,
         failed_nodeids as _failed_nodeids,
         junit_artifact_identity,
         nodeid_outcome_consistency as _nodeid_outcome_consistency,
@@ -109,11 +110,14 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
         pytest_args as _pytest_args,
         pytest_collect_modifiers as _pytest_collect_modifiers,
+        pytest_collection_args,
         pytest_collection_filter_args as _pytest_collection_filter_args,
         pytest_deselected_nodeids as _pytest_deselected_nodeids,
         pytest_selector_args as _pytest_selector_args,
+        pytest_uses_selection_cache,
         suite_coverage as _suite_coverage,
         suite_scope_for_key as _suite_scope_for_key,
+        without_full_suite_coverage,
     )
 else:
     from ops.scripts.core.artifact_envelope_runtime import (
@@ -182,6 +186,7 @@ else:
     )
     from ops.scripts.test.test_execution_evidence_runtime import (
         evidence_artifact_consistency as _evidence_artifact_consistency,
+        execution_evidence_failures,
         failed_nodeids as _failed_nodeids,
         junit_artifact_identity,
         nodeid_outcome_consistency as _nodeid_outcome_consistency,
@@ -209,11 +214,14 @@ else:
         apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
         pytest_args as _pytest_args,
         pytest_collect_modifiers as _pytest_collect_modifiers,
+        pytest_collection_args,
         pytest_collection_filter_args as _pytest_collection_filter_args,
         pytest_deselected_nodeids as _pytest_deselected_nodeids,
         pytest_selector_args as _pytest_selector_args,
+        pytest_uses_selection_cache,
         suite_coverage as _suite_coverage,
         suite_scope_for_key as _suite_scope_for_key,
+        without_full_suite_coverage,
     )
 
 
@@ -276,6 +284,7 @@ class TestExecutionReportRequest:
     collect_nodeid_digest: dict[str, Any] | None = None
     evidence_artifacts: list[dict[str, Any]] | None = None
     deselection_policy_path: str | None = None
+    recorded_counts: dict[str, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -410,7 +419,6 @@ def collect_pytest_nodeid_digest(
     deselection_lifecycle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     policy_inputs = _capture_test_policy_inputs(vault, policy_path)
-    selectors = _pytest_selector_args(command)
     collect_command = [
         sys.executable,
         "-m",
@@ -419,11 +427,9 @@ def collect_pytest_nodeid_digest(
         "addopts=",
         "--collect-only",
         "-q",
-        "-p",
-        "no:cacheprovider",
+        *([] if pytest_uses_selection_cache(command) else ["-p", "no:cacheprovider"]),
         "--capture=no",
-        *selectors,
-        *_pytest_collect_modifiers(command),
+        *pytest_collection_args(command),
     ]
     collect_env = dict(os.environ)
     collect_env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -466,7 +472,7 @@ def collect_pytest_nodeid_digest(
             nodeids=nodeids,
             selection_kind=(
                 "selector_subset"
-                if _pytest_selector_args(command) or _pytest_collect_modifiers(command)
+                if not _suite_coverage(suite="full", command=command)["represents_full_suite"]
                 else "full_suite"
             ),
             policy_path=policy_path,
@@ -576,7 +582,10 @@ def _test_execution_observations(
     *,
     generated_at: str,
 ) -> TestExecutionObservations:
-    counts = parse_pytest_counts(request.result.stdout, request.result.stderr)
+    counts = (
+        dict(request.recorded_counts) if request.recorded_counts is not None
+        else parse_pytest_counts(request.result.stdout, request.result.stderr)
+    )
     target_paths = resolve_pytest_target_paths(vault, request.command)
     test_target_fingerprints = build_test_target_fingerprints(vault, target_paths)
     deselected_tests = structured_deselected_tests(
@@ -609,6 +618,13 @@ def _test_execution_observations(
         _suite_coverage(suite=request.suite, command=request.command),
         execution_environment,
     )
+    failures = execution_evidence_failures(collect_nodeid_digest, nodeid_outcome_consistency, evidence_artifact_consistency)
+    status = classify_status(request.result, counts)
+    if failures or (pytest_marker_deselected_count and coverage["represents_full_suite"]):
+        reason = "; ".join(failures) if failures else "pytest reported deselected tests"
+        coverage = without_full_suite_coverage(coverage, reason)
+    if failures and status == "pass":
+        status = "fail"
     return TestExecutionObservations(
         counts=counts,
         target_paths=target_paths,
@@ -623,7 +639,7 @@ def _test_execution_observations(
         evidence_artifact_consistency=evidence_artifact_consistency,
         execution_environment=execution_environment,
         coverage=coverage,
-        status=classify_status(request.result, counts),
+        status=status,
     )
 
 
@@ -743,6 +759,10 @@ def _render_test_execution_summary(inputs: TestExecutionRenderInputs) -> dict[st
             duration_ms=request.duration_ms,
             generated_at=inputs.generated_at,
             deselection_lifecycle=observations.deselection_lifecycle,
+            evidence_failures=execution_evidence_failures(
+                observations.collect_nodeid_digest, observations.nodeid_outcome_consistency,
+                observations.evidence_artifact_consistency,
+            ),
         ),
     }
 
@@ -781,6 +801,7 @@ def _build_release_contract_diagnosis(
     duration_ms: int,
     generated_at: str,
     deselection_lifecycle: dict[str, Any],
+    evidence_failures: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Build release contract diagnosis entries for this test execution."""
     diagnosis: list[dict[str, Any]] = []
@@ -788,7 +809,9 @@ def _build_release_contract_diagnosis(
     # Pytest contract summary (the actual executed suite)
     lane = "clean" if status == "pass" else "blocked"
     blocker_conditions: list[str] = []
-    if status == "fail":
+    if evidence_failures:
+        blocker_conditions.append("execution_evidence_invalid")
+    elif status == "fail":
         blocker_conditions.append("pytest_suite_failed")
     if deselection_lifecycle.get("status") != "pass":
         blocker_conditions.append("deselection_lifecycle_not_pass")
@@ -804,7 +827,7 @@ def _build_release_contract_diagnosis(
             "blocker_conditions": blocker_conditions,
             "accepted_risk_family": None,
             "risk_acceptance_ref": None,
-            "reason": "",
+            "reason": "; ".join(evidence_failures or []),
         }
     )
 
@@ -974,35 +997,20 @@ def build_reused_report(
     )
     report = build_report(
         vault,
-        command=command,
-        result=result,
-        duration_ms=int(existing.get("duration_ms", 0) or 0),
-        suite=suite,
-        policy_path=policy_path,
-        context=context,
-        collect_nodeids=collect_nodeids,
-        collect_nodeid_digest=collect_nodeid_digest,
-        evidence_artifacts=[
-            item for item in existing.get("evidence_artifacts", []) if isinstance(item, dict)
-        ],
-        deselection_policy_path=deselection_policy_path,
+        TestExecutionReportRequest(
+            command=command, result=result,
+            duration_ms=int(existing.get("duration_ms", 0) or 0), suite=suite,
+            policy_path=policy_path, context=context, collect_nodeids=collect_nodeids,
+            collect_nodeid_digest=collect_nodeid_digest or dict(existing.get("pytest_collect_nodeid_digest", {})),
+            evidence_artifacts=[item for item in existing.get("evidence_artifacts", []) if isinstance(item, dict)],
+            deselection_policy_path=deselection_policy_path,
+            recorded_counts=dict(existing.get("counts", {})),
+        ),
     )
-    report["counts"] = dict(existing.get("counts", {}))
     dependency = merge_local_corpus_policy_dependencies(vault, [report, existing])
     if dependency == UNKNOWN_LOCAL_CORPUS_POLICY:
         raise ValueError("reused summary local corpus policy drift or missing binding")
     report["input_fingerprints"]["local_corpus_policy"] = dependency
-    report["nodeid_outcome_consistency"] = _nodeid_outcome_consistency(
-        report["counts"],
-        collect_nodeid_digest or dict(existing.get("pytest_collect_nodeid_digest", {})),
-    )
-    report["evidence_artifact_consistency"] = _evidence_artifact_consistency(
-        vault,
-        counts=report["counts"],
-        evidence_artifacts=[
-            item for item in existing.get("evidence_artifacts", []) if isinstance(item, dict)
-        ],
-    )
     report["termination_reason"] = "reused_current_summary"
     report["stdout_tail"] = str(existing.get("stdout_tail", ""))
     report["stderr_tail"] = str(existing.get("stderr_tail", ""))

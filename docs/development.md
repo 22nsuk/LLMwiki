@@ -79,6 +79,23 @@ focused selectors and serial/isolation debugging; selectorless raw module pytest
 belongs behind Make-owned lanes because it runs the full suite serially without
 the repository lane policy.
 
+Pytest selection, collection, deselection metadata, and entrypoint guidance use
+one argument parser. Boolean options such as `--cache-clear` do not consume a
+following test path; separated and attached `-k`/`-m`, ini overrides, JUnit
+aliases, and the `--` delimiter retain their pytest meanings. Collection keeps
+configuration, plugins, and selection inputs while omitting execution-output
+options and worker/verbosity settings. Selection filters, non-executing options,
+and unrecognized options cannot establish full-suite scope.
+
+A zero pytest exit code is insufficient when a requested collection or supplied
+execution artifact contradicts the outcomes. Such summaries have `status=fail`,
+return a nonzero summary CLI status, and cannot represent the full suite or be
+reused as passing evidence. The report's `returncode` still records the child
+exit code. Aggregation preserves these failures even if shard count differences
+cancel; intentionally unrequested collection remains `skipped`. Exact
+collection-to-JUnit nodeid verification remains required by the release sidecar
+and trusted-CI evidence paths.
+
 When a request says "full pytest", choose the lane by intent:
 
 | Intent | Command | Notes |

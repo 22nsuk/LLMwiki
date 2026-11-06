@@ -6,6 +6,7 @@ import os
 import platform
 import re
 import shlex
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -29,21 +30,111 @@ PYTEST_OPTION_VALUE_FLAGS = {
     "-k",
     "-m",
     "-n",
+    "-o",
     "-p",
+    "-r",
+    "-W",
     "--basetemp",
-    "--cache-clear",
     "--capture",
     "--confcutdir",
     "--deselect",
+    "--ignore",
+    "--ignore-glob",
     "--dist",
     "--log-cli-level",
     "--maxfail",
+    "--maxprocesses",
+    "--max-worker-restart",
     "--override-ini",
     "--rootdir",
     "--tb",
+    "--assert",
+    "--color",
+    "--code-highlight",
+    "--durations",
+    "--durations-min",
+    "--import-mode",
+    "--junit-prefix",
+    "--junitprefix",
+    "--lfnf",
+    "--last-failed-no-failures",
+    "--log-level",
+    "--log-format",
+    "--log-date-format",
+    "--log-file",
+    "--log-file-level",
+    "--log-file-format",
+    "--log-file-date-format",
+    "--pythonwarnings",
+    "--show-capture",
+    "--verbosity",
 }
-PYTEST_COLLECTION_FILTER_FLAGS = {"-k", "-m", "--deselect"}
+PYTEST_CACHE_SELECTION_FLAGS = {
+    "--lf", "--last-failed", "--sw", "--stepwise", "--sw-skip", "--stepwise-skip",
+}
+PYTEST_COLLECTION_FILTER_FLAGS = {
+    "-k", "-m", "--deselect", "--ignore", "--ignore-glob", *PYTEST_CACHE_SELECTION_FLAGS,
+}
+PYTEST_BOOLEAN_FLAGS = {
+    "-q", "--quiet", "-v", "--verbose", "-s", "-x", "--exitfirst",
+    "--cache-clear", "--disable-warnings", "--disable-pytest-warnings",
+    "--strict", "--strict-config", "--strict-markers", "--showlocals", "--no-showlocals",
+    "--full-trace", "--continue-on-collection-errors", "--noconftest", "--pyargs",
+    "--keep-duplicates", "--ff", "--failed-first", "--nf", "--new-first",
+    "--collect-only", "--co", *PYTEST_COLLECTION_FILTER_FLAGS,
+} - PYTEST_OPTION_VALUE_FLAGS
 PYTEST_PLUGIN_AUTOLOAD_ENV = "PYTEST_DISABLE_PLUGIN_AUTOLOAD"
+
+
+@dataclass(frozen=True)
+class PytestArgument:
+    option: str | None
+    value: str | None
+    tokens: tuple[str, ...]
+
+
+def _pytest_args_start(command: list[str]) -> int | None:
+    for index, item in enumerate(command):
+        if item == "-m" and index + 1 < len(command) and command[index + 1] == "pytest":
+            return index + 2
+        if Path(item).name in {"pytest", "py.test", "pytest.exe", "py.test.exe"}:
+            return index + 1
+    return None
+
+
+def is_pytest_command(command: list[str]) -> bool:
+    return _pytest_args_start(command) is not None
+
+
+def pytest_args(command: list[str]) -> list[str]:
+    start = _pytest_args_start(command)
+    return command[start:] if start is not None else []
+
+
+def parsed_pytest_args(command: list[str]) -> list[PytestArgument]:
+    """Tokenize once for coverage, collection, deselection, and entrypoint guidance."""
+    args = iter(pytest_args(command))
+    parsed: list[PytestArgument] = []
+    for token in args:
+        if token == "--":
+            parsed.append(PytestArgument("--", None, (token,)))
+            parsed.extend(PytestArgument(None, value, (value,)) for value in args)
+            break
+        if not token.startswith("-"):
+            parsed.append(PytestArgument(None, token, (token,)))
+            continue
+        option, separator, value = token.partition("=")
+        tokens: tuple[str, ...] = (token,)
+        if len(token) > 2 and token[:2] in PYTEST_OPTION_VALUE_FLAGS:
+            option, value, separator = token[:2], token[2:].removeprefix("="), "attached"
+        if option in PYTEST_OPTION_VALUE_FLAGS and not separator:
+            next_value = next(args, None)
+            value = next_value if next_value is not None else ""
+            tokens = (token, value) if next_value is not None else (token,)
+        if option.startswith("-") and set(option[1:]) in ({"q"}, {"v"}):
+            option = option[:2]
+        parsed.append(PytestArgument(option, value if separator or option in PYTEST_OPTION_VALUE_FLAGS else None, tokens))
+    return parsed
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:
@@ -92,19 +183,10 @@ def semantic_command(command: list[str]) -> list[str]:
 
 def collection_semantic_command(command: list[str]) -> list[str]:
     semantic = semantic_command(command)
-    normalized: list[str] = []
-    skip_next = False
-    for token in semantic:
-        if skip_next:
-            skip_next = False
-            continue
-        if token in PYTEST_JUNIT_OUTPUT_FLAGS:
-            skip_next = True
-            continue
-        if any(token.startswith(f"{flag}=") for flag in PYTEST_JUNIT_OUTPUT_FLAGS):
-            continue
-        normalized.append(token)
-    return normalized
+    args = pytest_args(command)
+    prefix = semantic[:len(semantic) - len(args)] if args else semantic
+    return [*prefix, *(token for arg in parsed_pytest_args(command)
+                       if arg.option not in PYTEST_JUNIT_OUTPUT_FLAGS for token in arg.tokens)]
 
 
 def _pytest_version() -> str:

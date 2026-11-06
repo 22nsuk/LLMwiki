@@ -5,10 +5,54 @@ import pytest
 from ops.scripts.test.test_execution_command_runtime import collection_semantic_command
 from ops.scripts.test.test_execution_selection_runtime import (
     apply_toolchain_contract_to_coverage,
+    pytest_collect_modifiers,
+    pytest_collection_filter_args,
     pytest_deselected_nodeids,
     pytest_selector_args,
     suite_coverage,
 )
+
+
+@pytest.mark.parametrize("option", ["--cache-clear", "-s", "--disable-warnings"])
+def test_boolean_options_preserve_the_following_selector(option: str) -> None:
+    command = ["python", "-m", "pytest", option, "tests/test_sample.py"]
+    assert pytest_selector_args(command) == ["tests/test_sample.py"]
+    assert not suite_coverage(suite="full", command=command)["represents_full_suite"]
+
+
+@pytest.mark.parametrize("flag", ["-k", "-m"])
+@pytest.mark.parametrize("args", [["FILTER", "smoke"], ["FILTER=smoke"], ["FILTERsmoke"]])
+def test_attached_selection_options_share_collection_and_coverage(flag: str, args: list[str]) -> None:
+    command = ["python", "-m", "pytest", *[arg.replace("FILTER", flag) for arg in args]]
+    assert pytest_selector_args(command) == []
+    assert pytest_collection_filter_args(command) == [flag]
+    assert pytest_collect_modifiers(command) == [flag, "smoke"]
+    assert not suite_coverage(suite="full", command=command)["represents_full_suite"]
+
+
+def test_option_values_and_delimiter_are_not_reparsed_as_flags() -> None:
+    command = ["python", "-m", "pytest", "-o", "addopts=", "--", "-k", "tests/test_sample.py"]
+    assert pytest_selector_args(command) == ["-k", "tests/test_sample.py"]
+    assert pytest_collection_filter_args(command) == []
+
+
+@pytest.mark.parametrize("args", [
+    ["--lf"], ["--stepwise"], ["--collect-only"], ["--unknown-selection-plugin"],
+    ["-o", "addopts=-k smoke"],
+])
+def test_unverified_or_nonexecuting_options_cannot_establish_full_scope(args: list[str]) -> None:
+    assert not suite_coverage(suite="full", command=["python", "-m", "pytest", *args])["represents_full_suite"]
+
+
+def test_non_pytest_command_cannot_establish_full_scope() -> None:
+    assert not suite_coverage(suite="full", command=["python", "-c", "print('1 passed')"])["represents_full_suite"]
+
+
+def test_attached_short_values_keep_embedded_equals() -> None:
+    command = ["python", "-m", "pytest", "-mdevice(serial='123')", "-oaddopts="]
+    assert pytest_collect_modifiers(command) == ["-m", "device(serial='123')"]
+    assert pytest_selector_args(command) == []
+    assert suite_coverage(suite="full", command=["pytest", "-oaddopts="])["represents_full_suite"]
 
 
 @pytest.mark.parametrize("option", ["--junit-xml", "--junitxml"])

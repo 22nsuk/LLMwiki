@@ -313,11 +313,14 @@ def _derived_fixture(
         context=FIXED_CONTEXT,
     )
     xml = junit_xml if junit_xml is not None else _junit_xml()
+    junit_path = "build/release-payloads/full.junit.xml"
+    (vault / junit_path).parent.mkdir(parents=True, exist_ok=True)
+    (vault / junit_path).write_bytes(xml)
     junit_evidence = parse_junit_testcases(xml, expected_nodeids=nodeids)
     full_summary["evidence_artifacts"] = [
         {
             "kind": "junit_xml",
-            "path": "build/release-payloads/full.junit.xml",
+            "path": junit_path,
             "exists": True,
             "size_bytes": len(xml),
             "sha256": hashlib.sha256(xml).hexdigest(),

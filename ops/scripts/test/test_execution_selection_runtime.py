@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from ops.scripts.test.test_execution_command_runtime import (
+    PYTEST_BOOLEAN_FLAGS,
+    PYTEST_CACHE_SELECTION_FLAGS,
     PYTEST_COLLECTION_FILTER_FLAGS,
+    PYTEST_JUNIT_OUTPUT_FLAGS,
     PYTEST_OPTION_VALUE_FLAGS,
     RELEASE_BUILDER_ENVIRONMENT,
+    is_pytest_command,
+    parsed_pytest_args,
+    pytest_args as pytest_args,
 )
 
 REPORT_CONTRACT_SUMMARY_SUITE = "report-contract-summary"
@@ -19,55 +24,32 @@ RELEASE_BUILDER_FULL_SCOPES = {"release-builder-full", "release_builder_full"}
 FULL_SUITE_SHARD_PREFIX = "full-shard-"
 
 
-def pytest_args(command: list[str]) -> list[str]:
-    for index, item in enumerate(command):
-        value = str(item)
-        name = Path(value).name
-        if value == "pytest" or name.startswith("pytest"):
-            return [str(arg) for arg in command[index + 1 :]]
-        if value == "-m" and index + 1 < len(command) and str(command[index + 1]) == "pytest":
-            return [str(arg) for arg in command[index + 2 :]]
-    return []
-
-
 def pytest_selector_args(command: list[str]) -> list[str]:
-    selectors: list[str] = []
-    args = pytest_args(command)
-    skip_next = False
-    for arg in args:
-        if skip_next:
-            skip_next = False
-            continue
-        if arg == "--":
-            continue
-        if arg in PYTEST_OPTION_VALUE_FLAGS:
-            skip_next = True
-            continue
-        if any(arg.startswith(f"{flag}=") for flag in PYTEST_OPTION_VALUE_FLAGS if flag.startswith("--")):
-            continue
-        if arg.startswith("-"):
-            continue
-        selectors.append(arg)
-    return selectors
+    return [str(arg.value) for arg in parsed_pytest_args(command) if arg.option is None]
 
 
 def pytest_collection_filter_args(command: list[str]) -> list[str]:
-    filters: list[str] = []
-    args = pytest_args(command)
-    skip_next = False
-    for arg in args:
-        if skip_next:
-            skip_next = False
+    return [str(arg.option) for arg in parsed_pytest_args(command)
+            if arg.option in PYTEST_COLLECTION_FILTER_FLAGS]
+
+
+def _unknown_or_nonexecuting_options(command: list[str]) -> bool:
+    if not is_pytest_command(command):
+        return True
+    for arg in parsed_pytest_args(command):
+        if arg.option is None or arg.option == "--":
             continue
-        if arg in PYTEST_COLLECTION_FILTER_FLAGS:
-            filters.append(arg)
-            skip_next = True
-            continue
-        for flag in PYTEST_COLLECTION_FILTER_FLAGS:
-            if flag.startswith("--") and arg.startswith(f"{flag}="):
-                filters.append(flag)
-                break
-    return filters
+        if arg.option in {"--collect-only", "--co"}:
+            return True
+        if arg.option not in PYTEST_OPTION_VALUE_FLAGS | PYTEST_BOOLEAN_FLAGS:
+            return True
+        if (
+            arg.option in {"-o", "--override-ini"}
+            and str(arg.value).startswith("addopts=")
+            and str(arg.value).removeprefix("addopts=").strip()
+        ):
+            return True
+    return False
 
 
 def suite_coverage(
@@ -79,7 +61,7 @@ def suite_coverage(
 ) -> dict[str, Any]:
     selectors = pytest_selector_args(command)
     collection_filters = pytest_collection_filter_args(command)
-    collection_limited = bool(selectors or collection_filters)
+    collection_limited = bool(selectors or collection_filters) or _unknown_or_nonexecuting_options(command)
     suite_key = suite.strip().lower().replace("_", "-")
     if suite_key == REPORT_CONTRACT_SUMMARY_SUITE:
         suite_scope = "report_contract_summary"
@@ -136,12 +118,16 @@ def apply_toolchain_contract_to_coverage(
     toolchain = execution_environment.get("toolchain_contract", {})
     if not isinstance(toolchain, dict) or toolchain.get("status") == "pass":
         return coverage
-    adjusted = dict(coverage)
-    full_suite_evidence = dict(adjusted.get("full_suite_evidence", {}))
     reason = (
         "unsupported toolchain blocks full-suite evidence promotion: "
         f"{toolchain.get('reason', 'unknown toolchain contract failure')}"
     )
+    return without_full_suite_coverage(coverage, reason)
+
+
+def without_full_suite_coverage(coverage: dict[str, Any], reason: str) -> dict[str, Any]:
+    adjusted = dict(coverage)
+    full_suite_evidence = dict(adjusted.get("full_suite_evidence", {}))
     adjusted["represents_full_suite"] = False
     adjusted["not_full_suite_reason"] = reason
     full_suite_evidence["status"] = "not_represented"
@@ -169,42 +155,28 @@ def suite_scope_for_key(suite_key: str) -> str:
 
 
 def pytest_collect_modifiers(command: list[str]) -> list[str]:
-    modifiers: list[str] = []
-    args = pytest_args(command)
-    skip_next = False
-    for index, arg in enumerate(args):
-        if skip_next:
-            skip_next = False
-            continue
-        if arg.startswith("--deselect="):
-            modifiers.append(arg)
-            continue
-        if arg == "--deselect" and index + 1 < len(args):
-            modifiers.extend([arg, args[index + 1]])
-            skip_next = True
-            continue
-        if arg in {"-m", "-k"} and index + 1 < len(args):
-            modifiers.extend([arg, args[index + 1]])
-            skip_next = True
-            continue
-        if arg.startswith(("--deselect=", "-m=", "-k=")):
-            modifiers.append(arg)
-            continue
-    return modifiers
+    return [token for arg in parsed_pytest_args(command)
+            if arg.option in PYTEST_COLLECTION_FILTER_FLAGS
+            for token in ([str(arg.option), arg.value] if arg.value is not None else [str(arg.option)])]
+
+
+def pytest_uses_selection_cache(command: list[str]) -> bool:
+    return bool(set(pytest_collection_filter_args(command)) & PYTEST_CACHE_SELECTION_FLAGS)
+
+
+def pytest_collection_args(command: list[str]) -> list[str]:
+    # Collection must retain config, plugins and selectors, but must not write
+    # execution evidence or change nodeid output formatting/start xdist workers.
+    omitted = PYTEST_JUNIT_OUTPUT_FLAGS | {
+        "-n", "--dist", "--maxprocesses", "--max-worker-restart",
+        "-q", "--quiet", "-v", "--verbose", "--verbosity", "-r",
+        "--collect-only", "--co", "--log-file",
+        "--ff", "--failed-first", "--nf", "--new-first",
+    }
+    if not pytest_uses_selection_cache(command):
+        omitted.update({"--cache-clear", "--lfnf", "--last-failed-no-failures"})
+    return [token for arg in parsed_pytest_args(command) if arg.option not in omitted for token in arg.tokens]
 
 
 def pytest_deselected_nodeids(command: list[str]) -> list[str]:
-    nodeids: list[str] = []
-    args = pytest_args(command)
-    skip_next = False
-    for index, arg in enumerate(args):
-        if skip_next:
-            skip_next = False
-            continue
-        if arg.startswith("--deselect="):
-            nodeids.append(arg.split("=", 1)[1])
-            continue
-        if arg == "--deselect" and index + 1 < len(args):
-            nodeids.append(args[index + 1])
-            skip_next = True
-    return [nodeid for nodeid in nodeids if nodeid]
+    return [arg.value for arg in parsed_pytest_args(command) if arg.option == "--deselect" and arg.value]

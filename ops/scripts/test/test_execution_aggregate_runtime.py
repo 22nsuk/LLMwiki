@@ -36,6 +36,7 @@ from ops.scripts.test.test_execution_derivation_runtime import (
 )
 from ops.scripts.test.test_execution_evidence_runtime import (
     evidence_artifact_consistency as _evidence_artifact_consistency,
+    execution_evidence_failures,
     nodeid_outcome_consistency as _nodeid_outcome_consistency,
     sha256_text as _sha256_text,
 )
@@ -43,6 +44,7 @@ from ops.scripts.test.test_execution_selection_runtime import (
     FULL_SUITE_SCOPES,
     apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
     suite_coverage as _suite_coverage,
+    without_full_suite_coverage,
 )
 from ops.scripts.test.test_execution_summary import (
     PRODUCER,
@@ -100,6 +102,11 @@ def reusable_aggregate_summary_diagnostics(
     checks = {
         "artifact_kind": existing.get("artifact_kind") == "test_execution_summary",
         "status": existing.get("status") == "pass",
+        "execution_evidence": not execution_evidence_failures(
+            existing.get("pytest_collect_nodeid_digest", {}),
+            existing.get("nodeid_outcome_consistency", {}),
+            existing.get("evidence_artifact_consistency", {}),
+        ),
         "suite": existing.get("suite") == suite,
         "summary_mode": existing.get("summary_mode") in {"aggregate", "reused"},
         "source_revision": existing.get("source_revision") == current_source_revision,
@@ -339,7 +346,7 @@ def aggregate_nodeid_digest(shards: list[dict[str, Any]]) -> dict[str, Any]:
         }
     if any(digest.get("status") != "collected" for digest in digests):
         return {
-            "status": "failed",
+            "status": "failed" if any(digest.get("status") == "failed" for digest in digests) else "skipped",
             "command": "",
             "nodeid_count": sum(int(digest.get("nodeid_count", 0) or 0) for digest in digests),
             "sha256": "",
@@ -433,6 +440,15 @@ def build_aggregate_report(
         counts=counts,
         evidence_artifacts=evidence_artifacts,
     )
+    failures = execution_evidence_failures(collect_nodeid_digest, nodeid_outcome_consistency, evidence_artifact_consistency)
+    for shard in shards:
+        failures.extend(execution_evidence_failures(
+            shard.get("pytest_collect_nodeid_digest", {}), shard.get("nodeid_outcome_consistency", {}),
+            shard.get("evidence_artifact_consistency", {}),
+        ))
+    if failures:
+        status = "fail"
+        coverage = without_full_suite_coverage(coverage, "; ".join(sorted(set(failures))))
     envelope = build_canonical_report_envelope(
         vault,
         generated_at=generated_at,

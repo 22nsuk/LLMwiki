@@ -5,6 +5,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from ops.scripts.test.test_execution_evidence_runtime import execution_evidence_failures
+
 REUSE_MISMATCH_SOURCE_TREE = "source_tree_mismatch"
 REUSE_MISMATCH_SOURCE_REVISION = "source_revision_mismatch"
 REUSE_MISMATCH_COMMAND_IDENTITY = "command_identity_mismatch"
@@ -152,6 +154,11 @@ def _command_identity_checks(
         existing_lifecycle = {}
     checks = {
         "suite": existing.get("suite") == request.suite,
+        "execution_evidence": not execution_evidence_failures(
+            existing.get("pytest_collect_nodeid_digest", {}),
+            existing.get("nodeid_outcome_consistency", {}),
+            existing.get("evidence_artifact_consistency", {}),
+        ),
         "semantic_command": _existing_semantic_command(existing)
         == request.current_semantic_command,
         "existing_deselection_lifecycle": existing_lifecycle.get("status") == "pass",

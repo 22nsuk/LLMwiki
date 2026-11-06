@@ -91,6 +91,127 @@ def _fixed_context() -> RuntimeContext:
     )
 
 
+@pytest.mark.parametrize("selection", [
+    ["--cache-clear", "tests/test_selected.py"],
+    ["-ktest_selected"],
+    ["-k=test_selected"],
+    ["--ignore", "tests/test_unselected.py"],
+])
+def test_partial_execution_cannot_become_full_suite_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, selection: list[str],
+) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    tests = tmp_path / "tests"
+    tests.mkdir(exist_ok=True)
+    (tests / "test_selected.py").write_text("def test_selected():\n    assert True\n", encoding="utf-8")
+    (tests / "test_unselected.py").write_text("def test_other():\n    assert False\n", encoding="utf-8")
+    command = [sys.executable, "-m", "pytest", *selection, "-q"]
+    out = "tmp/subset.json"
+    assert summary_main([
+        "--vault", str(tmp_path), "--suite", "full", "--collect-nodeids",
+        "--out", out, "--", *command,
+    ]) == 0
+    report = json.loads((tmp_path / out).read_text(encoding="utf-8"))
+    assert report["counts"]["passed"] == 1
+    assert report["represents_full_suite"] is False
+    assert report["pytest_collect_nodeid_digest"]["nodeid_count"] == 1
+    assert report["pytest_collect_nodeid_digest"]["sha256"] == hashlib.sha256(
+        b"tests/test_selected.py::test_selected\n"
+    ).hexdigest()
+    assert report["nodeid_outcome_consistency"]["status"] == "pass"
+    aggregate = build_aggregate_report(tmp_path, shard_paths=[out], suite="full", context=_fixed_context())
+    assert aggregate["represents_full_suite"] is False
+
+
+def test_collection_keeps_configuration_and_ini_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    (tmp_path / "configured").mkdir()
+    (tmp_path / "configured/test_one.py").write_text("def test_one():\n    pass\n", encoding="utf-8")
+    (tmp_path / "pytest-alternate.ini").write_text("[pytest]\ntestpaths = configured\n", encoding="utf-8")
+    digest = collect_pytest_nodeid_digest(
+        tmp_path, [sys.executable, "-m", "pytest", "-cpytest-alternate.ini", "-o", "cache_dir=tmp/cache"],
+        timeout_seconds=30,
+    )
+    assert digest["status"] == "collected"
+    assert digest["sha256"] == hashlib.sha256(b"configured/test_one.py::test_one\n").hexdigest()
+
+
+@pytest.mark.parametrize(("options", "expected_count", "full_scope"), [
+    (["--cache-clear", "--lf"], 2, False),
+    (["--lf", "--last-failed-no-failures=all"], 1, False),
+    (["--ff"], 2, True), (["--nf"], 2, True),
+])
+def test_collection_and_execution_share_cache_selection_semantics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, options: list[str], expected_count: int, full_scope: bool,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    tests = tmp_path / "tests"
+    tests.mkdir(exist_ok=True)
+    (tests / "test_pair.py").write_text("def test_one():\n    pass\ndef test_two():\n    pass\n", encoding="utf-8")
+    cache = tmp_path / ".pytest_cache/v/cache/lastfailed"
+    cache.parent.mkdir(parents=True)
+    cache.write_text(json.dumps({"tests/test_pair.py::test_one": True}), encoding="utf-8")
+    assert summary_main([
+        "--vault", str(tmp_path), "--suite", "full", "--collect-nodeids", "--out", "tmp/cache-flags.json",
+        "--", sys.executable, "-m", "pytest", *options, "-q",
+    ]) == 0
+    report = json.loads((tmp_path / "tmp/cache-flags.json").read_text(encoding="utf-8"))
+    assert report["counts"]["passed"] == expected_count
+    assert report["pytest_collect_nodeid_digest"]["nodeid_count"] == expected_count
+    assert report["represents_full_suite"] is full_scope
+
+
+def test_invalid_legacy_shards_cannot_cancel_count_drift_or_be_reused(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    command = ["python", "-m", "pytest"]
+    paths = []
+    for index, (passed, collected) in enumerate([(1, 2), (2, 1)]):
+        report = build_report(
+            tmp_path, command=command, suite="full", duration_ms=1, context=_fixed_context(),
+            result=_result(returncode=0, stdout=f"{passed} passed"), collect_nodeids=True,
+            collect_nodeid_digest={"status": "collected", "command": "python -m pytest --collect-only -q",
+                                  "nodeid_count": collected, "sha256": str(index) * 64, "reason": ""},
+        )
+        # Older writers allowed a successful process to override failed evidence.
+        report["status"] = "pass"
+        report["represents_full_suite"] = True
+        diagnostics = reuse_currentness_diagnostics(
+            report, vault=tmp_path, suite="full", command=command,
+            collect_nodeids=False, collect_nodeid_digest=None,
+        )
+        assert diagnostics["reusable"] is False
+        assert diagnostics["checks"]["execution_evidence"] is False
+        path = f"tmp/shard-{index}.json"
+        (tmp_path / path).parent.mkdir(exist_ok=True)
+        (tmp_path / path).write_text(json.dumps(report), encoding="utf-8")
+        paths.append(path)
+    aggregate = build_aggregate_report(tmp_path, shard_paths=paths, suite="full", context=_fixed_context())
+    assert aggregate["nodeid_outcome_consistency"]["status"] == "pass"
+    assert aggregate["status"] == "fail"
+    assert aggregate["represents_full_suite"] is False
+
+
+def test_reuse_validates_recorded_counts_instead_of_truncated_output(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    command = ["python", "-m", "pytest"]
+    digest = {"status": "collected", "command": "python -m pytest --collect-only -q",
+              "nodeid_count": 2, "sha256": "a" * 64, "reason": ""}
+    existing = build_report(tmp_path, command=command, suite="full", duration_ms=1,
+                            result=_result(returncode=0, stdout="2 passed"), collect_nodeid_digest=digest,
+                            context=_fixed_context())
+    existing["stdout_tail"] = "truncated diagnostic tail"
+    reused = build_reused_report(tmp_path, existing=existing, command=command, suite="full", context=_fixed_context())
+    assert reused["counts"]["passed"] == 2
+    assert reused["nodeid_outcome_consistency"]["status"] == "pass"
+    assert reused["status"] == "pass"
+    assert reused["represents_full_suite"] is True
+
+
 @pytest.mark.parametrize("option", ["--junit-xml", "--junitxml"])
 @pytest.mark.parametrize("joined", [False, True], ids=["separate", "equals"])
 @pytest.mark.parametrize("collect", [False, True], ids=["execution", "collection-manifest"])
@@ -1579,6 +1700,8 @@ class TestExecutionSummaryTest(unittest.TestCase):
 
             self.assertEqual(report["nodeid_outcome_consistency"]["status"], "fail")
             self.assertEqual(report["nodeid_outcome_consistency"]["delta"], 1)
+            self.assertEqual(report["status"], "fail")
+            self.assertFalse(report["represents_full_suite"])
             self.assertEqual(
                 validate_with_schema(report, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)),
                 [],
@@ -2878,7 +3001,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(artifacts["junit_xml"]["expected_count"], 3)
             self.assertEqual(validate_with_schema(payload, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)), [])
 
-    def test_cli_marks_junit_count_mismatch_as_artifact_attention(self) -> None:
+    def test_cli_blocks_junit_count_mismatch_as_invalid_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -2911,7 +3034,10 @@ class TestExecutionSummaryTest(unittest.TestCase):
             payload = json.loads(out_path.read_text(encoding="utf-8"))
             artifacts = {item["kind"]: item for item in payload["evidence_artifacts"]}
 
-            self.assertEqual(returncode, 0)
+            self.assertEqual(returncode, 1)
+            self.assertEqual(payload["status"], "fail")
+            self.assertFalse(payload["represents_full_suite"])
+            self.assertEqual(payload["returncode"], 0)
             self.assertEqual(artifacts["junit_xml"]["consistency_status"], "attention")
             self.assertEqual(artifacts["junit_xml"]["observed_count"], 1)
             self.assertEqual(artifacts["junit_xml"]["expected_count"], 3)
