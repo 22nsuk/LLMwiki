@@ -52,7 +52,9 @@ Unexpected errors after launch, including heartbeat/status-write failures and
 interruption, abort the backend-owned process scope and perform a bounded reap
 before propagating the error. This also covers failures while registering a
 goal command's child identity. On POSIX the abort kills the process group even
-when its leader has exited or closed output. Normal completion and timeout-race
+when its leader has exited or closed output. SIGINT and SIGTERM use this same
+abort path before forwarding the interruption to the previous signal handler;
+output EOF alone cannot mark signal cleanup complete. Normal completion and timeout-race
 handling retain their existing behavior. If termination or reaping cannot be
 confirmed, `ProcessCleanupError` preserves the original failure as its cause;
 the goal runner retains both locks for operator inspection instead of admitting

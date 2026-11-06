@@ -34,7 +34,7 @@ class ProcessCleanupError(RuntimeError):
 
 @dataclass
 class _ParentSignalCleanupState:
-    completed: bool = False
+    attempted: bool = False
 
 
 @dataclass(frozen=True)
@@ -597,21 +597,22 @@ def _install_parent_signal_cleanup(
     previous_handlers: dict[signal.Signals, PreviousSignalHandler] = {}
 
     def cleanup_then_forward(signum: int, frame: FrameType | None) -> None:
-        _finalize_timed_out_process(
+        interruption = KeyboardInterrupt() if signum == int(signal.SIGINT) else SystemExit(128 + signum)
+        # A failed abort raises ProcessCleanupError for the lock owner; do not retry it.
+        cleanup_state.attempted = True
+        cleanup_process_after_error(
             process,
             backend=backend,
+            error=interruption,
             grace_seconds=grace_seconds,
         )
-        cleanup_state.completed = True
         previous = previous_handlers.get(signal.Signals(signum), signal.SIG_DFL)
         if callable(previous):
             previous(signum, frame)
             return
         if previous == signal.SIG_IGN:
             return
-        if signum == int(signal.SIGINT):
-            raise KeyboardInterrupt
-        raise SystemExit(128 + signum)
+        raise interruption
 
     def restore() -> None:
         for signum, previous in previous_handlers.items():
@@ -851,7 +852,7 @@ def _run_with_timeout_request(request: RunWithTimeoutRequest) -> TimedProcessRes
         )
         return _communicate_run_with_timeout(state, monotonic)
     except BaseException as exc:  # broad-exception: platform_cleanup_boundary
-        if not cleanup_state.completed:
+        if not cleanup_state.attempted:
             cleanup_process_after_error(
                 state.process, backend=state.active_backend, error=exc,
                 grace_seconds=request.grace_seconds,

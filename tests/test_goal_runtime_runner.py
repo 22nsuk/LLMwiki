@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import signal
 import subprocess
 import tempfile
 import unittest
@@ -129,6 +130,37 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
                 monotonic_clock=SteppedClock([0, 0, 0, 0, 1]),
             ))
         self.assertIs(raised.exception.__cause__, error)
+        self.assertTrue((self.vault / "build/goal-runs/goal-runtime.lock.json").exists())
+        self.assertEqual(len(list((self.vault / "runs").glob("*/runner.lock.json"))), 1)
+
+    def test_signal_cleanup_failure_retains_workspace_and_runner_locks(self) -> None:
+        installed = {}
+
+        def install(signum, handler):
+            if callable(handler):
+                installed[signum] = handler
+            return signal.SIG_DFL
+
+        def interrupt(_event):
+            installed[signal.SIGTERM](int(signal.SIGTERM), None)
+
+        process = FakeProcess(communicate_side_effect=[
+            subprocess.TimeoutExpired(cmd=["python"], timeout=2),
+        ])
+        backend = FakeProcessBackend(process)
+        with (
+            patch("ops.scripts.core.command_runtime.signal.signal", side_effect=install),
+            patch("ops.scripts.core.command_runtime._communicate_with_optional_heartbeats", side_effect=lambda **_: interrupt(None)),
+            self.assertRaises(ProcessCleanupError) as raised,
+        ):
+            run_goal_runtime_command(GoalRuntimeRunnerRequest(
+                vault=self.vault, command_argv=["python"], run_id="signal-cleanup-error",
+                goal_contract_path="ops/reports/codex-goal-contract.json", context=fixed_context(),
+                backend=backend, heartbeat_interval_seconds=1, timeout_seconds=5,
+            ))
+        self.assertIsInstance(raised.exception.__cause__, SystemExit)
+        self.assertEqual(raised.exception.__cause__.code, 128 + int(signal.SIGTERM))
+        self.assertEqual(backend.signal_calls, [(process.pid, int(backend.kill_signal()))])
         self.assertTrue((self.vault / "build/goal-runs/goal-runtime.lock.json").exists())
         self.assertEqual(len(list((self.vault / "runs").glob("*/runner.lock.json"))), 1)
 

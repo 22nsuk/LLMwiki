@@ -92,7 +92,11 @@ execution artifact contradicts the outcomes. Such summaries have `status=fail`,
 return a nonzero summary CLI status, and cannot represent the full suite or be
 reused as passing evidence. The report's `returncode` still records the child
 exit code. Aggregation preserves these failures even if shard count differences
-cancel; intentionally unrequested collection remains `skipped`. Exact
+cancel, and checks each artifact against its owning shard's counts. Nested
+aggregates retain the referenced shard reports for this revalidation. Reuse
+checks read the current artifacts, including in `--reuse-only` mode; stale
+artifacts trigger execution when allowed, or a nonzero status otherwise.
+Intentionally unrequested collection remains `skipped`. Exact
 collection-to-JUnit nodeid verification remains required by the release sidecar
 and trusted-CI evidence paths.
 

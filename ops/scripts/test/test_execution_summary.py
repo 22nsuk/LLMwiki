@@ -916,6 +916,10 @@ def reuse_currentness_diagnostics(
             collect_nodeids=collect_nodeids,
             collect_nodeid_digest=collect_nodeid_digest,
             local_corpus_policy_current=local_corpus_policy_is_current(vault, existing),
+            evidence_artifacts_current=_evidence_artifact_consistency(
+                vault, counts=existing.get("counts", {}),
+                evidence_artifacts=existing.get("evidence_artifacts", []),
+            )["status"] != "fail",
         )
     )
 
@@ -1571,7 +1575,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     if report is not None:
         _write_and_print_report(vault, report, args.out)
-        return 0
+        return 0 if report["status"] == "pass" else 1
     if args.reuse_only:
         diagnostics = reusable_summary_diagnostics_for_path(
             vault,
