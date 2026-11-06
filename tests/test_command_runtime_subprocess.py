@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import sys
 import tempfile
 import time
@@ -9,9 +10,40 @@ from pathlib import Path
 
 import pytest
 
-from ops.scripts.core.command_runtime import run_with_timeout
+from ops.scripts.core.command_runtime import PosixProcessBackend, run_with_timeout
 
 pytestmark = pytest.mark.subprocess
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX process-group cleanup")
+@pytest.mark.parametrize("failure", [OSError, KeyboardInterrupt])
+def test_heartbeat_error_reaps_process_before_returning(tmp_path: Path, failure: type[BaseException]) -> None:
+    class RecordingBackend(PosixProcessBackend):
+        def start(self, *args, **kwargs):
+            self.process = super().start(*args, **kwargs)
+            return self.process
+
+    backend = RecordingBackend()
+    ready = tmp_path / "ready"
+    error = failure("heartbeat failed")
+
+    def heartbeat(_event):
+        if ready.exists():
+            raise error
+
+    try:
+        with pytest.raises(failure) as raised:
+            run_with_timeout(
+                [sys.executable, "-c", "from pathlib import Path; import time; Path('ready').touch(); time.sleep(30)"],
+                cwd=tmp_path, timeout_seconds=10, grace_seconds=0.2,
+                heartbeat_interval_seconds=1, heartbeat_callback=heartbeat, backend=backend,
+            )
+        assert raised.value is error
+        assert backend.process.poll() is not None
+    finally:
+        if backend.process.poll() is None:
+            os.killpg(backend.process.pid, signal.SIGKILL)
+        backend.process.communicate(timeout=3)
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX process-group descendant cleanup")

@@ -28,6 +28,15 @@ class _SyntheticKillSignal(int):
     """Sentinel used by FakeProcessBackend when SIGKILL is unavailable."""
 
 
+class ProcessCleanupError(RuntimeError):
+    """Child cleanup could not be confirmed; resource owners must retain locks."""
+
+
+@dataclass
+class _ParentSignalCleanupState:
+    completed: bool = False
+
+
 @dataclass(frozen=True)
 class CommandHeartbeat:
     args: list[str]
@@ -533,6 +542,31 @@ def _terminate_timed_out_process(
     return stdout, stderr
 
 
+def cleanup_process_after_error(
+    process: ProcessHandle,
+    *,
+    backend: ProcessBackend,
+    error: BaseException,
+    grace_seconds: float = TIMEOUT_GRACE_SECONDS,
+) -> None:
+    """Abort the owned process scope without treating an error as a completion race.
+
+    Kill before draining: the leader can already be at EOF while descendants
+    remain active. Cleanup failures retain the original error as their cause.
+    """
+    failures: list[str] = []
+    try:
+        backend.send_signal(process, backend.kill_signal())
+    except BaseException as exc:  # broad-exception: platform_cleanup_boundary
+        failures.append(f"termination: {type(exc).__name__}: {exc}")
+    try:
+        process.communicate(timeout=grace_seconds)
+    except BaseException as exc:  # broad-exception: platform_cleanup_boundary
+        failures.append(f"reaping/output: {type(exc).__name__}: {exc}")
+    if failures:
+        raise ProcessCleanupError("child process cleanup incomplete; " + "; ".join(failures)) from error
+
+
 def _timeout_termination_reason(
     *,
     timed_out: bool,
@@ -558,6 +592,7 @@ def _install_parent_signal_cleanup(
     process: ProcessHandle,
     backend: ProcessBackend,
     grace_seconds: float,
+    cleanup_state: _ParentSignalCleanupState,
 ) -> Callable[[], None]:
     previous_handlers: dict[signal.Signals, PreviousSignalHandler] = {}
 
@@ -567,6 +602,7 @@ def _install_parent_signal_cleanup(
             backend=backend,
             grace_seconds=grace_seconds,
         )
+        cleanup_state.completed = True
         previous = previous_handlers.get(signal.Signals(signum), signal.SIG_DFL)
         if callable(previous):
             previous(signum, frame)
@@ -577,18 +613,22 @@ def _install_parent_signal_cleanup(
             raise KeyboardInterrupt
         raise SystemExit(128 + signum)
 
-    for signum in (signal.SIGTERM, signal.SIGINT):
-        try:
-            previous_handlers[signum] = signal.signal(signum, cleanup_then_forward)
-        except (OSError, ValueError):
-            previous_handlers.pop(signum, None)
-
     def restore() -> None:
         for signum, previous in previous_handlers.items():
             try:
                 signal.signal(signum, previous)
             except (OSError, ValueError):
                 continue
+
+    try:
+        for signum in (signal.SIGTERM, signal.SIGINT):
+            try:
+                previous_handlers[signum] = signal.signal(signum, cleanup_then_forward)
+            except (OSError, ValueError):
+                previous_handlers.pop(signum, None)
+    except BaseException:  # broad-exception: platform_cleanup_boundary
+        restore()
+        raise
 
     return restore
 
@@ -669,16 +709,20 @@ def _start_run_with_timeout(
         input_text=request.input_text,
         env=subprocess_env,
     )
-    return _RunWithTimeoutState(
-        request=request,
-        argv_list=argv_list,
-        process=process,
-        active_backend=active_backend,
-        active_heartbeat_interval=active_heartbeat_interval,
-        heartbeat_state=_HeartbeatState(),
-        launch_latency_seconds=monotonic() - launch_start,
-        observation_mode=observation_mode,
-    )
+    try:
+        return _RunWithTimeoutState(
+            request=request,
+            argv_list=argv_list,
+            process=process,
+            active_backend=active_backend,
+            active_heartbeat_interval=active_heartbeat_interval,
+            heartbeat_state=_HeartbeatState(),
+            launch_latency_seconds=monotonic() - launch_start,
+            observation_mode=observation_mode,
+        )
+    except BaseException as exc:  # broad-exception: platform_cleanup_boundary
+        cleanup_process_after_error(process, backend=active_backend, error=exc, grace_seconds=request.grace_seconds)
+        raise
 
 
 def _result_inputs_from_state(
@@ -796,15 +840,26 @@ def _run_with_timeout_request(request: RunWithTimeoutRequest) -> TimedProcessRes
     _validate_run_with_timeout_request(request)
     monotonic = request.monotonic_clock or time.perf_counter
     state = _start_run_with_timeout(request, monotonic)
-    restore_signal_handlers = _install_parent_signal_cleanup(
-        process=state.process,
-        backend=state.active_backend,
-        grace_seconds=request.grace_seconds,
-    )
+    cleanup_state = _ParentSignalCleanupState()
+    restore_signal_handlers: Callable[[], None] | None = None
     try:
+        restore_signal_handlers = _install_parent_signal_cleanup(
+            process=state.process,
+            backend=state.active_backend,
+            grace_seconds=request.grace_seconds,
+            cleanup_state=cleanup_state,
+        )
         return _communicate_run_with_timeout(state, monotonic)
+    except BaseException as exc:  # broad-exception: platform_cleanup_boundary
+        if not cleanup_state.completed:
+            cleanup_process_after_error(
+                state.process, backend=state.active_backend, error=exc,
+                grace_seconds=request.grace_seconds,
+            )
+        raise
     finally:
-        restore_signal_handlers()
+        if restore_signal_handlers is not None:
+            restore_signal_handlers()
 
 
 def run_with_timeout(

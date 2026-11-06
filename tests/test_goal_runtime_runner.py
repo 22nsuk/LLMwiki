@@ -7,11 +7,16 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from ops.scripts.core.codex_goal_client import set_goal
-from ops.scripts.core.command_runtime import FakeProcess, FakeProcessBackend
+from ops.scripts.core.command_runtime import (
+    FakeProcess,
+    FakeProcessBackend,
+    ProcessCleanupError,
+)
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.mechanism.goal_run_status import (
     GoalRunStatusRequest,
@@ -84,6 +89,48 @@ class GoalRuntimeRunnerTests(unittest.TestCase):
         destination = self.vault / rel_path
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text((REPO_ROOT / rel_path).read_text(encoding="utf-8"), encoding="utf-8")
+
+    def test_status_or_registration_error_cleans_child_before_unlocking(self) -> None:
+        for stage in ("registration", "heartbeat"):
+            with self.subTest(stage=stage):
+                error = OSError("cannot write child status")
+                events = [subprocess.TimeoutExpired(cmd=["python"], timeout=1)] if stage == "heartbeat" else []
+                process = FakeProcess(communicate_side_effect=[*events, ("", "")])
+                backend = FakeProcessBackend(process)
+                target = "update_workspace_lock_child" if stage == "registration" else "_write_status_snapshot"
+                effects = error if stage == "registration" else [None, error]
+                with patch(f"ops.scripts.mechanism.goal_runtime_runner.{target}", side_effect=effects), self.assertRaises(OSError) as raised:
+                    run_goal_runtime_command(GoalRuntimeRunnerRequest(
+                        vault=self.vault, command_argv=["python"], run_id=f"error-{stage}",
+                        goal_contract_path="ops/reports/codex-goal-contract.json", context=fixed_context(),
+                        backend=backend, heartbeat_interval_seconds=1, timeout_seconds=5,
+                        monotonic_clock=SteppedClock([0, 0, 0, 0, 1]),
+                    ))
+                self.assertIs(raised.exception, error)
+                self.assertEqual(backend.signal_calls, [(process.pid, int(backend.kill_signal()))])
+                self.assertEqual(process.communicate_calls[-1]["timeout"], 2.0)
+                self.assertFalse((self.vault / "build/goal-runs/goal-runtime.lock.json").exists())
+                self.assertFalse(list((self.vault / "runs").glob("*/runner.lock.json")))
+
+    def test_cleanup_failure_retains_workspace_and_runner_locks(self) -> None:
+        error = OSError("heartbeat status write failed")
+        process = FakeProcess(communicate_side_effect=[
+            subprocess.TimeoutExpired(cmd=["python"], timeout=1),
+            subprocess.TimeoutExpired(cmd=["python"], timeout=2),
+        ])
+        with (
+            patch("ops.scripts.mechanism.goal_runtime_runner._write_status_snapshot", side_effect=[None, error]),
+            self.assertRaises(ProcessCleanupError) as raised,
+        ):
+            run_goal_runtime_command(GoalRuntimeRunnerRequest(
+                vault=self.vault, command_argv=["python"], run_id="cleanup-error",
+                goal_contract_path="ops/reports/codex-goal-contract.json", context=fixed_context(),
+                backend=FakeProcessBackend(process), heartbeat_interval_seconds=1, timeout_seconds=5,
+                monotonic_clock=SteppedClock([0, 0, 0, 0, 1]),
+            ))
+        self.assertIs(raised.exception.__cause__, error)
+        self.assertTrue((self.vault / "build/goal-runs/goal-runtime.lock.json").exists())
+        self.assertEqual(len(list((self.vault / "runs").glob("*/runner.lock.json"))), 1)
 
     def test_runner_writes_status_heartbeat_audit_and_final_result(self) -> None:
         process = FakeProcess(

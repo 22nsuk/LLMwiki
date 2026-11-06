@@ -48,6 +48,16 @@ and a nonzero return code. Genuine completion races with output already at EOF
 remain successful. Timeout handling may use up to two configured grace periods
 after the execution deadline to terminate and collect output.
 
+Unexpected errors after launch, including heartbeat/status-write failures and
+interruption, abort the backend-owned process scope and perform a bounded reap
+before propagating the error. This also covers failures while registering a
+goal command's child identity. On POSIX the abort kills the process group even
+when its leader has exited or closed output. Normal completion and timeout-race
+handling retain their existing behavior. If termination or reaping cannot be
+confirmed, `ProcessCleanupError` preserves the original failure as its cause;
+the goal runner retains both locks for operator inspection instead of admitting
+another writer.
+
 Mechanism repository-health checks, worker repository-health preflight, and
 candidate dependency probes require Linux with Bubblewrap installed at
 `/usr/bin/bwrap` and working user, PID, and network namespaces. On Debian/Ubuntu,

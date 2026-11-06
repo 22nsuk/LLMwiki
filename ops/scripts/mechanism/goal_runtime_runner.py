@@ -16,10 +16,12 @@ from ops.scripts.core.command_runtime import (
     CommandHeartbeat,
     PosixProcessBackend,
     ProcessBackend,
+    ProcessCleanupError,
     ProcessHandle,
     SignalValue,
     TimedProcessResult,
     WindowsProcessBackend,
+    cleanup_process_after_error,
     run_with_timeout,
 )
 from ops.scripts.core.output_runtime import (
@@ -161,15 +163,19 @@ class _WorkspaceLockProcessBackend:
         env: Mapping[str, str] | None = None,
     ) -> ProcessHandle:
         process = self.wrapped.start(argv, cwd=cwd, input_text=input_text, env=env)
-        child_pid = int(getattr(process, "pid", 0) or 0)
-        child_pgid = process_group_id_for_pid(child_pid)
-        if child_pgid == 0 and self.start_new_session:
-            child_pgid = child_pid
-        update_workspace_lock_child(
-            self.workspace_lock,
-            child_pid=child_pid,
-            child_pgid=child_pgid,
-        )
+        try:
+            child_pid = int(getattr(process, "pid", 0) or 0)
+            child_pgid = process_group_id_for_pid(child_pid)
+            if child_pgid == 0 and self.start_new_session:
+                child_pgid = child_pid
+            update_workspace_lock_child(
+                self.workspace_lock,
+                child_pid=child_pid,
+                child_pgid=child_pgid,
+            )
+        except BaseException as exc:  # broad-exception: platform_cleanup_boundary
+            cleanup_process_after_error(process, backend=self.wrapped, error=exc)
+            raise
         return process
 
     def send_signal(self, process: ProcessHandle, sig: SignalValue) -> str:
@@ -688,6 +694,7 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
         print(str(exc), file=sys.stderr)
         return RUNNER_LOCK_EXIT_CODE
 
+    release_locks = True
     try:
         _write_status_snapshot(
             request,
@@ -769,9 +776,13 @@ def run_goal_runtime_command(request: GoalRuntimeRunnerRequest) -> int:
         )
         print(display_path(vault, result_path))
         return _exit_code(result.returncode, timed_out=result.timed_out)
+    except ProcessCleanupError:
+        release_locks = False
+        raise
     finally:
-        _release_runner_lock(runner_lock)
-        release_workspace_lock(workspace_lock)
+        if release_locks:
+            _release_runner_lock(runner_lock)
+            release_workspace_lock(workspace_lock)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
