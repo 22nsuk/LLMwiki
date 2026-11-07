@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -19,6 +20,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         PUBLIC_INCLUDE_PREFIXES,
         PUBLIC_INCLUDED_REPORT_FILES,
         is_public_excluded_path,
+        is_public_excluded_subtree,
         render_public_gitignore_block,
     )
 else:
@@ -31,6 +33,7 @@ else:
         PUBLIC_INCLUDE_PREFIXES,
         PUBLIC_INCLUDED_REPORT_FILES,
         is_public_excluded_path,
+        is_public_excluded_subtree,
         render_public_gitignore_block,
     )
 
@@ -65,14 +68,40 @@ def _is_safe_export_file(vault_root: Path, path: Path) -> bool:
 def iter_public_files(vault: Path) -> list[str]:
     files: list[str] = []
     vault_root = vault.resolve()
-    for path in sorted(vault.rglob("*")):
-        rel_path = path.relative_to(vault).as_posix()
-        if not should_export_public(rel_path):
-            continue
-        if not _is_safe_export_file(vault_root, path):
-            continue
-        files.append(rel_path)
-    return files
+
+    def may_contain_public_file(relative: str) -> bool:
+        prefix = relative + "/"
+        # Explicit report exceptions can reopen an otherwise excluded ancestor.
+        if any(path.startswith(prefix) for path in PUBLIC_INCLUDED_REPORT_FILES):
+            return True
+        if is_public_excluded_subtree(relative):
+            return False
+        return (
+            any(path.startswith(prefix) for path in PUBLIC_INCLUDE_FILES)
+            or any(
+                included.startswith(prefix) or prefix.startswith(included)
+                for included in PUBLIC_INCLUDE_PREFIXES
+            )
+        )
+
+    def traversal_error(error: OSError) -> None:
+        # A selected but unreadable subtree cannot prove a complete inventory.
+        raise error
+
+    for directory, dirs, names in os.walk(vault, followlinks=False, onerror=traversal_error):
+        parent = Path(directory)
+        dirs[:] = [
+            name for name in dirs
+            if may_contain_public_file((parent / name).relative_to(vault).as_posix())
+            and not (parent / name).is_symlink()
+            and not (parent / name).is_junction()
+        ]
+        for name in names:
+            path = parent / name
+            rel_path = path.relative_to(vault).as_posix()
+            if should_export_public(rel_path) and _is_safe_export_file(vault_root, path):
+                files.append(rel_path)
+    return sorted(files, key=Path)
 
 
 def _export_roots(vault: Path, out_dir: Path) -> tuple[Path, Path]:

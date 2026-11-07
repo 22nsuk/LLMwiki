@@ -36,7 +36,7 @@ help:
 		"  make sync-derived                 regenerate source-derived projections/diagnostics" \
 		"  make sync-derived-check           fail if checkable derived projections are stale" \
 		"  make pytest-markers-sync          regenerate pytest.ini marker registration" \
-		"  make workflow-action-pins-sync    rewrite workflow uses pins from helper constants" \
+		"  make workflow-action-pins-sync    validate workflow-owned SHA pins and version cohorts" \
 		"  make make-target-inventory        inventory Make targets and script surfaces" \
 		"  make make-target-inventory-check  validate Make inventory and operator metadata without writing" \
 		"  make test-selectors-sync          regenerate mk/test-selectors.generated.mk from the lane registry" \

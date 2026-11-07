@@ -332,6 +332,21 @@ executions preserve any previous cache. Byte-identical regeneration preserves re
 Older summaries without this
 identity require a fresh public check; the shared release fingerprint retains its
 existing meaning.
+`input_fingerprints.public_python_toolchain` also binds a bounded live probe of
+the requested Python launcher, interpreter, validation tools, and installed
+package metadata. Missing interpreters, failed probes, or changed environments
+invalidate reuse and the pytest cache key even when paths and lock bytes are
+unchanged. Only the digest is stored; local installation paths stay out of the
+report. A second probe before publication rejects environment changes during
+validation. Legacy summaries without the binding need fresh validation. This
+identity detects environment replacement and metadata changes; it is not an
+integrity scan of every installed package source file.
+
+Export traversal prunes excluded directories before descending, while preserving
+explicit included-report exceptions and sorted inventories. Selected unreadable
+directories fail validation; symlink directories are never followed. Final
+source/output drift checks still run after validation.
+
 When CI public-check fails, inspect the printed `failure_causes` and uploaded
 `public-check-summary-*` candidate before rerunning the full lane. Keep release
 authority failures separate: missing finality attestation or sealed evidence is
@@ -369,14 +384,24 @@ The project does not publish to PyPI, so there is no publisher Action or
 publisher update group. Python dependency updates and the canonical package
 index remain in use; see [the distribution policy](release.md#distribution-policy).
 
-Workflow action references are generated from
-[`workflow_action_pin_catalog.py`](../ops/scripts/core/workflow_action_pin_catalog.py).
-For an accepted Dependabot update, first copy the reviewed SHA and version
-comment into the matching catalog rules, preserving the separate CI and
-release/security checkout scopes. Then run `make sync-derived`,
-`make sync-derived-check`, and the focused workflow tests before the required
-CI checks. Running the sync before updating the catalog restores the previous
-pins. Grouping narrows review scope; it does not synchronize the catalog.
+Workflow YAML is the authority for Action SHA and version comments. Dependabot
+updates it directly; there is no second version catalog to reconcile.
+[`workflow_action_pin_catalog.py`](../ops/scripts/core/workflow_action_pin_catalog.py)
+owns only allowed action/path pairs and version cohorts. `make static` validates
+40-character SHA pins, version comments, and agreement within each cohort,
+including CodeQL init/analyze. CI and release/security checkout cohorts remain
+separate. Both `make workflow-action-pins-sync-check` and the retained
+`make workflow-action-pins-sync` compatibility entrypoint validate without
+rewriting workflows. Conflicting pins fail and require review; no value wins
+implicitly. Run the focused workflow tests and required CI for updates.
+
+Python dependency updates use Dependabot's native `uv` ecosystem so manifest
+requirements and `uv.lock` are updated together, including the build/dev
+setuptools requirements. Keep build requirements synchronized with their dev
+counterparts and validate `make uv-lock-check`, package builds, and installed
+wheel behavior. Native updater support is documented in the
+[uv Dependabot integration guide](https://docs.astral.sh/uv/guides/integration/dependabot/).
+The repository does not publish packages as part of these updates.
 
 The shared Python/uv setup accepts `pip-cache: "false"` to install locked
 dependencies without restoring the optional pip cache. The cross-environment

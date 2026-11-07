@@ -6,122 +6,71 @@ from typing import TypedDict
 class WorkflowActionPinRule(TypedDict):
     id: str
     action: str
-    sha: str
-    version_comment: str
     paths: tuple[str, ...]
+    group: str
 
 
-CI_CHECKOUT_ACTION_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
-RELEASE_SECURITY_CHECKOUT_ACTION_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"
-SETUP_PYTHON_ACTION_SHA = "a309ff8b426b58ec0e2a45f0f869d46889d02405"
-SETUP_UV_ACTION_SHA = "08807647e7069bb48b6ef5acd8ec9567f424441b"
-UPLOAD_ARTIFACT_ACTION_SHA = "cf430e030ddbb5b0abf93d22962f4752f3646cd9"
-DOWNLOAD_ARTIFACT_ACTION_SHA = "9000827ccba6bdab643e8b6fd33ac0654aef8333"
-ATTEST_BUILD_PROVENANCE_ACTION_SHA = "4d101475d8b20a2381f78447822ac1eab6504dd8"
-CODEQL_ACTION_SHA = "9b3254085494b55a0f7c4c2b3d2d52cc712ce370"
-DEPENDENCY_REVIEW_ACTION_SHA = "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
-
-PINNED_CI_CHECKOUT_ACTION = f"actions/checkout@{CI_CHECKOUT_ACTION_SHA}"
-PINNED_RELEASE_SECURITY_CHECKOUT_ACTION = (
-    f"actions/checkout@{RELEASE_SECURITY_CHECKOUT_ACTION_SHA}"
-)
-PINNED_CHECKOUT_ACTION = PINNED_RELEASE_SECURITY_CHECKOUT_ACTION
-PINNED_SETUP_PYTHON_ACTION = f"actions/setup-python@{SETUP_PYTHON_ACTION_SHA}"
-PINNED_SETUP_UV_ACTION = f"astral-sh/setup-uv@{SETUP_UV_ACTION_SHA}"
-PINNED_UPLOAD_ARTIFACT_ACTION = f"actions/upload-artifact@{UPLOAD_ARTIFACT_ACTION_SHA}"
-PINNED_DOWNLOAD_ARTIFACT_ACTION = f"actions/download-artifact@{DOWNLOAD_ARTIFACT_ACTION_SHA}"
-PINNED_ATTEST_BUILD_PROVENANCE_ACTION = (
-    f"actions/attest-build-provenance@{ATTEST_BUILD_PROVENANCE_ACTION_SHA}"
-)
-PINNED_CODEQL_ACTION_PREFIX = "github/codeql-action/"
-PINNED_CODEQL_INIT_ACTION = f"github/codeql-action/init@{CODEQL_ACTION_SHA}"
-PINNED_CODEQL_ANALYZE_ACTION = f"github/codeql-action/analyze@{CODEQL_ACTION_SHA}"
-PINNED_DEPENDENCY_REVIEW_ACTION = (
-    f"actions/dependency-review-action@{DEPENDENCY_REVIEW_ACTION_SHA}"
-)
-
+# Policy owns allowed action/path pairs and version cohorts. SHA/version values
+# belong to the workflow YAML, which Dependabot updates directly.
 WORKFLOW_ACTION_PIN_RULES: tuple[WorkflowActionPinRule, ...] = (
     {
         "id": "checkout-ci",
         "action": "actions/checkout",
-        "sha": CI_CHECKOUT_ACTION_SHA,
-        "version_comment": "v7.0.1",
         "paths": (".github/workflows/ci.yml",),
+        "group": "checkout-ci",
     },
     {
         "id": "checkout-release-security",
         "action": "actions/checkout",
-        "sha": RELEASE_SECURITY_CHECKOUT_ACTION_SHA,
-        "version_comment": "v7.0.1",
-        "paths": (
-            ".github/workflows/release.yml",
-            ".github/workflows/codeql.yml",
-            ".github/workflows/dependency-review.yml",
-        ),
+        "paths": (".github/workflows/release.yml", ".github/workflows/codeql.yml", ".github/workflows/dependency-review.yml"),
+        "group": "checkout-release-security",
     },
     {
         "id": "setup-python",
         "action": "actions/setup-python",
-        "sha": SETUP_PYTHON_ACTION_SHA,
-        "version_comment": "v6.2.0",
         "paths": (".github/actions/setup-python-uv/action.yml",),
+        "group": "setup-python",
     },
     {
         "id": "setup-uv",
         "action": "astral-sh/setup-uv",
-        "sha": SETUP_UV_ACTION_SHA,
-        "version_comment": "v8.1.0",
         "paths": (".github/actions/setup-python-uv/action.yml",),
+        "group": "setup-uv",
     },
     {
         "id": "upload-artifact",
         "action": "actions/upload-artifact",
-        "sha": UPLOAD_ARTIFACT_ACTION_SHA,
-        "version_comment": "v7.0.2",
-        "paths": (
-            ".github/workflows/ci.yml",
-            ".github/workflows/release.yml",
-        ),
+        "paths": (".github/workflows/ci.yml", ".github/workflows/release.yml"),
+        "group": "upload-artifact",
     },
     {
         "id": "download-artifact",
         "action": "actions/download-artifact",
-        "sha": DOWNLOAD_ARTIFACT_ACTION_SHA,
-        "version_comment": "v8.0.2",
-        "paths": (
-            ".github/workflows/ci.yml",
-            ".github/workflows/release.yml",
-        ),
+        "paths": (".github/workflows/ci.yml", ".github/workflows/release.yml"),
+        "group": "download-artifact",
     },
     {
         "id": "attest-build-provenance",
         "action": "actions/attest-build-provenance",
-        "sha": ATTEST_BUILD_PROVENANCE_ACTION_SHA,
-        "version_comment": "v4.2.2",
-        "paths": (
-            ".github/workflows/ci.yml",
-            ".github/workflows/release.yml",
-        ),
+        "paths": (".github/workflows/ci.yml", ".github/workflows/release.yml"),
+        "group": "attest-build-provenance",
     },
     {
         "id": "codeql-init",
         "action": "github/codeql-action/init",
-        "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.39.1",
         "paths": (".github/workflows/codeql.yml",),
+        "group": "codeql",
     },
     {
         "id": "codeql-analyze",
         "action": "github/codeql-action/analyze",
-        "sha": CODEQL_ACTION_SHA,
-        "version_comment": "v4.39.1",
         "paths": (".github/workflows/codeql.yml",),
+        "group": "codeql",
     },
     {
         "id": "dependency-review",
         "action": "actions/dependency-review-action",
-        "sha": DEPENDENCY_REVIEW_ACTION_SHA,
-        "version_comment": "v5.0.0",
         "paths": (".github/workflows/dependency-review.yml",),
+        "group": "dependency-review",
     },
 )

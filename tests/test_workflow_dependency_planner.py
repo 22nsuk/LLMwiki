@@ -1463,7 +1463,6 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make static",
                 "make workflow-dependency-planner-check",
                 FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND,
-                "make sync-derived-check",
             ],
         )
         self.assertEqual(
@@ -1472,15 +1471,14 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
                 "make static": 60,
                 "make workflow-dependency-planner-check": 60,
                 FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND: 30,
-                "make sync-derived-check": 120,
             },
         )
-        self.assertEqual(plan["estimated_duration_seconds"], 270)
+        self.assertEqual(plan["estimated_duration_seconds"], 150)
         self.assertEqual(plan["budget_status"], "within_budget")
         self.assertFalse(plan["release_proof_replacement"])
         self.assertEqual(
             plan["path_recommendations"][0]["matched_rule_id"],
-            "release_workflow_static_contract+derived_surface_currentness",
+            "release_workflow_static_contract",
         )
         self.assertNotIn("make test-report-contract-core", plan["selected_commands"])
         self.assertEqual(
@@ -1611,12 +1609,11 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             [
                 "make static",
                 "make workflow-dependency-planner-check",
-                "make sync-derived-check",
             ],
         )
         self.assertEqual(
             plan["path_recommendations"][0]["matched_rule_id"],
-            "make_or_ci_contract+derived_surface_currentness",
+            "make_or_ci_contract",
         )
         self.assertNotIn(
             FOCUSED_RELEASE_WORKFLOW_TEST_COMMAND, plan["selected_commands"]
@@ -1797,6 +1794,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
             "ops/scripts/public/export_public_repo.py",
             "ops/scripts/public/public_surface_policy.py",
             "ops/scripts/public/public_check_summary.py",
+            "ops/scripts/public/public_toolchain_runtime.py",
             "ops/scripts/public/source_history_scan_runtime.py",
         ):
             with self.subTest(changed_path=changed_path):

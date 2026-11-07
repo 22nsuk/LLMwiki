@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +12,8 @@ from ops.scripts.public.export_public_repo import (
     DEFAULT_PUBLIC_OUT,
     build_parser,
     export_public_repo,
+    iter_public_files,
+    should_export_public,
 )
 from ops.scripts.release.external_report_lifecycle_status_decision_runtime import (
     single_source_status,
@@ -18,6 +21,70 @@ from ops.scripts.release.external_report_lifecycle_status_decision_runtime impor
 from tests.minimal_vault_runtime import REPO_ROOT
 
 pytestmark = pytest.mark.public
+
+
+def test_export_prunes_excluded_trees_without_changing_inventory(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    public = (
+        "README.md", ".agents/skills/sample/SKILL.md", "ops/scripts/sample.py",
+        "ops/manifest.json/child.txt",
+    )
+    excluded = ("raw/deep", "ops/reports/deep", "ops/scripts/__pycache__", "unlisted/deep")
+    for relative in (*public, *(f"{directory}/ignored.txt" for directory in excluded)):
+        path = vault / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(relative)
+    expected = [
+        p.relative_to(vault).as_posix() for p in sorted(vault.rglob("*"))
+        if p.is_file() and should_export_public(p.relative_to(vault).as_posix())
+    ]
+    scanned = []
+    scandir = os.scandir
+
+    def guarded_scandir(path: str | Path):
+        relative = Path(path).relative_to(vault).as_posix()
+        scanned.append(relative)
+        assert not any(relative == prefix or relative.startswith(prefix + "/") for prefix in excluded)
+        return scandir(path)
+
+    with patch("os.scandir", side_effect=guarded_scandir):
+        assert iter_public_files(vault) == expected == sorted(public, key=Path)
+    output = tmp_path / "export"
+    assert export_public_repo(vault, output)["files"] == expected
+    for relative in expected:
+        assert (vault / relative).read_bytes() == (output / relative).read_bytes()
+
+
+def test_export_preserves_explicit_report_exceptions(tmp_path: Path) -> None:
+    selected = "ops/reports/retained/report.json"
+    for relative in (selected, "ops/reports/private/nested/file.json"):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}")
+    scandir = os.scandir
+
+    def guarded_scandir(path: str | Path):
+        assert "private" not in Path(path).parts
+        return scandir(path)
+
+    with (
+        patch("ops.scripts.public.export_public_repo.PUBLIC_INCLUDED_REPORT_FILES", (selected,)),
+        patch("os.scandir", side_effect=guarded_scandir),
+    ):
+        assert iter_public_files(tmp_path) == [selected]
+
+
+def test_export_rejects_unreadable_selected_subtree(tmp_path: Path) -> None:
+    (tmp_path / "docs").mkdir()
+    scandir = os.scandir
+
+    def unreadable(path: str | Path):
+        if Path(path).name == "docs":
+            raise PermissionError("selected directory unreadable")
+        return scandir(path)
+
+    with patch("os.scandir", side_effect=unreadable), pytest.raises(PermissionError):
+        iter_public_files(tmp_path)
 
 
 @pytest.mark.parametrize("relationship", ["same", "ancestor", "descendant", "alias"])

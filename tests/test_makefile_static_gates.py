@@ -651,7 +651,7 @@ class MakefileStaticGateTests(unittest.TestCase):
                 self.assertNotIn("registry-preflight", dependencies)
         self.assertEqual(
             _target_dependencies(text, "static"),
-            ("static-local", "lock-freshness-check"),
+            ("static-local", "lock-freshness-check", "workflow-action-pins-sync-check"),
         )
         self.assertEqual(
             _target_dependencies(text, "static-local"), ("ruff", "typecheck")

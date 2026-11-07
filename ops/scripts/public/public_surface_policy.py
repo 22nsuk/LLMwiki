@@ -523,19 +523,23 @@ def is_public_excluded_by_local_state(rel_path: str) -> bool:
     return False
 
 
-def is_public_excluded_path(rel_path: str) -> bool:
-    """Return whether the canonical public policy excludes a repository path."""
+def is_public_excluded_subtree(rel_path: str) -> bool:
+    """Inherited exclusions only; an exact excluded filename does not exclude descendants."""
     normalized = PurePosixPath(rel_path).as_posix().removeprefix("./")
-    if normalized in PUBLIC_INCLUDED_REPORT_FILES:
-        return False
-    if normalized in PUBLIC_EXCLUDED_FILES:
-        return True
     if any(
         normalized == prefix.rstrip("/") or normalized.startswith(prefix)
         for prefix in PUBLIC_EXCLUDED_PREFIXES
     ):
         return True
     return is_public_excluded_by_local_state(normalized)
+
+
+def is_public_excluded_path(rel_path: str) -> bool:
+    """Return whether the canonical public policy excludes a repository path."""
+    normalized = PurePosixPath(rel_path).as_posix().removeprefix("./")
+    if normalized in PUBLIC_INCLUDED_REPORT_FILES:
+        return False
+    return normalized in PUBLIC_EXCLUDED_FILES or is_public_excluded_subtree(normalized)
 
 
 def render_public_gitignore_block() -> str:

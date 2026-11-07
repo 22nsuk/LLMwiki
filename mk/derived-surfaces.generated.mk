@@ -7,7 +7,6 @@ _internal-sync-derived:
 	$(MAKE) pytest-markers-sync
 	$(MAKE) test-selectors-sync
 	$(MAKE) sync-public-policy
-	$(MAKE) workflow-action-pins-sync
 	$(MAKE) script-output-surfaces
 	$(MAKE) script-lifecycle-policy
 	$(MAKE) script-module-surfaces
@@ -20,7 +19,6 @@ _internal-sync-derived-check:
 	$(MAKE) pytest-markers-sync-check
 	$(MAKE) test-selectors-sync-check
 	$(MAKE) sync-public-policy-check
-	$(MAKE) workflow-action-pins-sync-check
 	$(MAKE) script-output-surfaces-check
 	$(MAKE) script-lifecycle-policy-check
 	$(MAKE) script-module-surfaces-check

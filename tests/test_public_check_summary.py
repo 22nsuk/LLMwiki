@@ -48,6 +48,12 @@ PUBLIC_PYTEST_SUMMARY_RELATIVE_PATH = Path(
 )
 
 
+@pytest.fixture(autouse=True)
+def selected_python_on_path(monkeypatch):
+    # Bare "python" requests in command/config fixtures use this test environment.
+    monkeypatch.setenv("PATH", str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", ""))
+
+
 def _git(vault: Path, *args: str) -> str:
     result = subprocess.run(
         ["git", *args],
@@ -120,6 +126,89 @@ def fake_runner(
         timeout_seconds=timeout_seconds,
         termination_reason="completed",
     )
+
+
+@pytest.mark.parametrize("change", ["missing", "replaced", "metadata", "flags", "legacy"])
+def test_public_check_reuse_binds_live_toolchain(tmp_path: Path, monkeypatch, change: str) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    python = sys.executable
+    launcher = tmp_path / "python-launcher"
+    if change in {"missing", "replaced"}:
+        if os.name == "nt":
+            pytest.skip("POSIX executable launcher replacement; metadata probe is cross-platform")
+        import shlex
+
+        launcher.write_text(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} "$@"\n')
+        launcher.chmod(0o755)
+        python = str(launcher)
+    request = PublicCheckRequest(public_python=python, source_history_scan=False)
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(vault, report)
+    cache = _public_pytest_summary_cache_path(vault, request)
+    assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
+    if change == "missing":
+        launcher.unlink()
+    elif change == "replaced":
+        launcher.write_text(launcher.read_text() + "# replaced launcher\n")
+    elif change == "metadata":
+        metadata = tmp_path / "packages" / "pytest-999.0.dist-info"
+        metadata.mkdir(parents=True)
+        (metadata / "METADATA").write_text("Metadata-Version: 2.1\nName: pytest\nVersion: 999.0\n")
+        monkeypatch.setenv("PYTHONPATH", str(metadata.parent))
+    elif change == "flags":
+        monkeypatch.setenv("PYTEST_ADDOPTS", "-k synthetic")
+    else:
+        report["input_fingerprints"].pop("public_python_toolchain", None)
+        destination.write_text(json.dumps(report))
+    diagnostic = reusable_summary_diagnostics(vault, destination, request)
+    assert not diagnostic["reusable"]
+    assert "public_python_toolchain" in diagnostic["reason"]
+    if change in {"replaced", "metadata", "flags"}:
+        assert _public_pytest_summary_cache_path(vault, request) != cache
+    with redirect_stdout(io.StringIO()):
+        assert public_check_summary_module.main([
+            "--vault", str(vault), "--public-python", python, "--skip-source-history-scan",
+            "--reuse-if-current", "--reuse-only", "--reuse-from", str(destination),
+        ]) == 1
+
+
+def test_public_check_does_not_publish_cache_after_toolchain_changes(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    cache = tmp_path / "tmp" / "previous-cache.json"
+    cache.parent.mkdir(exist_ok=True)
+    cache.write_bytes(b"previous")
+    with (
+        patch.object(public_check_summary_module, "public_toolchain_fingerprint", side_effect=["a" * 64, "b" * 64]),
+        patch.object(public_check_summary_module, "_public_pytest_summary_cache_path", return_value=cache),
+        pytest.raises(ValueError, match="toolchain"),
+    ):
+        build_report(tmp_path, context=fixed_context(), command_runner=fake_runner)
+    assert cache.read_bytes() == b"previous"
+
+
+@pytest.mark.parametrize("failure", ["timeout", "invalid", "nonzero"])
+def test_public_toolchain_probe_failure_cannot_reuse_summary(tmp_path: Path, failure: str) -> None:
+    from ops.scripts.public import public_toolchain_runtime
+
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    request = PublicCheckRequest(public_python=sys.executable, source_history_scan=False)
+    report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(tmp_path, report)
+    result = TimedProcessResult(
+        args=[], returncode=1 if failure == "nonzero" else 0,
+        stdout="invalid" if failure == "invalid" else "a" * 64, stderr="",
+        timed_out=failure == "timeout", timeout_seconds=15,
+        termination_reason="timeout" if failure == "timeout" else "completed",
+    )
+    with patch.object(public_toolchain_runtime, "run_with_timeout", return_value=result):
+        assert not reusable_summary_diagnostics(tmp_path, destination, request)["reusable"]
+        with pytest.raises(ValueError, match="probe"):
+            build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
 
 
 def test_default_public_checks_have_independent_workspaces_and_caches(tmp_path: Path) -> None:
@@ -580,8 +669,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
         self.assertEqual(captured_env["PYTHON"], "/workspace/.venv/bin/python")
         self.assertEqual(captured_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"], "1")
 
+    @patch("ops.scripts.public.public_check_summary.public_toolchain_fingerprint", return_value="a" * 64)
     def test_build_report_default_runner_exports_resolved_public_python_to_all_commands(
-        self,
+        self, _probe,
     ) -> None:
         captured_envs: list[dict[str, str]] = []
 
@@ -1730,8 +1820,9 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 ],
             )
 
+    @patch("ops.scripts.public.public_check_summary.public_toolchain_fingerprint", return_value="a" * 64)
     def test_reusable_summary_requires_matching_public_check_config_fingerprint(
-        self,
+        self, _probe,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
@@ -2074,7 +2165,8 @@ class PublicCheckSummaryTests(unittest.TestCase):
                 self.assertIn("source_command", diagnostics["reason"])
                 self.assertIn("public_check_config", diagnostics["reason"])
 
-    def test_relative_public_python_resolves_against_source_vault(self) -> None:
+    @patch("ops.scripts.public.public_check_summary.public_toolchain_fingerprint", return_value="a" * 64)
+    def test_relative_public_python_resolves_against_source_vault(self, _probe) -> None:
         captured_argv: list[list[str]] = []
         captured_cwd: list[Path] = []
 

@@ -62,24 +62,6 @@
       "include_in_sync_derived": true
     },
     {
-      "surface_id": "workflow_action_pins",
-      "description": "Pinned GitHub Actions uses lines rewritten from the workflow action pin catalog.",
-      "kind": "managed_block",
-      "sync_target": "workflow-action-pins-sync",
-      "check_target": "workflow-action-pins-sync-check",
-      "generator_module": "ops.scripts.core.workflow_action_pins",
-      "source_paths": [
-        "ops/scripts/core/workflow_action_pin_catalog.py",
-        "tests/workflow_static_helpers.py"
-      ],
-      "tracked_outputs": [
-        ".github/actions/**/*.yml",
-        ".github/workflows/*.yml"
-      ],
-      "local_outputs": [],
-      "include_in_sync_derived": true
-    },
-    {
       "surface_id": "script_output_surfaces",
       "description": "Script output surface inventory generated from ops script AST scanning.",
       "kind": "tracked_json",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shlex
 import subprocess
+import tomllib
 import unittest
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -222,6 +223,22 @@ class CiWorkflowStaticTests(unittest.TestCase):
                         )
                         self.assertEqual(matches, expected)
 
+    def test_uv_updater_covers_build_and_dev_requirements_with_one_lock(self) -> None:
+        config = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))
+        python_updates = [item for item in config["updates"] if item["package-ecosystem"] == "uv"]
+        self.assertEqual(len(python_updates), 1)
+        self.assertEqual(python_updates[0]["directory"], "/")
+        self.assertEqual(python_updates[0]["groups"]["python-dependencies"]["patterns"], ["*"])
+        project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+        lock = tomllib.loads(Path("uv.lock").read_text(encoding="utf-8"))
+        dev = project["project"]["optional-dependencies"]["dev"]
+        for requirement in project["build-system"]["requires"]:
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, dev)
+                name, version = requirement.split("==")
+                packages = [row for row in lock["package"] if row["name"] == name]
+                self.assertEqual([row["version"] for row in packages], [version])
+
     def test_shared_python_setup_can_skip_pip_cache_and_still_install_locked_dependencies(self) -> None:
         action = yaml.safe_load(
             Path(".github/actions/setup-python-uv/action.yml").read_text(encoding="utf-8")
@@ -250,7 +267,7 @@ class CiWorkflowStaticTests(unittest.TestCase):
         updates = dependabot.get("updates", [])
         self.assertIsInstance(updates, list)
         ecosystems = {item.get("package-ecosystem") for item in updates if isinstance(item, dict)}
-        self.assertEqual(ecosystems, {"github-actions", "pip"})
+        self.assertEqual(ecosystems, {"github-actions", "uv"})
 
         for workflow_path in (
             CI_WORKFLOW,
