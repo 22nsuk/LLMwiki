@@ -46,6 +46,7 @@ from .goal_runtime_lock import (
     GoalRuntimeWorkspaceLock,
     GoalRuntimeWorkspaceLockActive,
     acquire_workspace_lock,
+    mark_workspace_lock_child_pending,
     process_group_id_for_pid,
     release_workspace_lock,
     update_workspace_lock_child,
@@ -162,6 +163,7 @@ class _WorkspaceLockProcessBackend:
         input_text: str | None,
         env: Mapping[str, str] | None = None,
     ) -> ProcessHandle:
+        mark_workspace_lock_child_pending(self.workspace_lock)
         process = self.wrapped.start(argv, cwd=cwd, input_text=input_text, env=env)
         try:
             child_pid = int(getattr(process, "pid", 0) or 0)

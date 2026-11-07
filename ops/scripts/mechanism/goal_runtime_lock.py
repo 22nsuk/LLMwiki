@@ -162,6 +162,15 @@ def inspect_workspace_lock(
             "active_owner": owner,
             "reason": f"active {owner['type']} {owner['id']} owns the goal runtime workspace",
         }
+    if payload.get("child_registration_pending"):
+        return {
+            "status": "unresolved",
+            "active": True,
+            "path": resolved.relative_to(vault.resolve()).as_posix(),
+            "payload": payload,
+            "active_owner": None,
+            "reason": "child registration is incomplete; verify child cleanup before removing the lock",
+        }
     return {
         "status": "stale",
         "active": False,
@@ -232,18 +241,31 @@ def acquire_workspace_lock(
         return GoalRuntimeWorkspaceLock(path=resolved, token=token)
 
 
+def _update_workspace_lock(lock: GoalRuntimeWorkspaceLock, fields: dict[str, Any]) -> None:
+    payload = _load_payload(lock.path)
+    if payload.get("token") != lock.token:
+        raise GoalRuntimeWorkspaceLockActive(f"goal runtime workspace lock ownership changed: {lock.path}")
+    payload.update(fields)
+    lock.path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def mark_workspace_lock_child_pending(lock: GoalRuntimeWorkspaceLock) -> None:
+    # Persist before launch: registration itself may fail because storage is
+    # unavailable, so recording uncertainty only after cleanup fails is too late.
+    _update_workspace_lock(lock, {"child_registration_pending": True})
+
+
 def update_workspace_lock_child(
     lock: GoalRuntimeWorkspaceLock,
     *,
     child_pid: int,
     child_pgid: int,
 ) -> None:
-    payload = _load_payload(lock.path)
-    if payload.get("token") != lock.token:
-        return
-    payload["child_pid"] = child_pid
-    payload["child_pgid"] = child_pgid
-    lock.path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    _update_workspace_lock(lock, {
+        "child_pid": child_pid,
+        "child_pgid": child_pgid,
+        "child_registration_pending": child_pid <= 0 and child_pgid <= 0,
+    })
 
 
 def release_workspace_lock(lock: GoalRuntimeWorkspaceLock) -> None:
@@ -282,7 +304,7 @@ def stop_workspace_lock(
             "lock": status,
             "reason": status["reason"],
         }
-    if status["status"] == "invalid":
+    if status["status"] in {"invalid", "unresolved"}:
         return {
             "status": "blocked",
             "signaled": False,

@@ -60,6 +60,18 @@ confirmed, `ProcessCleanupError` preserves the original failure as its cause;
 the goal runner retains both locks for operator inspection instead of admitting
 another writer.
 
+Before launching a goal command, the workspace lock records
+`child_registration_pending`. Successful PID/PGID registration clears it;
+confirmed cleanup removes the lock normally. If registration and cleanup both
+fail, a later runner, `make goal-runtime-lock-check`, and artifact
+retention cleanup keep blocking even after the original runner exits. Lock
+status reports `unresolved` when no recorded owner remains; `stop` refuses to
+signal an unknown child. An operator must verify that the command and its
+descendants have stopped before removing this lock. Resolve such a lock before
+running an older runtime that does not recognize this field. Existing locks
+without the field and registered children retain their PID/PGID-based stale
+recovery behavior.
+
 Mechanism repository-health checks, worker repository-health preflight, and
 candidate dependency probes require Linux with Bubblewrap installed at
 `/usr/bin/bwrap` and working user, PID, and network namespaces. On Debian/Ubuntu,
