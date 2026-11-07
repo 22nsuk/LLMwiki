@@ -274,6 +274,51 @@ def test_collection_keeps_configuration_and_ini_overrides(tmp_path: Path, monkey
     assert digest["sha256"] == hashlib.sha256(b"configured/test_one.py::test_one\n").hexdigest()
 
 
+@pytest.mark.parametrize(("options", "ini", "env_options", "execution_verbosity", "selected_only"), [
+    (["-oaddopts=-q"], "", "", "auto", False),
+    (["-overbosity_test_cases=2"], "", "", "2", False),
+    (["-o", "verbosity_test_cases=-2"], "", "", "-2", False),
+    (["--override-ini=verbosity_test_cases=2", "--"], "", "", "2", False),
+    (["--override-ini", "addopts=-q -k selected"], "", "", "auto", True),
+    (["-o", "verbosity_test_cases=0", "-o", "verbosity_test_cases=2"], "", "", "2", False),
+    ([], "verbosity_test_cases = 2\n", "", "2", False),
+    ([], "", "-q -o verbosity_test_cases=2", "2", False),
+], ids=["addopts", "attached", "separate", "long-equals", "addopts-selection", "repeated", "config", "environment"])
+def test_collection_output_overrides_preserve_nodeids_and_execution_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, options: list[str], ini: str,
+    env_options: str, execution_verbosity: str, selected_only: bool,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    monkeypatch.setenv("PYTEST_ADDOPTS", env_options)
+    (tmp_path / "pytest.ini").write_text(f"[pytest]\n{ini}", encoding="utf-8")
+    (tmp_path / "tests").mkdir(exist_ok=True)
+    (tmp_path / "tests/test_sample.py").write_text(
+        "def test_selected(request):\n"
+        f"    assert request.config.getini('verbosity_test_cases') == {execution_verbosity!r}\n"
+        "def test_other():\n    pass\n",
+        encoding="utf-8",
+    )
+    command = [sys.executable, "-m", "pytest", *options, "tests/test_sample.py"]
+    assert summary_main([
+        "--vault", str(tmp_path), "--suite", "unit", "--collect-nodeids",
+        "--out", "tmp/summary.json", "--", *command,
+    ]) == 0
+    report = json.loads((tmp_path / "tmp/summary.json").read_text(encoding="utf-8"))
+    nodeids = ["tests/test_sample.py::test_selected"]
+    if not selected_only:
+        nodeids.insert(0, "tests/test_sample.py::test_other")
+    assert report["status"] == "pass"
+    assert report["returncode"] == 0
+    assert report["counts"]["passed"] == len(nodeids)
+    assert report["pytest_collect_nodeid_digest"]["nodeid_count"] == len(nodeids)
+    assert report["pytest_collect_nodeid_digest"]["sha256"] == hashlib.sha256(
+        ("\n".join(nodeids) + "\n").encode(),
+    ).hexdigest()
+    assert report["nodeid_outcome_consistency"]["status"] == "pass"
+
+
 @pytest.mark.parametrize(("options", "expected_count", "full_scope"), [
     (["--cache-clear", "--lf"], 2, False),
     (["--lf", "--last-failed-no-failures=all"], 1, False),

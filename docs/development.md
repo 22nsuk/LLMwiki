@@ -84,7 +84,11 @@ one argument parser. Boolean options such as `--cache-clear` do not consume a
 following test path; separated and attached `-k`/`-m`, ini overrides, JUnit
 aliases, and the `--` delimiter retain their pytest meanings. Collection keeps
 configuration, plugins, and selection inputs while omitting execution-output
-options and worker/verbosity settings. Selection filters, non-executing options,
+options and worker/verbosity settings. Collection applies a final
+`verbosity_test_cases=-1` override before `--` so `addopts`, ini settings, and
+environment options cannot change its one-nodeid-per-line output. The original
+test execution retains its requested verbosity and selection settings.
+Selection filters, non-executing options,
 and unrecognized options cannot establish full-suite scope.
 
 A zero pytest exit code is insufficient when a requested collection or supplied

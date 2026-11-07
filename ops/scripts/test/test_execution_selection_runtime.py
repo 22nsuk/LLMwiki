@@ -175,7 +175,18 @@ def pytest_collection_args(command: list[str]) -> list[str]:
     }
     if not pytest_uses_selection_cache(command):
         omitted.update({"--cache-clear", "--lfnf", "--last-failed-no-failures"})
-    return [token for arg in parsed_pytest_args(command) if arg.option not in omitted for token in arg.tokens]
+    # The digest reader needs one nodeid per line, even when addopts or ini
+    # settings override global verbosity. Apply this after user overrides and
+    # before the delimiter, without changing the original execution command.
+    output_format = ["-o", "verbosity_test_cases=-1"]
+    parsed = parsed_pytest_args(command)
+    collected: list[str] = []
+    for index, arg in enumerate(parsed):
+        if arg.option == "--":
+            return [*collected, *output_format, *(token for item in parsed[index:] for token in item.tokens)]
+        if arg.option not in omitted:
+            collected.extend(arg.tokens)
+    return [*collected, *output_format]
 
 
 def pytest_deselected_nodeids(command: list[str]) -> list[str]:
