@@ -91,6 +91,307 @@ def _fixed_context() -> RuntimeContext:
     )
 
 
+@pytest.mark.parametrize("mutation", ["none", "missing", "swapped"])
+def test_aggregate_checks_artifacts_against_their_own_shard_counts(tmp_path: Path, mutation: str) -> None:
+    from ops.scripts.test.test_execution_evidence_runtime import junit_artifact_identity
+
+    seed_minimal_vault(tmp_path)
+    (tmp_path / "tmp").mkdir(exist_ok=True)
+    paths = []
+    for index, count in enumerate((2, 3)):
+        junit_path = f"tmp/shard-{index}.xml"
+        (tmp_path / junit_path).write_text(f'<testsuite tests="{count}"/>', encoding="utf-8")
+        report = build_report(
+            tmp_path, command=["python", "-m", "pytest"], suite="full", duration_ms=1,
+            result=_result(returncode=0, stdout=f"{count} passed"), context=_fixed_context(),
+            collect_nodeid_digest={"status": "collected", "command": "python -m pytest --collect-only",
+                                  "nodeid_count": count, "sha256": str(index) * 64, "reason": ""},
+            evidence_artifacts=[junit_artifact_identity(tmp_path, junit_path, counts={"passed": count})],
+        )
+        assert report["status"] == "pass"
+        path = f"tmp/shard-{index}.json"
+        (tmp_path / path).write_text(json.dumps(report), encoding="utf-8")
+        paths.append(path)
+    if mutation == "missing":
+        (tmp_path / "tmp/shard-0.xml").unlink()
+    elif mutation == "swapped":
+        # The total still matches; each individual shard must match as well.
+        (tmp_path / "tmp/shard-0.xml").write_text('<testsuite tests="3"/>', encoding="utf-8")
+        (tmp_path / "tmp/shard-1.xml").write_text('<testsuite tests="2"/>', encoding="utf-8")
+    out = "tmp/aggregate.json"
+    assert summary_main([
+        "--vault", str(tmp_path), "--suite", "full", "--out", out,
+        *[arg for path in paths for arg in ("--aggregate-from", path)],
+    ]) == (0 if mutation == "none" else 1)
+    aggregate = json.loads((tmp_path / out).read_text(encoding="utf-8"))
+    assert aggregate["counts"]["passed"] == 5
+    assert aggregate["represents_full_suite"] is (mutation == "none")
+    assert aggregate["evidence_artifact_consistency"]["status"] == ("pass" if mutation == "none" else "fail")
+    nested = build_aggregate_report(tmp_path, shard_paths=[out], suite="full", context=_fixed_context())
+    assert nested["status"] == aggregate["status"]
+    assert nested["evidence_artifact_consistency"] == aggregate["evidence_artifact_consistency"]
+    if mutation == "none":
+        assert reusable_aggregate_summary_diagnostics(tmp_path, out, suite="full")["reusable"]
+        shard_path = tmp_path / paths[0]
+        original = shard_path.read_bytes()
+        # An overwritten shard cannot redefine the counts behind a cached aggregate.
+        overwritten = json.loads(original)
+        overwritten["counts"]["passed"] = 3
+        shard_path.write_text(json.dumps(overwritten), encoding="utf-8")
+        assert not reusable_aggregate_summary_diagnostics(tmp_path, out, suite="full")["reusable"]
+        shard_path.write_bytes(original)
+        (tmp_path / "tmp/shard-0.xml").unlink()
+        assert not reusable_aggregate_summary_diagnostics(tmp_path, out, suite="full")["reusable"]
+        assert build_aggregate_report(
+            tmp_path, shard_paths=[out], suite="full", context=_fixed_context(),
+        )["status"] == "fail"
+
+
+@pytest.mark.parametrize("mutation", ["none", "missing", "count"])
+@pytest.mark.parametrize("mode", ["rerun", "reuse-only", "rebind-only"])
+def test_reuse_rechecks_current_artifacts_before_skipping_execution(
+    tmp_path: Path, mutation: str, mode: str,
+) -> None:
+    from ops.scripts.test.test_execution_evidence_runtime import junit_artifact_identity
+
+    seed_minimal_vault(tmp_path)
+    (tmp_path / "tmp").mkdir(exist_ok=True)
+    junit_path = "tmp/cached.xml"
+    junit = tmp_path / junit_path
+    junit.write_text('<testsuite tests="2"/>', encoding="utf-8")
+    command = [sys.executable, "-m", "pytest"]
+    existing = build_report(
+        tmp_path, command=command, suite="unit", duration_ms=1, context=_fixed_context(),
+        result=_result(returncode=0, stdout="2 passed"),
+        evidence_artifacts=[junit_artifact_identity(tmp_path, junit_path, counts={"passed": 2})],
+    )
+    cache = tmp_path / "tmp/cached.json"
+    cache.write_text(json.dumps(existing), encoding="utf-8")
+    cache_bytes = cache.read_bytes()
+    if mutation == "missing":
+        junit.unlink()
+    elif mutation == "count":
+        junit.write_text('<testsuite tests="1"/>', encoding="utf-8")
+    flags = ["--reuse-if-current"]
+    if mode != "rerun":
+        flags.append("--reuse-only")
+    if mode == "rebind-only":
+        flags.append("--refresh-revision-if-same-tree")
+    out = tmp_path / "tmp/reused.json"
+    with patch("ops.scripts.test.test_execution_summary.run_with_timeout",
+               return_value=_result(returncode=0, stdout="2 passed")) as run:
+        result = summary_main([
+            "--vault", str(tmp_path), "--suite", "unit", "--reuse-from", str(cache),
+            "--out", str(out), *flags, "--", *command,
+        ])
+    stale = mutation != "none"
+    assert result == (1 if stale and mode != "rerun" else 0)
+    assert run.call_count == int(stale and mode == "rerun")
+    assert cache.read_bytes() == cache_bytes
+    if stale and mode != "rerun":
+        assert not out.exists()
+    elif mode != "reuse-only":
+        report = json.loads(out.read_text(encoding="utf-8"))
+        assert report["status"] == "pass"
+        assert (report.get("summary_mode") == "reused") is (not stale)
+
+
+def test_reuse_returns_failure_if_artifact_changes_after_currentness_check(tmp_path: Path) -> None:
+    from ops.scripts.test.test_execution_evidence_runtime import junit_artifact_identity
+
+    seed_minimal_vault(tmp_path)
+    (tmp_path / "tmp").mkdir(exist_ok=True)
+    junit = tmp_path / "tmp/cached.xml"
+    junit.write_text('<testsuite tests="2"/>', encoding="utf-8")
+    command = [sys.executable, "-m", "pytest"]
+    existing = build_report(
+        tmp_path, command=command, suite="unit", duration_ms=1, context=_fixed_context(),
+        result=_result(returncode=0, stdout="2 passed"),
+        evidence_artifacts=[junit_artifact_identity(tmp_path, junit, counts={"passed": 2})],
+    )
+    cache = tmp_path / "tmp/cached.json"
+    cache.write_text(json.dumps(existing), encoding="utf-8")
+
+    def change_after_check(*args, **kwargs):
+        junit.unlink()
+        return build_reused_report(*args, **kwargs)
+
+    # Keep the real admission and report construction; alter only their ordering boundary.
+    with patch("ops.scripts.test.test_execution_summary.build_reused_report", side_effect=change_after_check):
+        assert summary_main([
+            "--vault", str(tmp_path), "--suite", "unit", "--reuse-if-current",
+            "--reuse-from", str(cache), "--out", "tmp/reused.json", "--", *command,
+        ]) == 1
+    report = json.loads((tmp_path / "tmp/reused.json").read_text(encoding="utf-8"))
+    assert report["status"] == "fail"
+
+
+@pytest.mark.parametrize("selection", [
+    ["--cache-clear", "tests/test_selected.py"],
+    ["-ktest_selected"],
+    ["-k=test_selected"],
+    ["--ignore", "tests/test_unselected.py"],
+])
+def test_partial_execution_cannot_become_full_suite_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, selection: list[str],
+) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    tests = tmp_path / "tests"
+    tests.mkdir(exist_ok=True)
+    (tests / "test_selected.py").write_text("def test_selected():\n    assert True\n", encoding="utf-8")
+    (tests / "test_unselected.py").write_text("def test_other():\n    assert False\n", encoding="utf-8")
+    command = [sys.executable, "-m", "pytest", *selection, "-q"]
+    out = "tmp/subset.json"
+    assert summary_main([
+        "--vault", str(tmp_path), "--suite", "full", "--collect-nodeids",
+        "--out", out, "--", *command,
+    ]) == 0
+    report = json.loads((tmp_path / out).read_text(encoding="utf-8"))
+    assert report["counts"]["passed"] == 1
+    assert report["represents_full_suite"] is False
+    assert report["pytest_collect_nodeid_digest"]["nodeid_count"] == 1
+    assert report["pytest_collect_nodeid_digest"]["sha256"] == hashlib.sha256(
+        b"tests/test_selected.py::test_selected\n"
+    ).hexdigest()
+    assert report["nodeid_outcome_consistency"]["status"] == "pass"
+    aggregate = build_aggregate_report(tmp_path, shard_paths=[out], suite="full", context=_fixed_context())
+    assert aggregate["represents_full_suite"] is False
+
+
+def test_collection_keeps_configuration_and_ini_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    (tmp_path / "configured").mkdir()
+    (tmp_path / "configured/test_one.py").write_text("def test_one():\n    pass\n", encoding="utf-8")
+    (tmp_path / "pytest-alternate.ini").write_text("[pytest]\ntestpaths = configured\n", encoding="utf-8")
+    digest = collect_pytest_nodeid_digest(
+        tmp_path, [sys.executable, "-m", "pytest", "-cpytest-alternate.ini", "-o", "cache_dir=tmp/cache"],
+        timeout_seconds=30,
+    )
+    assert digest["status"] == "collected"
+    assert digest["sha256"] == hashlib.sha256(b"configured/test_one.py::test_one\n").hexdigest()
+
+
+@pytest.mark.parametrize(("options", "ini", "env_options", "execution_verbosity", "selected_only"), [
+    (["-oaddopts=-q"], "", "", "auto", False),
+    (["-overbosity_test_cases=2"], "", "", "2", False),
+    (["-o", "verbosity_test_cases=-2"], "", "", "-2", False),
+    (["--override-ini=verbosity_test_cases=2", "--"], "", "", "2", False),
+    (["--override-ini", "addopts=-q -k selected"], "", "", "auto", True),
+    (["-o", "verbosity_test_cases=0", "-o", "verbosity_test_cases=2"], "", "", "2", False),
+    ([], "verbosity_test_cases = 2\n", "", "2", False),
+    ([], "", "-q -o verbosity_test_cases=2", "2", False),
+], ids=["addopts", "attached", "separate", "long-equals", "addopts-selection", "repeated", "config", "environment"])
+def test_collection_output_overrides_preserve_nodeids_and_execution_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, options: list[str], ini: str,
+    env_options: str, execution_verbosity: str, selected_only: bool,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    monkeypatch.setenv("PYTEST_ADDOPTS", env_options)
+    (tmp_path / "pytest.ini").write_text(f"[pytest]\n{ini}", encoding="utf-8")
+    (tmp_path / "tests").mkdir(exist_ok=True)
+    (tmp_path / "tests/test_sample.py").write_text(
+        "def test_selected(request):\n"
+        f"    assert request.config.getini('verbosity_test_cases') == {execution_verbosity!r}\n"
+        "def test_other():\n    pass\n",
+        encoding="utf-8",
+    )
+    command = [sys.executable, "-m", "pytest", *options, "tests/test_sample.py"]
+    assert summary_main([
+        "--vault", str(tmp_path), "--suite", "unit", "--collect-nodeids",
+        "--out", "tmp/summary.json", "--", *command,
+    ]) == 0
+    report = json.loads((tmp_path / "tmp/summary.json").read_text(encoding="utf-8"))
+    nodeids = ["tests/test_sample.py::test_selected"]
+    if not selected_only:
+        nodeids.insert(0, "tests/test_sample.py::test_other")
+    assert report["status"] == "pass"
+    assert report["returncode"] == 0
+    assert report["counts"]["passed"] == len(nodeids)
+    assert report["pytest_collect_nodeid_digest"]["nodeid_count"] == len(nodeids)
+    assert report["pytest_collect_nodeid_digest"]["sha256"] == hashlib.sha256(
+        ("\n".join(nodeids) + "\n").encode(),
+    ).hexdigest()
+    assert report["nodeid_outcome_consistency"]["status"] == "pass"
+
+
+@pytest.mark.parametrize(("options", "expected_count", "full_scope"), [
+    (["--cache-clear", "--lf"], 2, False),
+    (["--lf", "--last-failed-no-failures=all"], 1, False),
+    (["--ff"], 2, True), (["--nf"], 2, True),
+])
+def test_collection_and_execution_share_cache_selection_semantics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, options: list[str], expected_count: int, full_scope: bool,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    tests = tmp_path / "tests"
+    tests.mkdir(exist_ok=True)
+    (tests / "test_pair.py").write_text("def test_one():\n    pass\ndef test_two():\n    pass\n", encoding="utf-8")
+    cache = tmp_path / ".pytest_cache/v/cache/lastfailed"
+    cache.parent.mkdir(parents=True)
+    cache.write_text(json.dumps({"tests/test_pair.py::test_one": True}), encoding="utf-8")
+    assert summary_main([
+        "--vault", str(tmp_path), "--suite", "full", "--collect-nodeids", "--out", "tmp/cache-flags.json",
+        "--", sys.executable, "-m", "pytest", *options, "-q",
+    ]) == 0
+    report = json.loads((tmp_path / "tmp/cache-flags.json").read_text(encoding="utf-8"))
+    assert report["counts"]["passed"] == expected_count
+    assert report["pytest_collect_nodeid_digest"]["nodeid_count"] == expected_count
+    assert report["represents_full_suite"] is full_scope
+
+
+def test_invalid_legacy_shards_cannot_cancel_count_drift_or_be_reused(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    command = ["python", "-m", "pytest"]
+    paths = []
+    for index, (passed, collected) in enumerate([(1, 2), (2, 1)]):
+        report = build_report(
+            tmp_path, command=command, suite="full", duration_ms=1, context=_fixed_context(),
+            result=_result(returncode=0, stdout=f"{passed} passed"), collect_nodeids=True,
+            collect_nodeid_digest={"status": "collected", "command": "python -m pytest --collect-only -q",
+                                  "nodeid_count": collected, "sha256": str(index) * 64, "reason": ""},
+        )
+        # Older writers allowed a successful process to override failed evidence.
+        report["status"] = "pass"
+        report["represents_full_suite"] = True
+        diagnostics = reuse_currentness_diagnostics(
+            report, vault=tmp_path, suite="full", command=command,
+            collect_nodeids=False, collect_nodeid_digest=None,
+        )
+        assert diagnostics["reusable"] is False
+        assert diagnostics["checks"]["execution_evidence"] is False
+        path = f"tmp/shard-{index}.json"
+        (tmp_path / path).parent.mkdir(exist_ok=True)
+        (tmp_path / path).write_text(json.dumps(report), encoding="utf-8")
+        paths.append(path)
+    aggregate = build_aggregate_report(tmp_path, shard_paths=paths, suite="full", context=_fixed_context())
+    assert aggregate["nodeid_outcome_consistency"]["status"] == "pass"
+    assert aggregate["status"] == "fail"
+    assert aggregate["represents_full_suite"] is False
+
+
+def test_reuse_validates_recorded_counts_instead_of_truncated_output(tmp_path: Path) -> None:
+    seed_minimal_vault(tmp_path)
+    command = ["python", "-m", "pytest"]
+    digest = {"status": "collected", "command": "python -m pytest --collect-only -q",
+              "nodeid_count": 2, "sha256": "a" * 64, "reason": ""}
+    existing = build_report(tmp_path, command=command, suite="full", duration_ms=1,
+                            result=_result(returncode=0, stdout="2 passed"), collect_nodeid_digest=digest,
+                            context=_fixed_context())
+    existing["stdout_tail"] = "truncated diagnostic tail"
+    reused = build_reused_report(tmp_path, existing=existing, command=command, suite="full", context=_fixed_context())
+    assert reused["counts"]["passed"] == 2
+    assert reused["nodeid_outcome_consistency"]["status"] == "pass"
+    assert reused["status"] == "pass"
+    assert reused["represents_full_suite"] is True
+
+
 @pytest.mark.parametrize("option", ["--junit-xml", "--junitxml"])
 @pytest.mark.parametrize("joined", [False, True], ids=["separate", "equals"])
 @pytest.mark.parametrize("collect", [False, True], ids=["execution", "collection-manifest"])
@@ -1579,6 +1880,8 @@ class TestExecutionSummaryTest(unittest.TestCase):
 
             self.assertEqual(report["nodeid_outcome_consistency"]["status"], "fail")
             self.assertEqual(report["nodeid_outcome_consistency"]["delta"], 1)
+            self.assertEqual(report["status"], "fail")
+            self.assertFalse(report["represents_full_suite"])
             self.assertEqual(
                 validate_with_schema(report, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)),
                 [],
@@ -2878,7 +3181,7 @@ class TestExecutionSummaryTest(unittest.TestCase):
             self.assertEqual(artifacts["junit_xml"]["expected_count"], 3)
             self.assertEqual(validate_with_schema(payload, load_schema(vault / TEST_EXECUTION_SUMMARY_SCHEMA_PATH)), [])
 
-    def test_cli_marks_junit_count_mismatch_as_artifact_attention(self) -> None:
+    def test_cli_blocks_junit_count_mismatch_as_invalid_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
             vault.mkdir()
@@ -2911,7 +3214,10 @@ class TestExecutionSummaryTest(unittest.TestCase):
             payload = json.loads(out_path.read_text(encoding="utf-8"))
             artifacts = {item["kind"]: item for item in payload["evidence_artifacts"]}
 
-            self.assertEqual(returncode, 0)
+            self.assertEqual(returncode, 1)
+            self.assertEqual(payload["status"], "fail")
+            self.assertFalse(payload["represents_full_suite"])
+            self.assertEqual(payload["returncode"], 0)
             self.assertEqual(artifacts["junit_xml"]["consistency_status"], "attention")
             self.assertEqual(artifacts["junit_xml"]["observed_count"], 1)
             self.assertEqual(artifacts["junit_xml"]["expected_count"], 3)

@@ -4,13 +4,14 @@ import argparse
 import gzip
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+from ops.scripts.mechanism.goal_runtime_lock import inspect_workspace_lock
 
 from .command_log_summary_runtime import COMMAND_LOG_SUMMARY_FILENAME
 from .gate_effect_vocabulary import (
@@ -41,7 +42,6 @@ TEMPLATE_RUN_RESIDUE_PATHS = (
 TEMPLATE_RUN_RESIDUE_ALLOWED_FILES = frozenset({"runtime-events.jsonl"})
 EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
 ARTIFACT_FRESHNESS_REPORT_PATH = "ops/reports/artifact-freshness-report.json"
-GOAL_RUNTIME_LOCK_PATH = "build/goal-runs/goal-runtime.lock.json"
 RUN_COMMAND_LOG_FILENAMES = frozenset(
     {
         "mutation-command.stdout.txt",
@@ -157,70 +157,10 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _process_is_running(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    except OSError:
-        return True
-    return True
-
-
-def _process_group_is_running(pgid: int) -> bool:
-    if pgid <= 0 or os.name == "nt":
-        return False
-    killpg = getattr(os, "killpg", None)
-    if killpg is None:
-        return False
-    try:
-        killpg(pgid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    except OSError:
-        return True
-    return True
-
-
-def _int_field(payload: dict[str, Any], field: str) -> int:
-    value = payload.get(field)
-    if isinstance(value, bool):
-        return 0
-    if isinstance(value, int):
-        return value
-    try:
-        return int(str(value))
-    except (TypeError, ValueError):
-        return 0
-
-
 def _goal_runtime_lock_blocker(vault: Path) -> dict[str, str] | None:
-    path = vault / GOAL_RUNTIME_LOCK_PATH
-    if not path.exists():
-        return None
-    payload = _read_json_object(path)
-    if not payload:
-        return {
-            "path": GOAL_RUNTIME_LOCK_PATH,
-            "reason": "goal runtime lock is unreadable or not a JSON object",
-        }
-    for field, owner_type, probe in (
-        ("child_pgid", "child_process_group", _process_group_is_running),
-        ("child_pid", "child_process", _process_is_running),
-        ("pid", "runner_process", _process_is_running),
-    ):
-        value = _int_field(payload, field)
-        if value > 0 and probe(value):
-            return {
-                "path": GOAL_RUNTIME_LOCK_PATH,
-                "reason": f"active {owner_type} {value} owns the goal runtime workspace",
-            }
+    status = inspect_workspace_lock(vault)
+    if status["active"]:
+        return {"path": status["path"], "reason": status["reason"]}
     return None
 
 

@@ -54,6 +54,16 @@ def test_junit_output_option_does_not_supply_focused_scope(
     ) is focused
 
 
+@pytest.mark.parametrize(("args", "focused"), [
+    (["--cache-clear", "tests/test_sample.py"], True),
+    (["-ksmoke"], True), (["-m=public"], True),
+    (["-o", "addopts=", "tests"], False),
+    (["--junitxml", "tmp/result.xml", "tests"], False),
+])
+def test_guidance_uses_the_same_pytest_argument_parser(args: list[str], focused: bool) -> None:
+    assert _load_repo_conftest()._argv_has_focused_pytest_scope(["pytest/__main__.py", *args]) is focused
+
+
 class PytestEntrypointGuidanceTests(unittest.TestCase):
     def test_bare_pytest_fails_with_supported_entrypoint_guidance(self) -> None:
         env = os.environ.copy()

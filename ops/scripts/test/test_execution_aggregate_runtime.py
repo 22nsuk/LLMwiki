@@ -36,13 +36,16 @@ from ops.scripts.test.test_execution_derivation_runtime import (
 )
 from ops.scripts.test.test_execution_evidence_runtime import (
     evidence_artifact_consistency as _evidence_artifact_consistency,
+    execution_evidence_failures,
     nodeid_outcome_consistency as _nodeid_outcome_consistency,
+    sha256_file,
     sha256_text as _sha256_text,
 )
 from ops.scripts.test.test_execution_selection_runtime import (
     FULL_SUITE_SCOPES,
     apply_toolchain_contract_to_coverage as _apply_toolchain_contract_to_coverage,
     suite_coverage as _suite_coverage,
+    without_full_suite_coverage,
 )
 from ops.scripts.test.test_execution_summary import (
     PRODUCER,
@@ -79,6 +82,7 @@ def reusable_aggregate_summary_diagnostics(
     }
     try:
         existing = load_test_execution_summary(vault, path)
+        current_artifact_consistency = aggregate_evidence_artifact_consistency(vault, [existing])
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         diagnostics["reason"] = f"summary_unavailable:{type(exc).__name__}"
         return diagnostics
@@ -100,6 +104,11 @@ def reusable_aggregate_summary_diagnostics(
     checks = {
         "artifact_kind": existing.get("artifact_kind") == "test_execution_summary",
         "status": existing.get("status") == "pass",
+        "execution_evidence": current_artifact_consistency["status"] != "fail" and not execution_evidence_failures(
+            existing.get("pytest_collect_nodeid_digest", {}),
+            existing.get("nodeid_outcome_consistency", {}),
+            existing.get("evidence_artifact_consistency", {}),
+        ),
         "suite": existing.get("suite") == suite,
         "summary_mode": existing.get("summary_mode") in {"aggregate", "reused"},
         "source_revision": existing.get("source_revision") == current_source_revision,
@@ -339,7 +348,7 @@ def aggregate_nodeid_digest(shards: list[dict[str, Any]]) -> dict[str, Any]:
         }
     if any(digest.get("status") != "collected" for digest in digests):
         return {
-            "status": "failed",
+            "status": "failed" if any(digest.get("status") == "failed" for digest in digests) else "skipped",
             "command": "",
             "nodeid_count": sum(int(digest.get("nodeid_count", 0) or 0) for digest in digests),
             "sha256": "",
@@ -379,6 +388,44 @@ def aggregate_nodeid_consistency(
     if collect_digest.get("status") != "collected":
         consistency["reason"] = str(collect_digest.get("reason", "")) or consistency["reason"]
     return collect_digest, consistency
+
+
+def aggregate_evidence_artifact_consistency(
+    vault: Path,
+    shards: list[dict[str, Any]],
+    *,
+    ancestors: frozenset[Path] = frozenset(),
+) -> dict[str, Any]:
+    """Recheck artifacts at the leaf execution that owns their outcome counts."""
+    checks: list[dict[str, Any]] = []
+    blockers: list[dict[str, Any]] = []
+    for shard in shards:
+        if not shard.get("evidence_artifacts"):
+            continue
+        if shard.get("shards"):
+            for index, reference in enumerate(shard["shards"], start=1):
+                path = (vault / reference["path"]).resolve()
+                if path in ancestors:
+                    raise ValueError("cyclic test execution summary shard reference")
+                if sha256_file(path) != shard.get("input_fingerprints", {}).get(f"shard_{index}"):
+                    raise ValueError("test execution summary shard changed since aggregation")
+                result = aggregate_evidence_artifact_consistency(
+                    vault, [load_test_execution_summary(vault, path)], ancestors=ancestors | {path},
+                )
+                checks.extend(result["checks"])
+                blockers.extend(result["blockers"])
+        else:
+            result = _evidence_artifact_consistency(
+                vault, counts=shard.get("counts", {}), evidence_artifacts=shard["evidence_artifacts"],
+            )
+            checks.extend(result["checks"])
+            blockers.extend(result["blockers"])
+    return {
+        "status": "fail" if blockers else "pass" if checks else "skipped",
+        "checked_artifact_count": len(checks),
+        "checks": checks,
+        "blockers": blockers,
+    }
 
 
 def aggregate_source_command(suite: str, shard_paths: list[str]) -> str:
@@ -428,11 +475,16 @@ def build_aggregate_report(
     collect_nodeid_digest, nodeid_outcome_consistency = aggregate_nodeid_consistency(shards, counts)
     duration_telemetry = aggregate_duration_telemetry(shards)
     evidence_artifacts = aggregate_shard_dict_items(shards, "evidence_artifacts")
-    evidence_artifact_consistency = _evidence_artifact_consistency(
-        vault,
-        counts=counts,
-        evidence_artifacts=evidence_artifacts,
-    )
+    evidence_artifact_consistency = aggregate_evidence_artifact_consistency(vault, shards)
+    failures = execution_evidence_failures(collect_nodeid_digest, nodeid_outcome_consistency, evidence_artifact_consistency)
+    for shard in shards:
+        failures.extend(execution_evidence_failures(
+            shard.get("pytest_collect_nodeid_digest", {}), shard.get("nodeid_outcome_consistency", {}),
+            shard.get("evidence_artifact_consistency", {}),
+        ))
+    if failures:
+        status = "fail"
+        coverage = without_full_suite_coverage(coverage, "; ".join(sorted(set(failures))))
     envelope = build_canonical_report_envelope(
         vault,
         generated_at=generated_at,

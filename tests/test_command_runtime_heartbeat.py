@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import subprocess
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -10,10 +12,46 @@ from ops.scripts.core.command_runtime import (
     CommandHeartbeat,
     FakeProcess,
     FakeProcessBackend,
+    ProcessCleanupError,
     run_with_timeout,
 )
 
 pytestmark = pytest.mark.public
+
+
+@pytest.mark.parametrize("failure_site", ["communicate", "after_launch", "signal_install"])
+def test_post_launch_errors_abort_before_propagating(failure_site: str) -> None:
+    error = OSError("controller failed")
+    process = FakeProcess(communicate_side_effect=[error] if failure_site == "communicate" else [])
+    backend = FakeProcessBackend(process)
+    clock_values = iter([0.0, error] if failure_site == "after_launch" else [0.0] * 10)
+
+    def clock() -> float:
+        value = next(clock_values)
+        if isinstance(value, BaseException):
+            raise value
+        return value
+
+    failure_context = (
+        patch("ops.scripts.core.command_runtime._install_parent_signal_cleanup", side_effect=error)
+        if failure_site == "signal_install" else nullcontext()
+    )
+    with failure_context, pytest.raises(OSError) as raised:
+        run_with_timeout(["python"], cwd=Path(), timeout_seconds=5, backend=backend, monotonic_clock=clock)
+    assert raised.value is error
+    assert backend.signal_calls == [(process.pid, int(backend.kill_signal()))]
+    assert process.communicate_calls[-1]["timeout"] == 2.0
+
+
+def test_cleanup_failure_preserves_original_exception_and_stays_bounded() -> None:
+    original = OSError("heartbeat status write failed")
+    process = FakeProcess(communicate_side_effect=[original, subprocess.TimeoutExpired(cmd=["python"], timeout=.1)])
+    backend = FakeProcessBackend(process)
+    with pytest.raises(ProcessCleanupError) as raised:
+        run_with_timeout(["python"], cwd=Path(), timeout_seconds=5, grace_seconds=.1, backend=backend)
+    assert raised.value.__cause__ is original
+    assert "cleanup incomplete" in str(raised.value)
+    assert process.communicate_calls[-1]["timeout"] == .1
 
 
 class SteppedClock:

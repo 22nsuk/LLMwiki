@@ -56,6 +56,18 @@ def nodeid_outcome_consistency(
     }
 
 
+def execution_evidence_failures(
+    collection: dict[str, Any],
+    nodeid_consistency: dict[str, Any],
+    artifact_consistency: dict[str, Any],
+) -> list[str]:
+    return [name for name, check in (
+        ("pytest collection", collection),
+        ("collection/outcome consistency", nodeid_consistency),
+        ("execution artifact consistency", artifact_consistency),
+    ) if check.get("status") in {"fail", "failed"}]
+
+
 def artifact_identity(vault: Path, path_value: str | Path, *, kind: str, source: str) -> dict[str, Any]:
     path = Path(path_value)
     if not path.is_absolute():

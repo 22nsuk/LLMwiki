@@ -221,8 +221,6 @@ class CommandRuntimeTests(unittest.TestCase):
     def test_run_with_timeout_cleans_child_group_on_parent_sigterm(self) -> None:
         process = FakeProcess(
             communicate_side_effect=[
-                subprocess.TimeoutExpired(cmd=["python"], timeout=0),
-                subprocess.TimeoutExpired(cmd=["python"], timeout=2.0),
                 ("terminated-stdout", "terminated-stderr"),
             ],
             poll_side_effect=[None],
@@ -259,10 +257,7 @@ class CommandRuntimeTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 128 + int(signal.SIGTERM))
         self.assertEqual(
             backend.signal_calls,
-            [
-                (1, int(signal.SIGTERM)),
-                (1, int(getattr(signal, "SIGKILL", signal.SIGTERM))),
-            ],
+            [(1, int(backend.kill_signal()))],
         )
 
     def test_run_with_timeout_disables_start_new_session_on_windows(self) -> None:

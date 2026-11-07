@@ -14,6 +14,7 @@ from ops.scripts.mechanism.goal_runtime_lock import (
     GoalRuntimeWorkspaceLockActive,
     acquire_workspace_lock,
     inspect_workspace_lock,
+    mark_workspace_lock_child_pending,
     release_workspace_lock,
     stop_workspace_lock,
     update_workspace_lock_child,
@@ -118,6 +119,42 @@ class GoalRuntimeLockTests(unittest.TestCase):
         )
         self.assertEqual(signals, [(9876, int(signal.SIGTERM))])
         release_workspace_lock(lock)
+
+    def test_registration_restores_owner_based_stale_recovery(self) -> None:
+        lock = acquire_workspace_lock(
+            self.vault, lock_path=self.lock_path, run_id="registration",
+            runtime_mode="self_improvement_loop", started_at="2026-05-21T00:00:00Z",
+            command_argv=["python"],
+        )
+        mark_workspace_lock_child_pending(lock)
+
+        def inspect(*, child_running=False):
+            return inspect_workspace_lock(
+                self.vault, lock_path=self.lock_path,
+                process_is_running=lambda pid: child_running and pid == 4321,
+                process_group_is_running=lambda pgid: False,
+            )
+
+        self.assertEqual(inspect()["status"], "unresolved")
+        update_workspace_lock_child(lock, child_pid=4321, child_pgid=0)
+        self.assertEqual(inspect(child_running=True)["active_owner"]["id"], 4321)
+        self.assertEqual(inspect()["status"], "stale")
+        self.assertFalse(inspect()["active"])
+        release_workspace_lock(lock)
+
+    def test_child_registration_requires_lock_ownership(self) -> None:
+        lock = acquire_workspace_lock(
+            self.vault, lock_path=self.lock_path, run_id="registration",
+            runtime_mode="self_improvement_loop", started_at="2026-05-21T00:00:00Z",
+            command_argv=["python"],
+        )
+        replacement = json.dumps({"pid": os.getpid(), "token": "another-owner"})
+        lock.path.write_text(replacement, encoding="utf-8")
+        with self.assertRaises(GoalRuntimeWorkspaceLockActive):
+            mark_workspace_lock_child_pending(lock)
+        with self.assertRaises(GoalRuntimeWorkspaceLockActive):
+            update_workspace_lock_child(lock, child_pid=4321, child_pgid=0)
+        self.assertEqual(lock.path.read_text(encoding="utf-8"), replacement)
 
 
 if __name__ == "__main__":  # pragma: no cover

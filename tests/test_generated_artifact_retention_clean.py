@@ -810,34 +810,38 @@ class GeneratedArtifactRetentionCleanTests(unittest.TestCase):
     def test_apply_blocks_all_deletion_when_goal_runtime_lock_is_active(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vault = self._vault(Path(temp_dir))
-            (vault / "build/source-package-smoke").mkdir(parents=True)
-            (vault / "build/source-package-smoke/report.json").write_text(
-                "{}", encoding="utf-8"
-            )
-            lock_path = vault / "build/goal-runs/goal-runtime.lock.json"
-            lock_path.parent.mkdir(parents=True)
-            lock_path.write_text(
-                json.dumps({"pid": os.getpid(), "run_id": "run-active-lock"}),
-                encoding="utf-8",
-            )
+        for payload, reason in (
+            ({"pid": os.getpid(), "run_id": "run-active-lock"}, "active runner_process"),
+            ({"pid": -1, "child_registration_pending": True}, "child registration is incomplete"),
+        ):
+            with self.subTest(payload=payload), tempfile.TemporaryDirectory() as temp_dir:
+                vault = self._vault(Path(temp_dir))
+                (vault / "build/source-package-smoke").mkdir(parents=True)
+                (vault / "build/source-package-smoke/report.json").write_text(
+                    "{}", encoding="utf-8"
+                )
+                lock_path = vault / "build/goal-runs/goal-runtime.lock.json"
+                lock_path.parent.mkdir(parents=True)
+                lock_path.write_text(
+                    json.dumps(payload),
+                    encoding="utf-8",
+                )
 
-            report = build_report(vault, apply=True)
+                report = build_report(vault, apply=True)
 
-            self.assertEqual(report["status"], "fail")
-            self.assertEqual(report["cleanup_status"], "blocked")
-            self.assertEqual(report["retention_status"], "pass")
-            self.assertEqual(report["gate_effect"], "blocks_execution")
-            self.assertEqual(report["deleted_paths"], [])
-            self.assertEqual(
-                report["blockers"][0]["path"],
-                "build/goal-runs/goal-runtime.lock.json",
-            )
-            self.assertIn("active runner_process", report["blockers"][0]["reason"])
-            self.assertTrue(
-                (vault / "build/source-package-smoke/report.json").is_file()
-            )
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(report["cleanup_status"], "blocked")
+                self.assertEqual(report["retention_status"], "pass")
+                self.assertEqual(report["gate_effect"], "blocks_execution")
+                self.assertEqual(report["deleted_paths"], [])
+                self.assertEqual(
+                    report["blockers"][0]["path"],
+                    "build/goal-runs/goal-runtime.lock.json",
+                )
+                self.assertIn(reason, report["blockers"][0]["reason"])
+                self.assertTrue(
+                    (vault / "build/source-package-smoke/report.json").is_file()
+                )
 
     def test_apply_blocks_non_ignored_allowlist_candidates(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

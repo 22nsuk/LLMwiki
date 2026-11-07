@@ -184,6 +184,7 @@
       ]
     },
     "represents_full_suite": {
+      "description": "Recognized pytest full-suite scope, withheld for selection, non-execution, unsupported toolchains, or failed execution evidence checks.",
       "type": "boolean"
     },
     "not_full_suite_reason": {
@@ -193,6 +194,7 @@
       "$ref": "#/$defs/full_suite_evidence"
     },
     "status": {
+      "description": "Summary outcome including requested collection and execution artifact validation; a zero child exit code cannot override failed evidence checks.",
       "type": "string",
       "enum": [
         "pass",
@@ -215,6 +217,7 @@
       "minLength": 1
     },
     "returncode": {
+      "description": "Wrapped command exit code; summary status and CLI exit may fail independently when evidence is inconsistent.",
       "type": "integer"
     },
     "timed_out": {

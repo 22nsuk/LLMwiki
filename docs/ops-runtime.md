@@ -48,6 +48,30 @@ and a nonzero return code. Genuine completion races with output already at EOF
 remain successful. Timeout handling may use up to two configured grace periods
 after the execution deadline to terminate and collect output.
 
+Unexpected errors after launch, including heartbeat/status-write failures and
+interruption, abort the backend-owned process scope and perform a bounded reap
+before propagating the error. This also covers failures while registering a
+goal command's child identity. On POSIX the abort kills the process group even
+when its leader has exited or closed output. SIGINT and SIGTERM use this same
+abort path before forwarding the interruption to the previous signal handler;
+output EOF alone cannot mark signal cleanup complete. Normal completion and timeout-race
+handling retain their existing behavior. If termination or reaping cannot be
+confirmed, `ProcessCleanupError` preserves the original failure as its cause;
+the goal runner retains both locks for operator inspection instead of admitting
+another writer.
+
+Before launching a goal command, the workspace lock records
+`child_registration_pending`. Successful PID/PGID registration clears it;
+confirmed cleanup removes the lock normally. If registration and cleanup both
+fail, a later runner, `make goal-runtime-lock-check`, and artifact
+retention cleanup keep blocking even after the original runner exits. Lock
+status reports `unresolved` when no recorded owner remains; `stop` refuses to
+signal an unknown child. An operator must verify that the command and its
+descendants have stopped before removing this lock. Resolve such a lock before
+running an older runtime that does not recognize this field. Existing locks
+without the field and registered children retain their PID/PGID-based stale
+recovery behavior.
+
 Mechanism repository-health checks, worker repository-health preflight, and
 candidate dependency probes require Linux with Bubblewrap installed at
 `/usr/bin/bwrap` and working user, PID, and network namespaces. On Debian/Ubuntu,

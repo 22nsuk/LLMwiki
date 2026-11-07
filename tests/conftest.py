@@ -14,9 +14,12 @@ from _pytest.reports import TestReport
 from _pytest.unittest import SubtestReport
 from hypothesis import HealthCheck, settings
 
-from ops.scripts.test.test_execution_command_runtime import PYTEST_OPTION_VALUE_FLAGS
 from ops.scripts.test.test_execution_derivation_runtime import (
     JUNIT_SUBTESTS_PASSED_PROPERTY,
+)
+from ops.scripts.test.test_execution_selection_runtime import (
+    pytest_collection_filter_args as _pytest_collection_filter_args,
+    pytest_selector_args as _pytest_selector_args,
 )
 from tests.minimal_vault_runtime import seed_minimal_vault
 from tests.report_contract_test_runtime import (
@@ -40,7 +43,6 @@ SELECTORLESS_PYTEST_GUIDANCE = (
 MAKE_PYTEST_ENTRYPOINT_ENV = "LLMWIKI_MAKE_PYTEST_ENTRYPOINT"
 HYPOTHESIS_PROFILE = "llmwiki"
 DEFAULT_HYPOTHESIS_MAX_EXAMPLES = 30
-PYTEST_SCOPE_VALUE_FLAGS = {"-k", "-m", "--deselect", "--ignore", "--ignore-glob"}
 _PASSED_SUBTEST_COUNTS: dict[str, int] = {}
 
 
@@ -59,27 +61,10 @@ def _is_broad_pytest_selector(arg: str) -> bool:
 
 
 def _argv_has_focused_pytest_scope(argv: list[str]) -> bool:
-    skip_next = False
-    for arg in argv[1:]:
-        if skip_next:
-            skip_next = False
-            continue
-        if arg == "--":
-            continue
-        if arg in PYTEST_SCOPE_VALUE_FLAGS:
-            return True
-        if any(arg.startswith(f"{flag}=") for flag in PYTEST_SCOPE_VALUE_FLAGS if flag.startswith("--")):
-            return True
-        if arg in PYTEST_OPTION_VALUE_FLAGS:
-            skip_next = True
-            continue
-        if any(arg.startswith(f"{flag}=") for flag in PYTEST_OPTION_VALUE_FLAGS if flag.startswith("--")):
-            continue
-        if arg.startswith("-"):
-            continue
-        if not _is_broad_pytest_selector(arg):
-            return True
-    return False
+    command = ["pytest", *argv[1:]]
+    return bool(_pytest_collection_filter_args(command)) or any(
+        not _is_broad_pytest_selector(selector) for selector in _pytest_selector_args(command)
+    )
 
 
 @pytest.fixture

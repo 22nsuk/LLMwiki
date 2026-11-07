@@ -79,6 +79,31 @@ focused selectors and serial/isolation debugging; selectorless raw module pytest
 belongs behind Make-owned lanes because it runs the full suite serially without
 the repository lane policy.
 
+Pytest selection, collection, deselection metadata, and entrypoint guidance use
+one argument parser. Boolean options such as `--cache-clear` do not consume a
+following test path; separated and attached `-k`/`-m`, ini overrides, JUnit
+aliases, and the `--` delimiter retain their pytest meanings. Collection keeps
+configuration, plugins, and selection inputs while omitting execution-output
+options and worker/verbosity settings. Collection applies a final
+`verbosity_test_cases=-1` override before `--` so `addopts`, ini settings, and
+environment options cannot change its one-nodeid-per-line output. The original
+test execution retains its requested verbosity and selection settings.
+Selection filters, non-executing options,
+and unrecognized options cannot establish full-suite scope.
+
+A zero pytest exit code is insufficient when a requested collection or supplied
+execution artifact contradicts the outcomes. Such summaries have `status=fail`,
+return a nonzero summary CLI status, and cannot represent the full suite or be
+reused as passing evidence. The report's `returncode` still records the child
+exit code. Aggregation preserves these failures even if shard count differences
+cancel, and checks each artifact against its owning shard's counts. Nested
+aggregates retain the referenced shard reports for this revalidation. Reuse
+checks read the current artifacts, including in `--reuse-only` mode; stale
+artifacts trigger execution when allowed, or a nonzero status otherwise.
+Intentionally unrequested collection remains `skipped`. Exact
+collection-to-JUnit nodeid verification remains required by the release sidecar
+and trusted-CI evidence paths.
+
 When a request says "full pytest", choose the lane by intent:
 
 | Intent | Command | Notes |
