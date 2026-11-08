@@ -21,7 +21,7 @@ from unittest.mock import patch
 import pytest
 
 import ops.scripts.public.public_check_summary as public_check_summary_module
-from ops.scripts.core.command_runtime import TimedProcessResult
+from ops.scripts.core.command_runtime import ProcessCleanupError, TimedProcessResult
 from ops.scripts.core.policy_runtime import LOCAL_CORPUS_POLICY_PATH
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
@@ -147,7 +147,7 @@ def test_public_check_reuse_accepts_same_interpreter_alias(tmp_path: Path) -> No
     assert reusable_summary_diagnostics(tmp_path, destination, request)["reusable"]
 
 
-@pytest.mark.parametrize("pythonpath", [".", "plugins", os.pathsep.join([".", "", "plugins"])])
+@pytest.mark.parametrize("pythonpath", ["", ".", "..", "plugins", os.pathsep.join([".", "", "plugins"])])
 @pytest.mark.parametrize("safe_path", ["", "1"])
 def test_public_check_reuse_with_relative_pythonpath(
     tmp_path: Path, monkeypatch, pythonpath: str, safe_path: str,
@@ -172,7 +172,7 @@ def test_public_toolchain_accepts_relative_path_launcher(monkeypatch) -> None:
     executable = Path(sys.executable)
     monkeypatch.chdir(executable.parent)
     monkeypatch.setenv("PATH", ".")
-    assert public_toolchain_fingerprint(executable.name) == public_toolchain_fingerprint(str(executable))
+    assert public_toolchain_fingerprint(executable.name, cwd=executable.parent) == public_toolchain_fingerprint(str(executable), cwd=executable.parent)
 
 
 def test_public_toolchain_distinguishes_virtualenvs(tmp_path: Path) -> None:
@@ -192,7 +192,112 @@ def test_public_toolchain_distinguishes_virtualenvs(tmp_path: Path) -> None:
     (Path(result.stdout.strip()) / "test-dependencies.pth").write_text(
         sysconfig.get_path("purelib") + "\n", encoding="utf-8",
     )
-    assert public_toolchain_fingerprint(str(python)) != public_toolchain_fingerprint(sys.executable)
+    assert public_toolchain_fingerprint(str(python), cwd=tmp_path) != public_toolchain_fingerprint(sys.executable, cwd=tmp_path)
+
+
+def _native_public_validation(vault: Path, *, public_out: str, python: str) -> PublicCheckRequest:
+    # Use the real summary wrapper and all three validation tools on one small test.
+    with public_export_session(REPO_ROOT, vault):
+        pass
+    target = "tests/test_public_check_summary.py"
+    (vault / target).write_text(
+        "import pytest\n\npytestmark = pytest.mark.public\n\n\n"
+        "def test_native_validation() -> None:\n    assert 1 + 1 == 2\n",
+        encoding="utf-8",
+    )
+    return PublicCheckRequest(
+        public_out=public_out, public_python=python, source_history_scan=False,
+        ruff_targets=target, mypy_targets=target, pytest_flags=f"{target} -o addopts= -q",
+        timeout_seconds=60, heartbeat_interval_seconds=0,
+    )
+
+
+@pytest.mark.parametrize("bare_launcher", [False, True])
+def test_public_check_uses_relative_external_validation_dependencies(
+    tmp_path: Path, monkeypatch, bare_launcher: bool,
+) -> None:
+    import sysconfig
+
+    environment = tmp_path / "environment"
+    subprocess.run(
+        [sys.executable, "-m", "venv", "--without-pip", str(environment)],
+        check=True, capture_output=True, timeout=30,
+    )
+    python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    dependencies = tmp_path / "validation-packages"
+    try:
+        dependencies.symlink_to(sysconfig.get_path("purelib"), target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"dependency directory symlink unavailable: {exc}")
+    metadata = tmp_path / "metadata" / "validation_environment-1.0.dist-info"
+    metadata.mkdir(parents=True)
+    metadata_file = metadata / "METADATA"
+    metadata_file.write_text("Name: validation-environment\nVersion: 1.0\n")
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join(["../validation-packages", "../metadata"]))
+    if bare_launcher:
+        monkeypatch.setenv("PATH", os.pathsep.join([
+            os.path.join("..", "environment", python.parent.name), os.environ.get("PATH", ""),
+        ]))
+    vault, output = tmp_path / "source", tmp_path / "public"
+    request = _native_public_validation(
+        vault, public_out=str(output), python=python.name if bare_launcher else str(python),
+    )
+    # Independently establish that the real tools are available in this layout.
+    subprocess.run(
+        [str(python), "-c", "import pytest, ruff, mypy"], cwd=vault,
+        check=True, capture_output=True, timeout=15,
+    )
+    report = build_report(vault, request, context=fixed_context())
+    assert report["status"] == "pass", json.dumps(report["commands"], indent=2)
+    assert report["summary"]["pytest_passed"] == 1
+    destination = write_report(vault, report)
+    cache = _public_pytest_summary_cache_path(vault, request)
+    assert cache.is_file()
+    assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
+    metadata_file.write_text("Name: validation-environment\nVersion: 2.0\n")
+    assert not reusable_summary_diagnostics(vault, destination, request)["reusable"]
+    assert _public_pytest_summary_cache_path(vault, request) != cache
+
+
+@pytest.mark.parametrize("retained", [False, True])
+@pytest.mark.parametrize("exported_launcher", [False, True])
+def test_public_check_probes_exported_imports(
+    tmp_path: Path, monkeypatch, retained: bool, exported_launcher: bool,
+) -> None:
+    if exported_launcher and os.name == "nt":
+        pytest.skip("exported POSIX shell launcher")
+    vault = tmp_path / "source"
+    request = _native_public_validation(
+        vault, public_out=str(tmp_path / "public") if retained else "",
+        python="python-launcher" if exported_launcher else sys.executable,
+    )
+    if exported_launcher:
+        launcher = vault / "tools/python-launcher"
+        launcher.write_text('#!/bin/sh\nexec "$VALIDATION_PYTHON" "$@"\n')
+        launcher.chmod(0o755)
+        monkeypatch.setenv("VALIDATION_PYTHON", sys.executable)
+        monkeypatch.setenv("PATH", os.pathsep.join(["tools", os.environ.get("PATH", "")]))
+    packages = vault / "tools" / "validation_plugins"
+    packages.mkdir()
+    (packages / "validation_plugin.py").write_text("VALUE = 1\n")
+    metadata = packages / "validation_plugin-1.0.dist-info"
+    metadata.mkdir()
+    (metadata / "METADATA").write_text("Name: validation-plugin\nVersion: 1.0\n")
+    target = vault / "tests/test_public_check_summary.py"
+    target.write_text(
+        "import pytest\nimport validation_plugin\n\npytestmark = pytest.mark.public\n\n\n"
+        "def test_native_validation() -> None:\n    assert validation_plugin.VALUE == 1\n",
+    )
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join([".", "tools/validation_plugins"]))
+    monkeypatch.setenv("PYTHONSAFEPATH", "1")
+    report = build_report(vault, request, context=fixed_context())
+    assert report["status"] == "pass", json.dumps(report["commands"], indent=2)
+    assert report["summary"]["pytest_passed"] == 1
+    destination = write_report(vault, report)
+    cache = _public_pytest_summary_cache_path(vault, request)
+    assert cache.is_file()
+    assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
+    assert _public_pytest_summary_cache_path(vault, request) == cache
 
 
 @pytest.mark.parametrize("change", ["missing", "replaced", "metadata", "flags", "legacy"])
@@ -279,6 +384,53 @@ def test_public_toolchain_probe_failure_cannot_reuse_summary(tmp_path: Path, fai
         assert not reusable_summary_diagnostics(tmp_path, destination, request)["reusable"]
         with pytest.raises(ValueError, match="probe"):
             build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+
+
+def test_public_toolchain_cleanup_failure_propagates(tmp_path: Path) -> None:
+    from ops.scripts.public import public_toolchain_runtime
+
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    request = PublicCheckRequest(source_history_scan=False)
+    report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(tmp_path, report)
+    with patch.object(public_toolchain_runtime, "run_with_timeout", side_effect=ProcessCleanupError("cleanup failed")):
+        with pytest.raises(ProcessCleanupError):
+            reusable_summary_diagnostics(tmp_path, destination, request)
+        with pytest.raises(ProcessCleanupError):
+            build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+
+
+@pytest.mark.parametrize("retained", [False, True])
+@pytest.mark.parametrize("changed", ["source", "export"])
+def test_reuse_rejects_changes_during_toolchain_probe(
+    tmp_path: Path, monkeypatch, retained: bool, changed: str,
+) -> None:
+    vault = tmp_path / "source"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(
+        public_out=str(tmp_path / "public") if retained else "", source_history_scan=False,
+    )
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(vault, report)
+
+    def mutating_probe(public_python: str, *, cwd: Path, private_workspace: bool) -> str:
+        result = public_toolchain_fingerprint(public_python, cwd=cwd, private_workspace=private_workspace)
+        target = vault if changed == "source" else cwd
+        (target / "README.md").write_text("changed during probe\n")
+        return result
+
+    monkeypatch.setattr(public_check_summary_module, "public_toolchain_fingerprint", mutating_probe)
+    diagnostics = reusable_summary_diagnostics(vault, destination, request)
+    assert not diagnostics["reusable"]
+    if changed == "source":
+        assert not diagnostics["checks"]["public_export_source"]
+    elif retained:
+        assert not diagnostics["checks"]["retained_export"]
+    else:
+        assert "changed during toolchain probe" in diagnostics["toolchain_error"]
 
 
 def test_default_public_checks_have_independent_workspaces_and_caches(tmp_path: Path) -> None:

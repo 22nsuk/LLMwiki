@@ -45,7 +45,7 @@
       "properties": {
         "public_python_toolchain": {
           "$ref": "#/$defs/sha256",
-          "description": "Bounded live probe of the resolved launcher target and effective validation environment, with probe-local paths normalized; required for reuse. Equivalent launcher aliases share toolchain identity, while distinct virtualenvs remain distinct. Legacy or changed fingerprints require fresh validation."
+          "description": "Bounded live probe in the actual export working directory with validation environment defaults. Relative paths resolve as they do for validation; export-local paths and private workspace roots are normalized only in the digest. Equivalent launcher aliases share toolchain identity, while distinct virtualenvs remain distinct. Legacy or changed fingerprints require fresh validation."
         },
         "public_export_source": {
           "$ref": "#/$defs/sha256",

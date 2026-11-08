@@ -337,20 +337,32 @@ the requested Python launcher, interpreter, validation tools, and installed
 package metadata. Missing interpreters, failed probes, or changed environments
 invalidate reuse and the pytest cache key even when paths and lock bytes are
 unchanged. Only the digest is stored; local installation paths stay out of the
-report. A second probe before publication rejects environment changes during
-validation. Legacy summaries without the binding need fresh validation. This
+report. Both probes run in the actual export directory under its output lock,
+with the same environment defaults as the validation commands. The second probe
+before publication rejects environment changes during validation. Legacy summaries
+without the binding need fresh validation. This
 identity detects environment replacement and metadata changes; it is not an
 integrity scan of every installed package source file.
 Launcher aliases of the same executable and effective environment share a
 toolchain identity; virtualenv prefixes and wrapper executable identities still
 distinguish different environments. Request-less diagnostics probe the current
-interpreter, so pass the original request when checking a different environment.
+interpreter in a reconstructed private export, so pass the original request when
+checking a different interpreter or an explicitly retained export.
 Explicit requests also retain their existing configuration identity checks.
-Probe-local search paths (including relative or empty `PYTHONPATH` entries) are
-normalized without changing the inherited environment. Every search-path entry
-is included, also when `PYTHONSAFEPATH` suppresses the initial current-directory
-entry. The fingerprint revision changes, so prior reports and caches require
-fresh validation once.
+Relative `PATH` and `PYTHONPATH` entries resolve from the export, not the caller's
+directory or an unrelated probe directory. Bare Python launchers are resolved
+once for command execution, preserving venv aliases. Export-local paths and
+disposable workspace roots are normalized only in the fingerprint; the actual
+environment and import resolution are unchanged. Every search-path entry is
+included, also when `PYTHONSAFEPATH` suppresses the initial current-directory entry.
+Exported launchers bind content and mode rather than copy-specific inodes, while
+pre/post stat checks still reject replacement during a probe.
+Reuse checks inspect retained exports without rewriting them, under the same
+output lock; private exports are reconstructed from current public sources and
+removed afterward. This adds one public export copy to private-summary reuse and
+standalone cache-key inspection, so the probe can see exported modules and metadata.
+Changed or unavailable exports and probe failures reject reuse. The fingerprint
+revision changes, so prior reports and caches require fresh validation once.
 
 Export traversal prunes excluded directories before descending, while preserving
 explicit included-report exceptions and sorted inventories. Selected unreadable

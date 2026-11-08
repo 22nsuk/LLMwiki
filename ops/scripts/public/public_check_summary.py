@@ -10,7 +10,8 @@ import stat
 import sys
 import tempfile
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -27,7 +28,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.core.command_runtime import TimedProcessResult, run_with_timeout
+    from ops.scripts.core.command_runtime import (
+        ProcessCleanupError,
+        TimedProcessResult,
+        run_with_timeout,
+    )
     from ops.scripts.core.output_runtime import display_path, sanitize_report_text
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
@@ -35,6 +40,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         release_source_tree_fingerprint,
     )
     from ops.scripts.public.export_public_repo import (
+        _export_roots,
         _output_lock,
         iter_public_files,
         public_export_session,
@@ -44,7 +50,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         find_public_local_path_leaks,
         is_public_excluded_path,
     )
-    from ops.scripts.public.public_toolchain_runtime import public_toolchain_fingerprint
+    from ops.scripts.public.public_toolchain_runtime import (
+        public_check_environment,
+        public_python_launcher,
+        public_toolchain_fingerprint,
+    )
     from ops.scripts.public.source_history_scan_runtime import (
         scan_source_history,
         source_history_state_fingerprint,
@@ -61,7 +71,11 @@ else:
         SchemaBackedReportWriteRequest,
         write_schema_backed_report,
     )
-    from ops.scripts.core.command_runtime import TimedProcessResult, run_with_timeout
+    from ops.scripts.core.command_runtime import (
+        ProcessCleanupError,
+        TimedProcessResult,
+        run_with_timeout,
+    )
     from ops.scripts.core.output_runtime import display_path, sanitize_report_text
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
@@ -71,6 +85,7 @@ else:
     from ops.scripts.test.test_execution_summary import parse_pytest_counts
 
     from .export_public_repo import (
+        _export_roots,
         _output_lock,
         iter_public_files,
         public_export_session,
@@ -80,7 +95,11 @@ else:
         find_public_local_path_leaks,
         is_public_excluded_path,
     )
-    from .public_toolchain_runtime import public_toolchain_fingerprint
+    from .public_toolchain_runtime import (
+        public_check_environment,
+        public_python_launcher,
+        public_toolchain_fingerprint,
+    )
     from .source_history_scan_runtime import (
         scan_source_history,
         source_history_state_fingerprint,
@@ -308,14 +327,15 @@ def _public_export_source_inputs(vault: Path) -> str:
 def _public_pytest_summary_cache_path(
     vault: Path, request: PublicCheckRequest, *, toolchain: str | None = None,
 ) -> Path:
+    if toolchain is None:
+        with _toolchain_workspace(vault, request) as output:
+            toolchain = _export_toolchain_fingerprint(vault, request, output)
     key = _canonical_sha256({
         "source": str(vault.resolve()),
         "tree": release_source_tree_fingerprint(vault),
         PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY: _public_export_source_inputs(vault),
         "config": _public_check_config_payload(vault, request),
-        PUBLIC_TOOLCHAIN_FINGERPRINT_KEY: toolchain or public_toolchain_fingerprint(
-            _resolve_public_python(vault, request.public_python)
-        ),
+        PUBLIC_TOOLCHAIN_FINGERPRINT_KEY: toolchain,
     })
     return (
         Path(tempfile.gettempdir())
@@ -560,15 +580,12 @@ def _default_command_runner(
     public_python: str,
     heartbeat_interval_seconds: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
 ) -> TimedProcessResult:
-    env = dict(os.environ)
-    env["PYTHON"] = public_python
-    env.setdefault("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
     heartbeat_callback = (lambda _event: None) if heartbeat_interval_seconds else None
     return run_with_timeout(
         argv,
         cwd=cwd,
         timeout_seconds=timeout_seconds,
-        env=env,
+        env=public_check_environment(public_python),
         heartbeat_interval_seconds=heartbeat_interval_seconds or None,
         heartbeat_callback=heartbeat_callback,
     )
@@ -707,8 +724,8 @@ def _run_public_check_commands(
     public_out_path: Path,
     command_runner: CommandRunner | None,
     pytest_summary_cache_path: Path,
+    *, public_python: str,
 ) -> tuple[list[dict[str, Any]], bytes | None]:
-    public_python = _resolve_public_python(vault, request.public_python)
     pytest_summary_path = _public_pytest_summary_path(public_out_path)
     runner = command_runner or (
         lambda argv, cwd, timeout_seconds: _default_command_runner(
@@ -972,9 +989,45 @@ def build_report(
     command_runner: CommandRunner | None = None,
 ) -> dict[str, Any]:
     request = request or PublicCheckRequest()
-    with tempfile.TemporaryDirectory(prefix="llm-wiki-public-check-") as temp:
-        output = _resolve_out_dir(vault, request.public_out) if request.public_out else Path(temp) / "export"
+    with _public_check_output(vault, request) as output:
         return _check_export(vault, output, request, context=context, command_runner=command_runner)
+
+
+@contextmanager
+def _public_check_output(vault: Path, request: PublicCheckRequest) -> Iterator[Path]:
+    if request.public_out:
+        yield _resolve_out_dir(vault, request.public_out).resolve()
+    else:
+        with tempfile.TemporaryDirectory(prefix="llm-wiki-public-check-") as temp:
+            yield Path(temp) / "export"
+
+
+@contextmanager
+def _toolchain_workspace(vault: Path, request: PublicCheckRequest) -> Iterator[Path]:
+    """Inspect retained output under its lock; reconstruct only private exports."""
+    with _public_check_output(vault, request) as output:
+        if request.public_out:
+            _export_roots(vault, output)
+            if not output.is_dir():
+                raise ValueError("retained public export is unavailable")
+            with _output_lock(output):
+                yield output
+        else:
+            with public_export_session(vault, output) as manifest:
+                snapshot = _canonical_sha256(_export_file_records(output, manifest))
+                yield output
+                if (
+                    not _export_inventory_is_current(output, manifest)
+                    or snapshot != _canonical_sha256(_export_file_records(output, manifest))
+                ):
+                    raise ValueError("public export changed during toolchain probe")
+
+
+def _export_toolchain_fingerprint(vault: Path, request: PublicCheckRequest, output: Path) -> str:
+    return public_toolchain_fingerprint(
+        _resolve_public_python(vault, request.public_python),
+        cwd=output, private_workspace=not request.public_out,
+    )
 
 
 def _check_export(
@@ -983,19 +1036,20 @@ def _check_export(
 ) -> dict[str, Any]:
     source_identity = release_source_tree_fingerprint(vault)
     public_source_inputs = _public_export_source_inputs(vault)
-    public_python = _resolve_public_python(vault, request.public_python)
-    toolchain = public_toolchain_fingerprint(public_python)
-    pytest_summary_cache_path = _public_pytest_summary_cache_path(vault, request, toolchain=toolchain)
     policy, resolved_policy_path = load_policy(vault, None)
     runtime_context = context or RuntimeContext.from_policy(policy)
     with public_export_session(vault, output) as manifest:
         export = _collect_public_export_snapshot(vault, output, manifest)
+        public_python = public_python_launcher(_resolve_public_python(vault, request.public_python), cwd=output)
+        toolchain = _export_toolchain_fingerprint(vault, request, output)
+        pytest_summary_cache_path = _public_pytest_summary_cache_path(vault, request, toolchain=toolchain)
         source_history = scan_source_history(vault, requested=request.source_history_scan)
         commands, pytest_summary = _run_public_check_commands(
             vault, request, output, command_runner, pytest_summary_cache_path,
+            public_python=public_python,
         )
         if (
-            toolchain != public_toolchain_fingerprint(public_python)
+            toolchain != _export_toolchain_fingerprint(vault, request, output)
             or source_identity != release_source_tree_fingerprint(vault)
             or public_source_inputs != _public_export_source_inputs(vault)
             or not _export_inventory_is_current(output, manifest)
@@ -1028,22 +1082,20 @@ def write_report(
     )
 
 
-def _retained_export_is_current(vault: Path, request: PublicCheckRequest, payload: dict[str, Any]) -> bool:
-    output = _resolve_out_dir(vault, request.public_out).resolve()
-    source = vault.resolve()
+def _retained_export_is_current(output: Path, payload: dict[str, Any]) -> bool:
+    """Caller holds the export lock for this check and the live toolchain probe."""
     metadata = payload.get("public_export", {})
-    if not output.is_dir() or output.is_relative_to(source) or source.is_relative_to(output) or not isinstance(metadata, dict):
+    if not isinstance(metadata, dict):
         return False
     try:
-        with _output_lock(output):
-            manifest_path = output / "PUBLIC-EXPORT-MANIFEST.json"
-            if _sha256_file(manifest_path) != metadata.get("manifest_sha256"):
-                return False
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            return (
-                _export_inventory_is_current(output, manifest)
-                and _canonical_sha256(_export_file_records(output, manifest)) == metadata.get("export_root_fingerprint")
-            )
+        manifest_path = output / "PUBLIC-EXPORT-MANIFEST.json"
+        if _sha256_file(manifest_path) != metadata.get("manifest_sha256"):
+            return False
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return (
+            _export_inventory_is_current(output, manifest)
+            and _canonical_sha256(_export_file_records(output, manifest)) == metadata.get("export_root_fingerprint")
+        )
     except (OSError, ValueError, RuntimeError, KeyError, TypeError):
         return False
 
@@ -1093,18 +1145,32 @@ def reusable_summary_diagnostics(
         "local_corpus_policy": local_corpus_policy_is_current(vault, payload),
     }
     try:
-        toolchain = public_toolchain_fingerprint(
-            _resolve_public_python(vault, (request or PublicCheckRequest()).public_python)
+        effective_request = request or PublicCheckRequest()
+        if effective_request.public_out:
+            checks["retained_export"] = False
+        with _toolchain_workspace(vault, effective_request) as output:
+            if effective_request.public_out:
+                checks["retained_export"] = _retained_export_is_current(output, payload)
+            checks[PUBLIC_TOOLCHAIN_FINGERPRINT_KEY] = False
+            if checks.get("retained_export", True):
+                toolchain = _export_toolchain_fingerprint(vault, effective_request, output)
+                checks[PUBLIC_TOOLCHAIN_FINGERPRINT_KEY] = input_fingerprints.get(
+                    PUBLIC_TOOLCHAIN_FINGERPRINT_KEY
+                ) == hashlib.sha256(toolchain.encode()).hexdigest()
+                if effective_request.public_out:
+                    checks["retained_export"] = _retained_export_is_current(output, payload)
+        checks["source_tree_fingerprint"] = checks["source_tree_fingerprint"] and (
+            current_source_tree_fingerprint == release_source_tree_fingerprint(vault)
         )
-        checks[PUBLIC_TOOLCHAIN_FINGERPRINT_KEY] = input_fingerprints.get(
-            PUBLIC_TOOLCHAIN_FINGERPRINT_KEY
-        ) == hashlib.sha256(toolchain.encode()).hexdigest()
-    except ValueError as exc:
+        checks[PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY] = checks[PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY] and (
+            current_public_source_fingerprint == hashlib.sha256(_public_export_source_inputs(vault).encode("utf-8")).hexdigest()
+        )
+    except ProcessCleanupError:
+        raise
+    except (OSError, ValueError, RuntimeError) as exc:
         checks[PUBLIC_TOOLCHAIN_FINGERPRINT_KEY] = False
-        diagnostics["toolchain_error"] = str(exc)
+        diagnostics["toolchain_error"] = sanitize_report_text(vault, str(exc))
     if request is not None:
-        if request.public_out:
-            checks["retained_export"] = _retained_export_is_current(vault, request, payload)
         expected_source_command = _public_check_source_command(request)
         observed_source_command = str(payload.get("source_command", ""))
         checks["source_command"] = observed_source_command == expected_source_command
