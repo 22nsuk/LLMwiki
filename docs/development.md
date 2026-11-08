@@ -368,6 +368,19 @@ Reuse checks inspect retained exports without rewriting them, under the same
 output lock; private exports are reconstructed from current public sources and
 removed afterward. This adds one public export copy to private-summary reuse and
 standalone cache-key inspection, so the probe can see exported modules and metadata.
+When `--reuse-if-current` needs fresh validation after an environment or history
+mismatch, the CLI keeps that private export and its lock for the validation commands.
+It rechecks source and export contents before handoff and retains both validation
+probes and the final drift checks. Failed probes or changed inputs discard the
+prepared export; refresh then creates a fresh one. All invocation workspaces close
+before a report is written or a successful reuse is announced.
+`make public-check-summary-current-or-refresh` uses this single invocation with
+`--promote-to`: only a newly executed, passing candidate is promoted through the
+canonical artifact writer. A reuse hit leaves both candidate and canonical files
+untouched; failed execution never promotes a candidate. The candidate `--out`
+and `--promote-to` destination must be distinct repository paths. Explicit `PUBLIC_OUT`
+continues to inspect retained output without rewriting it on reuse and rebuilds
+it under its lock when validation is required.
 Reuse diagnostics reject incompatible report metadata, missing required identities,
 request configuration, or local policy before scanning source contents. Source
 changes then reject reuse before export reconstruction, toolchain probing, and

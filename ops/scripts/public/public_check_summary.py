@@ -11,7 +11,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Callable, Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import ExitStack, closing, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -26,6 +26,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
+        promote_schema_validated_json,
         write_schema_backed_report,
     )
     from ops.scripts.core.command_runtime import (
@@ -33,7 +34,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         TimedProcessResult,
         run_with_timeout,
     )
-    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.output_runtime import (
+        display_path,
+        resolve_repo_output_path,
+        sanitize_report_text,
+    )
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.core.source_tree_fingerprint_runtime import (
@@ -69,6 +74,7 @@ else:
     )
     from ops.scripts.core.artifact_io_runtime import (
         SchemaBackedReportWriteRequest,
+        promote_schema_validated_json,
         write_schema_backed_report,
     )
     from ops.scripts.core.command_runtime import (
@@ -76,7 +82,11 @@ else:
         TimedProcessResult,
         run_with_timeout,
     )
-    from ops.scripts.core.output_runtime import display_path, sanitize_report_text
+    from ops.scripts.core.output_runtime import (
+        display_path,
+        resolve_repo_output_path,
+        sanitize_report_text,
+    )
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.core.source_tree_fingerprint_runtime import (
@@ -1041,38 +1051,50 @@ def _check_export(
 ) -> dict[str, Any]:
     source_identity = release_source_tree_fingerprint(vault)
     public_source_inputs = _public_export_source_inputs(vault)
+    with public_export_session(vault, output) as manifest:
+        return _validate_export(
+            vault, output, request, manifest, source_identity, public_source_inputs,
+            context=context, command_runner=command_runner,
+        )
+
+
+def _validate_export(
+    vault: Path, output: Path, request: PublicCheckRequest, manifest: dict[str, Any],
+    source_identity: str, public_source_inputs: str, *,
+    context: RuntimeContext | None, command_runner: CommandRunner | None,
+) -> dict[str, Any]:
+    """Validate an export while its caller owns the output lock and lifetime."""
     policy, resolved_policy_path = load_policy(vault, None)
     runtime_context = context or RuntimeContext.from_policy(policy)
-    with public_export_session(vault, output) as manifest:
-        export = _collect_public_export_snapshot(vault, output, manifest)
-        public_python = public_python_launcher(_resolve_public_python(vault, request.public_python), cwd=output)
-        toolchain = _export_toolchain_fingerprint(vault, request, output)
-        pytest_summary_cache_path = _public_pytest_summary_cache_path(
-            vault, request, toolchain=toolchain,
-            source_identity=source_identity, public_source_inputs=public_source_inputs,
-        )
-        source_history = scan_source_history(vault, requested=request.source_history_scan)
-        commands, pytest_summary = _run_public_check_commands(
-            vault, request, output, command_runner, pytest_summary_cache_path,
-            public_python=public_python,
-        )
-        if (
-            toolchain != _export_toolchain_fingerprint(vault, request, output)
-            or source_identity != release_source_tree_fingerprint(vault)
-            or public_source_inputs != _public_export_source_inputs(vault)
-            or not _export_inventory_is_current(output, manifest)
-            or export.export_root_fingerprint != _canonical_sha256(_export_file_records(output, manifest))
-            or source_history["history_state_fingerprint"] != source_history_state_fingerprint(vault, requested=request.source_history_scan)
-        ):
-            raise ValueError("public check source, toolchain or exported inputs changed during validation")
-        report = _render_public_check_report(
-            vault, policy, resolved_policy_path, runtime_context,
-            export, source_history, commands, request, public_source_inputs, toolchain,
-        )
-        _persist_public_pytest_summary(pytest_summary, pytest_summary_cache_path)
-        if not request.public_out:
-            report["public_export"]["output_dir"] = "<tmp>/invocation-private/export"
-        return report
+    export = _collect_public_export_snapshot(vault, output, manifest)
+    public_python = public_python_launcher(_resolve_public_python(vault, request.public_python), cwd=output)
+    toolchain = _export_toolchain_fingerprint(vault, request, output)
+    pytest_summary_cache_path = _public_pytest_summary_cache_path(
+        vault, request, toolchain=toolchain,
+        source_identity=source_identity, public_source_inputs=public_source_inputs,
+    )
+    source_history = scan_source_history(vault, requested=request.source_history_scan)
+    commands, pytest_summary = _run_public_check_commands(
+        vault, request, output, command_runner, pytest_summary_cache_path,
+        public_python=public_python,
+    )
+    if (
+        toolchain != _export_toolchain_fingerprint(vault, request, output)
+        or source_identity != release_source_tree_fingerprint(vault)
+        or public_source_inputs != _public_export_source_inputs(vault)
+        or not _export_inventory_is_current(output, manifest)
+        or export.export_root_fingerprint != _canonical_sha256(_export_file_records(output, manifest))
+        or source_history["history_state_fingerprint"] != source_history_state_fingerprint(vault, requested=request.source_history_scan)
+    ):
+        raise ValueError("public check source, toolchain or exported inputs changed during validation")
+    report = _render_public_check_report(
+        vault, policy, resolved_policy_path, runtime_context,
+        export, source_history, commands, request, public_source_inputs, toolchain,
+    )
+    _persist_public_pytest_summary(pytest_summary, pytest_summary_cache_path)
+    if not request.public_out:
+        report["public_export"]["output_dir"] = "<tmp>/invocation-private/export"
+    return report
 
 
 def write_report(
@@ -1125,6 +1147,13 @@ def reusable_summary_diagnostics(
     vault: Path,
     path_value: str | Path,
     request: PublicCheckRequest | None = None,
+) -> dict[str, Any]:
+    return _reusable_summary_diagnostics(vault, path_value, request)
+
+
+def _reusable_summary_diagnostics(
+    vault: Path, path_value: str | Path, request: PublicCheckRequest | None,
+    *, session: _PublicCheckSession | None = None,
 ) -> dict[str, Any]:
     path = Path(path_value)
     if not path.is_absolute():
@@ -1182,8 +1211,9 @@ def reusable_summary_diagnostics(
 
     current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     try:
+        current_public_source_inputs = _public_export_source_inputs(vault)
         current_public_source_fingerprint = hashlib.sha256(
-            _public_export_source_inputs(vault).encode("utf-8")
+            current_public_source_inputs.encode("utf-8")
         ).hexdigest()
     except OSError as exc:
         diagnostics["reason"] = f"public_export_source_unavailable:{type(exc).__name__}"
@@ -1200,7 +1230,12 @@ def reusable_summary_diagnostics(
         effective_request = request or PublicCheckRequest()
         if effective_request.public_out:
             checks["retained_export"] = False
-        with _toolchain_workspace(vault, effective_request) as output:
+        workspace = (
+            session.probe_workspace(current_source_tree_fingerprint, current_public_source_inputs)
+            if session is not None and not effective_request.public_out
+            else _toolchain_workspace(vault, effective_request)
+        )
+        with workspace as output:
             if effective_request.public_out:
                 checks["retained_export"] = _retained_export_is_current(output, payload)
             checks[PUBLIC_TOOLCHAIN_FINGERPRINT_KEY] = False
@@ -1262,6 +1297,71 @@ def reusable_summary_diagnostics(
     return diagnostics
 
 
+@dataclass(frozen=True)
+class _PreparedPublicExport:
+    output: Path
+    manifest: dict[str, Any]
+    fingerprint: str
+    source_identity: str
+    public_source_inputs: str
+
+    def is_current(self) -> bool:
+        return (
+            _export_inventory_is_current(self.output, self.manifest)
+            and self.fingerprint == _canonical_sha256(_export_file_records(self.output, self.manifest))
+        )
+
+
+class _PublicCheckSession:
+    """Keep one private export locked between reuse diagnosis and validation."""
+
+    def __init__(self, vault: Path, request: PublicCheckRequest) -> None:
+        self.vault = vault
+        self.request = request
+        self.stack = ExitStack()
+        self.prepared: _PreparedPublicExport | None = None
+
+    def close(self) -> None:
+        self.prepared = None
+        self.stack.close()
+
+    @contextmanager
+    def probe_workspace(self, source_identity: str, public_source_inputs: str) -> Iterator[Path]:
+        valid = False
+        try:
+            output = self.stack.enter_context(_public_check_output(self.vault, self.request))
+            manifest = self.stack.enter_context(public_export_session(self.vault, output))
+            self.prepared = _PreparedPublicExport(
+                output, manifest, _canonical_sha256(_export_file_records(output, manifest)),
+                source_identity, public_source_inputs,
+            )
+            yield output
+            if not self.prepared.is_current():
+                raise ValueError("public export changed during toolchain probe")
+            valid = True
+        finally:
+            if not valid:
+                self.prepared = None
+            # The invocation closes even rejected workspaces outside the diagnostic
+            # exception handler, so cleanup errors cannot become ordinary misses.
+
+    def build_report(self) -> dict[str, Any]:
+        prepared = self.prepared
+        if (
+            prepared is not None
+            and prepared.source_identity == release_source_tree_fingerprint(self.vault)
+            and prepared.public_source_inputs == _public_export_source_inputs(self.vault)
+            and prepared.is_current()
+        ):
+            return _validate_export(
+                self.vault, prepared.output, self.request, prepared.manifest,
+                prepared.source_identity, prepared.public_source_inputs,
+                context=None, command_runner=None,
+            )
+        self.close()
+        return build_report(self.vault, self.request)
+
+
 def _public_check_cli_failure_summary(
     vault: Path,
     report: dict[str, Any],
@@ -1310,6 +1410,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--reuse-if-current", action="store_true")
     parser.add_argument("--reuse-from")
     parser.add_argument(
+        "--promote-to", help="Promote the candidate only after fresh validation passes; reuse leaves it untouched.",
+    )
+    parser.add_argument(
         "--reuse-only",
         action="store_true",
         help="With --reuse-if-current, fail instead of rerunning when the public-check summary is stale.",
@@ -1327,6 +1430,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.reuse_only:
         args.reuse_if_current = True
     vault = Path(args.vault).resolve()
+    promotion_path = resolve_repo_output_path(vault, args.promote_to) if args.promote_to else None
+    if promotion_path is not None and promotion_path == resolve_repo_output_path(vault, args.out):
+        raise ValueError("public check candidate and promotion destination must differ")
     request = PublicCheckRequest(
         mode=args.mode,
         public_out=args.public_out,
@@ -1339,33 +1445,31 @@ def main(argv: list[str] | None = None) -> int:
         heartbeat_interval_seconds=args.heartbeat_interval_seconds,
         source_history_scan=not args.skip_source_history_scan,
     )
-    if args.reuse_if_current:
-        diagnostics = reusable_summary_diagnostics(
-            vault, args.reuse_from or args.out, request
-        )
-        if diagnostics["reusable"]:
-            print(
-                json.dumps(
-                    {"summary_mode": "reused", **diagnostics},
-                    ensure_ascii=False,
-                    indent=2,
-                )
+    diagnostics: dict[str, Any] = {}
+    with closing(_PublicCheckSession(vault, request)) as session:
+        if args.reuse_if_current:
+            diagnostics = _reusable_summary_diagnostics(
+                vault, args.reuse_from or args.out, request, session=session
             )
-            return 0
-        print(
-            json.dumps(
-                {"summary_mode": "executed", "reuse_diagnostics": diagnostics},
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
-        if args.reuse_only:
-            return 1
-    report = build_report(
-        vault,
-        request,
-    )
+            if not diagnostics["reusable"]:
+                print(json.dumps(
+                    {"summary_mode": "executed", "reuse_diagnostics": diagnostics},
+                    ensure_ascii=False, indent=2,
+                ))
+                if args.reuse_only:
+                    return 1
+        report = None if diagnostics.get("reusable") else session.build_report()
+    if report is None:
+        print(json.dumps({"summary_mode": "reused", **diagnostics}, ensure_ascii=False, indent=2))
+        return 0
     destination = write_report(vault, report, args.out)
+    if report["status"] == "pass" and promotion_path is not None:
+        destination = promote_schema_validated_json(
+            vault, candidate_path=destination,
+            destination_path=promotion_path,
+            schema_path=SCHEMA_PATH, expected_artifact_kind="public_check_summary",
+            expected_producer=PRODUCER, context="public check summary promotion failed",
+        )
     print(display_path(vault, destination))
     if report["status"] != "pass":
         print(

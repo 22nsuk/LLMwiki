@@ -13,7 +13,7 @@ import threading
 import unittest
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import ExitStack, redirect_stdout
+from contextlib import ExitStack, contextmanager, redirect_stdout
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -128,6 +128,313 @@ def fake_runner(
         timeout_seconds=timeout_seconds,
         termination_reason="completed",
     )
+
+
+@pytest.mark.parametrize("mode", ["default", "full"])
+def test_cli_refresh_reuses_private_export_after_toolchain_miss(
+    tmp_path: Path, monkeypatch, mode: str,
+) -> None:
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    monkeypatch.setenv("PYTHONPATH", ".:tools")
+    monkeypatch.setenv("PYTHONSAFEPATH", "1")
+    request = PublicCheckRequest(mode=mode, source_history_scan=False)
+    report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(tmp_path, report)
+    before = destination.read_bytes(), destination.stat().st_mtime_ns
+    monkeypatch.setenv("PYTEST_ADDOPTS", "-q")
+    exports: list[Path] = []
+
+    @contextmanager
+    def observed_export(vault, output):
+        exports.append(output)
+        with public_export_session(vault, output) as manifest:
+            yield manifest
+
+    with (
+        patch.object(public_check_summary_module, "public_export_session", observed_export),
+        patch.object(public_check_summary_module, "_default_command_runner", side_effect=lambda argv, cwd, timeout_seconds, **kwargs: fake_runner(argv, cwd, timeout_seconds)),
+        redirect_stdout(io.StringIO()),
+    ):
+        assert public_check_summary_module.main([
+            "--vault", str(tmp_path), "--mode", mode, "--out", "tmp/candidate.json",
+            "--reuse-from", str(destination), "--reuse-if-current", "--skip-source-history-scan",
+        ]) == 0
+    assert len(exports) == 1
+    assert not exports[0].exists()
+    assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+    assert reusable_summary_diagnostics(tmp_path, "tmp/candidate.json", request)["reusable"]
+
+
+@pytest.mark.parametrize("retained", [False, True])
+@pytest.mark.parametrize("outcome", ["hit", "source_miss", "history_miss", "reuse_only", "pass", "fail"])
+def test_cli_session_preserves_publication_and_locking(
+    tmp_path: Path, monkeypatch, retained: bool, outcome: str,
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(tmp_path / "public") if retained else "", source_history_scan=False)
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    if outcome == "source_miss":
+        report["source_tree_fingerprint"] = "0" * 64
+    elif outcome == "history_miss":
+        report["input_fingerprints"]["source_history_state"] = "0" * 64
+    destination = write_report(vault, report)
+    before = destination.read_bytes(), destination.stat().st_mtime_ns
+    candidate = vault / "tmp/candidate.json"
+    candidate.parent.mkdir(exist_ok=True)
+    candidate.write_text("stale candidate must never be promoted on a hit\n")
+    candidate_before = candidate.read_bytes(), candidate.stat().st_mtime_ns
+    if outcome in {"pass", "fail", "reuse_only"}:
+        monkeypatch.setenv("PYTEST_ADDOPTS", "-q")
+    commands: list[Path] = []
+    exports: list[Path] = []
+
+    @contextmanager
+    def observed_export(source, output):
+        exports.append(output)
+        with public_export_session(source, output) as manifest:
+            yield manifest
+
+    def runner(argv, cwd, timeout_seconds, **kwargs):
+        commands.append(cwd)
+        # The reused private export remains owned by the invocation throughout validation.
+        with pytest.raises(RuntimeError, match="output lock"), public_export_session(vault, cwd):
+            pytest.fail("validation lost its output lock")
+        result = fake_runner(argv, cwd, timeout_seconds)
+        return replace(result, returncode=1) if outcome == "fail" else result
+
+    with (
+        patch.object(public_check_summary_module, "public_export_session", observed_export),
+        patch.object(public_check_summary_module, "_default_command_runner", side_effect=runner),
+        redirect_stdout(io.StringIO()),
+    ):
+        result = public_check_summary_module.main([
+            "--vault", str(vault), "--out", str(candidate), "--promote-to", str(destination),
+            "--reuse-from", str(destination), "--public-out", request.public_out,
+            "--reuse-if-current", "--skip-source-history-scan",
+            *(["--reuse-only"] if outcome == "reuse_only" else []),
+        ])
+    assert result == (1 if outcome in {"fail", "reuse_only"} else 0)
+    executed = outcome not in {"hit", "reuse_only"}
+    assert bool(commands) == executed
+    assert len(exports) == (0 if retained and not executed else 1)
+    assert all(path.exists() == retained for path in exports)
+    if not executed:
+        assert (candidate.read_bytes(), candidate.stat().st_mtime_ns) == candidate_before
+    if outcome in {"hit", "reuse_only", "fail"}:
+        assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+    else:
+        assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
+    if outcome == "fail":
+        assert json.loads(candidate.read_text())["status"] == "fail"
+
+
+@pytest.mark.parametrize("change", ["source", "export", "probe_error"])
+def test_cli_discards_unsafe_prepared_export(tmp_path: Path, monkeypatch, change: str) -> None:
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    (tmp_path / "README.md").write_text("original source\n")
+    request = PublicCheckRequest(source_history_scan=False)
+    destination = write_report(tmp_path, build_report(
+        tmp_path, request, context=fixed_context(), command_runner=fake_runner,
+    ))
+    original_readme = (tmp_path / "README.md").read_text()
+    probes: list[Path] = []
+    commands: list[Path] = []
+
+    def probe(public_python, *, cwd, private_workspace):
+        probes.append(cwd)
+        if len(probes) == 1:
+            if change == "probe_error":
+                raise OSError("temporary probe failure")
+            target = tmp_path if change == "source" else cwd
+            (target / "README.md").write_text("changed during probe\n")
+        return public_toolchain_fingerprint(public_python, cwd=cwd, private_workspace=private_workspace)
+
+    def runner(argv, cwd, timeout_seconds, **kwargs):
+        commands.append(cwd)
+        expected = "changed during probe\n" if change == "source" else original_readme
+        assert (cwd / "README.md").read_text() == expected
+        return fake_runner(argv, cwd, timeout_seconds)
+
+    with (
+        patch.object(public_check_summary_module, "public_toolchain_fingerprint", side_effect=probe),
+        patch.object(public_check_summary_module, "_default_command_runner", side_effect=runner),
+        redirect_stdout(io.StringIO()),
+    ):
+        assert public_check_summary_module.main([
+            "--vault", str(tmp_path), "--out", "tmp/candidate.json", "--reuse-from", str(destination),
+            "--reuse-if-current", "--skip-source-history-scan",
+        ]) == 0
+    assert len(probes) == 3
+    assert probes[0] != probes[1] == probes[2]
+    assert set(commands) == {probes[1]}
+    assert all(not path.exists() for path in probes)
+    assert reusable_summary_diagnostics(tmp_path, "tmp/candidate.json", request)["reusable"]
+
+
+@pytest.mark.parametrize("failure", ["probe_cleanup", "workspace_hit", "workspace_miss", "workspace_refresh"])
+def test_cli_session_cleanup_failure_prevents_publication(tmp_path: Path, monkeypatch, failure: str) -> None:
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    request = PublicCheckRequest(source_history_scan=False)
+    destination = write_report(tmp_path, build_report(
+        tmp_path, request, context=fixed_context(), command_runner=fake_runner,
+    ))
+    before = destination.read_bytes(), destination.stat().st_mtime_ns
+    candidate = tmp_path / "tmp/candidate.json"
+    outputs: list[Path] = []
+    if failure == "workspace_refresh":
+        monkeypatch.setenv("PYTEST_ADDOPTS", "-q")
+
+    @contextmanager
+    def workspace(vault, requested):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "export"
+            outputs.append(output)
+            yield output
+        if failure.startswith("workspace"):
+            raise OSError("workspace cleanup failed")
+
+    def probe(public_python, *, cwd, private_workspace):
+        if failure == "probe_cleanup":
+            raise ProcessCleanupError("probe cleanup failed")
+        if failure == "workspace_miss":
+            raise ValueError("probe unavailable")
+        return public_toolchain_fingerprint(public_python, cwd=cwd, private_workspace=private_workspace)
+
+    stdout = io.StringIO()
+    with (
+        patch.object(public_check_summary_module, "_public_check_output", workspace),
+        patch.object(public_check_summary_module, "public_toolchain_fingerprint", side_effect=probe),
+        patch.object(public_check_summary_module, "_default_command_runner", side_effect=lambda argv, cwd, timeout_seconds, **kwargs: fake_runner(argv, cwd, timeout_seconds)) as run,
+        redirect_stdout(stdout),
+        pytest.raises(ProcessCleanupError if failure == "probe_cleanup" else OSError, match="cleanup failed"),
+    ):
+        public_check_summary_module.main([
+            "--vault", str(tmp_path), "--out", str(candidate), "--promote-to", str(destination),
+            "--reuse-from", str(destination), "--reuse-if-current", "--skip-source-history-scan",
+        ])
+    assert bool(run.call_count) == (failure == "workspace_refresh")
+    assert not candidate.exists()
+    assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+    assert '"summary_mode": "reused"' not in stdout.getvalue()
+    assert len(outputs) == 1 and not outputs[0].exists()
+
+
+@pytest.mark.parametrize("changed", ["source", "export", "toolchain"])
+def test_reused_session_rejects_drift_during_validation(tmp_path: Path, monkeypatch, changed: str) -> None:
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    request = PublicCheckRequest(source_history_scan=False)
+    destination = write_report(tmp_path, build_report(
+        tmp_path, request, context=fixed_context(), command_runner=fake_runner,
+    ))
+    before = destination.read_bytes(), destination.stat().st_mtime_ns
+    monkeypatch.setenv("PYTEST_ADDOPTS", "-q")
+    cache = _public_pytest_summary_cache_path(tmp_path, request)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_bytes(b"previous cache")
+    outputs: list[Path] = []
+
+    def runner(argv, cwd, timeout_seconds, **kwargs):
+        outputs.append(cwd)
+        if changed == "toolchain":
+            monkeypatch.setenv("PYTEST_ADDOPTS", "-x")
+        else:
+            ((tmp_path if changed == "source" else cwd) / "README.md").write_text("changed\n")
+        return fake_runner(argv, cwd, timeout_seconds)
+
+    with (
+        patch.object(public_check_summary_module, "_default_command_runner", side_effect=runner),
+        redirect_stdout(io.StringIO()),
+        pytest.raises(ValueError, match="changed during validation"),
+    ):
+        public_check_summary_module.main([
+            "--vault", str(tmp_path), "--out", "tmp/candidate.json", "--promote-to", str(destination),
+            "--reuse-from", str(destination), "--reuse-if-current", "--skip-source-history-scan",
+        ])
+    assert outputs and all(not path.exists() for path in outputs)
+    assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+    assert not (tmp_path / "tmp/candidate.json").exists()
+    assert cache.read_bytes() == b"previous cache"
+
+
+def test_make_current_or_refresh_uses_one_cli_and_promotes_only_execution(tmp_path: Path, monkeypatch) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest()
+    destination = write_report(vault, build_report(
+        vault, request, context=fixed_context(), command_runner=fake_runner,
+    ))
+    candidate = vault / "tmp/candidate.json"
+    candidate.parent.mkdir(exist_ok=True)
+    candidate.write_text("stale candidate\n")
+    shim = tmp_path / "invoke.py"
+    invocations = tmp_path / "invocations"
+    shim.write_text(
+        "import sys\nfrom pathlib import Path\nfrom dataclasses import replace\n"
+        f"sys.path.insert(0, {str(REPO_ROOT)!r})\n"
+        "from tests.test_public_check_summary import fake_runner\n"
+        "from ops.scripts.public import public_check_summary as module\n"
+        f"with Path({str(invocations)!r}).open('a') as handle: handle.write('invoke\\n')\n"
+        "def runner(argv, cwd, timeout_seconds, **kwargs):\n"
+        "    result = fake_runner(argv, cwd, timeout_seconds)\n"
+        "    return replace(result, returncode=1) if 'fail-check' in sys.argv else result\n"
+        "module._default_command_runner = runner\n"
+        "args = sys.argv[3:]\n"
+        "raise SystemExit(module.main(args))\n"
+    )
+    makefile = tmp_path / "Makefile"
+    makefile.write_text(
+        f"include {REPO_ROOT / 'mk/public.mk'}\n"
+        "script-output-surfaces-check:\n\t@true\n"
+    )
+    command = [
+        "make", "--no-print-directory", "-f", str(makefile), "public-check-summary-current-or-refresh",
+        f"PYTHON={sys.executable} {shim}", f"VAULT={vault}", f"PUBLIC_PYTHON={sys.executable}",
+        "RUFF_TARGETS=ops/scripts tests tools", "MYPY_TARGETS=ops/scripts", "PYTEST_PUBLIC_MARK_EXPR=public",
+        "PYTEST_FLAGS=", "PUBLIC_OUT=", f"PUBLIC_CHECK_SUMMARY_OUT={destination}",
+        f"PUBLIC_CHECK_SUMMARY_REUSE_FROM={destination}", f"PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT={candidate}",
+    ]
+    for index, outcome in enumerate(("hit", "pass", "fail"), 1):
+        before = destination.read_bytes(), destination.stat().st_mtime_ns
+        if outcome != "hit":
+            monkeypatch.setenv("PYTEST_ADDOPTS", "-q" if outcome == "pass" else "-x")
+        actual = command + (["PYTEST_FLAGS=fail-check"] if outcome == "fail" else [])
+        result = subprocess.run(actual, cwd=REPO_ROOT, capture_output=True, text=True, timeout=30)
+        assert (result.returncode == 0) == (outcome != "fail"), result.stdout + result.stderr
+        assert invocations.read_text().splitlines() == ["invoke"] * index
+        if outcome != "pass":
+            assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+        if outcome == "hit":
+            assert '"summary_mode": "reused"' in result.stdout
+            assert candidate.read_text() == "stale candidate\n"
+        elif outcome == "pass":
+            assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
+        else:
+            assert json.loads(candidate.read_text())["status"] == "fail"
+
+
+def test_cli_promotion_rejects_candidate_alias_before_execution(tmp_path: Path) -> None:
+    canonical = tmp_path / "ops/reports/public-check-summary.json"
+    canonical.parent.mkdir(parents=True)
+    canonical.write_text("existing canonical\n")
+    with (
+        patch.object(public_check_summary_module, "build_report") as run,
+        pytest.raises(ValueError, match="candidate and promotion destination must differ"),
+    ):
+        public_check_summary_module.main([
+            "--vault", str(tmp_path), "--out", "ops/reports/../reports/public-check-summary.json",
+            "--promote-to", str(canonical),
+        ])
+    run.assert_not_called()
+    assert canonical.read_text() == "existing canonical\n"
 
 
 @pytest.mark.parametrize("retained", [False, True])
