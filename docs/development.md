@@ -347,6 +347,9 @@ before publication rejects environment changes during validation. Legacy summari
 without the binding need fresh validation. This
 identity detects environment replacement and metadata changes; it is not an
 integrity scan of every installed package source file.
+Each distribution's name and version share one parsed metadata object within a
+probe. Raw metadata digests and independent validation-tool version/module
+resolution remain unchanged; metadata is read again on every probe.
 Launcher aliases of the same executable and effective environment share a
 toolchain identity; virtualenv prefixes and wrapper executable identities still
 distinguish different environments. Request-less diagnostics probe the current

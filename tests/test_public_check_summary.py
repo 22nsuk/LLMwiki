@@ -360,6 +360,72 @@ def test_public_toolchain_accepts_relative_path_launcher(monkeypatch) -> None:
     assert public_toolchain_fingerprint(executable.name, cwd=executable.parent) == public_toolchain_fingerprint(str(executable), cwd=executable.parent)
 
 
+def test_toolchain_probe_parses_each_distribution_metadata_once(tmp_path: Path, monkeypatch, capsys) -> None:
+    import importlib.metadata
+
+    from ops.scripts.public import public_toolchain_runtime
+
+    # Include duplicate names using both supported metadata layouts. Discovery
+    # and the validation tools' independent version resolution remain native.
+    for suffix, filename, version in (
+        ("dist-info", "METADATA", "1.0"), ("egg-info", "PKG-INFO", "2.0"),
+    ):
+        directory = tmp_path / f"probe_copy-{version}.{suffix}"
+        directory.mkdir()
+        (directory / filename).write_text(f"Name: Probe_Copy\nVersion: {version}\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["probe", "retained"])
+    native_distributions = importlib.metadata.distributions
+    native_metadata = importlib.metadata.Distribution.metadata.fget
+    enumerated: list[Any] = []
+    reads: dict[int, int] = {}
+
+    def distributions(**kwargs):
+        enumerated.extend(native_distributions(**kwargs))
+        return iter(enumerated)
+
+    def metadata(distribution):
+        identity = id(distribution)
+        reads[identity] = reads.get(identity, 0) + 1
+        return native_metadata(distribution)
+
+    monkeypatch.setattr(importlib.metadata, "distributions", distributions)
+    monkeypatch.setattr(importlib.metadata.Distribution, "metadata", property(metadata))
+    namespace: dict[str, Any] = {}
+    exec(compile(public_toolchain_runtime._PROBE, "<public toolchain probe>", "exec"), namespace)
+    assert enumerated
+    assert [reads[id(distribution)] for distribution in enumerated] == [1] * len(enumerated)
+    packages = [item for item in namespace["payload"]["packages"] if item[0] == "Probe_Copy"]
+    assert [item[1] for item in packages] == ["1.0", "2.0"]
+    for name in ("pytest", "ruff", "mypy"):
+        assert namespace["payload"]["tools"][name][0] == importlib.metadata.version(name)
+    assert capsys.readouterr().out.strip() == hashlib.sha256(
+        json.dumps(namespace["payload"], sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+@pytest.mark.parametrize("metadata_file", ["METADATA", "PKG-INFO", "RECORD", "direct_url.json"])
+def test_toolchain_metadata_content_changes_invalidate_fingerprint(tmp_path: Path, monkeypatch, metadata_file: str) -> None:
+    suffix = "egg-info" if metadata_file == "PKG-INFO" else "dist-info"
+    directory = tmp_path / f"probe_copy-1.0.{suffix}"
+    directory.mkdir()
+    package_metadata = directory / ("PKG-INFO" if suffix == "egg-info" else "METADATA")
+    package_metadata.write_text("Name: probe-copy\nVersion: 1.0\nSummary: original\n")
+    monkeypatch.setenv("PYTHONPATH", str(tmp_path))
+    before = public_toolchain_fingerprint(sys.executable, cwd=tmp_path)
+    if metadata_file == "METADATA":
+        # Raw metadata bytes still matter even when Name and Version are unchanged.
+        package_metadata.write_text("Name: probe-copy\nVersion: 1.0\nSummary: changed\n")
+    elif metadata_file == "PKG-INFO":
+        package_metadata.write_text("Name: probe-copy\nVersion: 2.0\nSummary: original\n")
+    elif metadata_file == "RECORD":
+        (directory / metadata_file).write_text("module.py,sha256=changed,42\n")
+    else:
+        (directory / metadata_file).write_text('{"url":"https://example.invalid/changed.whl"}\n')
+    assert public_toolchain_fingerprint(sys.executable, cwd=tmp_path) != before
+
+
 def test_public_toolchain_distinguishes_virtualenvs(tmp_path: Path) -> None:
     import sysconfig
 

@@ -33,8 +33,9 @@ def path_identity(value):
 
 packages = []
 for distribution in importlib.metadata.distributions():
+    metadata = distribution.metadata
     packages.append((
-        distribution.metadata['Name'], distribution.version,
+        metadata['Name'], metadata['Version'],
         path_identity(distribution.locate_file('')),
         tuple(digest(distribution.read_text(name) or '') for name in
               ('METADATA', 'RECORD', 'direct_url.json')),
