@@ -329,6 +329,10 @@ release tree fingerprint deliberately excludes. Changes during validation reject
 the result; changes before reuse invalidate both the summary and its pytest cache
 key. The pytest cache is published only after the final input checks, so rejected
 executions preserve any previous cache. Byte-identical regeneration preserves reuse.
+During validation, pytest cache-key construction uses the release-tree and public
+source identities already captured for that invocation. Independent cache-key
+inspection still reads current sources. Both identities are recomputed after the
+commands before publication; the cache-key format and drift checks are unchanged.
 Older summaries without this
 identity require a fresh public check; the shared release fingerprint retains its
 existing meaning.

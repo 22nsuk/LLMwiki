@@ -326,14 +326,19 @@ def _public_export_source_inputs(vault: Path) -> str:
 
 def _public_pytest_summary_cache_path(
     vault: Path, request: PublicCheckRequest, *, toolchain: str | None = None,
+    source_identity: str | None = None, public_source_inputs: str | None = None,
 ) -> Path:
     if toolchain is None:
         with _toolchain_workspace(vault, request) as output:
             toolchain = _export_toolchain_fingerprint(vault, request, output)
+    if source_identity is None:
+        source_identity = release_source_tree_fingerprint(vault)
+    if public_source_inputs is None:
+        public_source_inputs = _public_export_source_inputs(vault)
     key = _canonical_sha256({
         "source": str(vault.resolve()),
-        "tree": release_source_tree_fingerprint(vault),
-        PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY: _public_export_source_inputs(vault),
+        "tree": source_identity,
+        PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY: public_source_inputs,
         "config": _public_check_config_payload(vault, request),
         PUBLIC_TOOLCHAIN_FINGERPRINT_KEY: toolchain,
     })
@@ -1042,7 +1047,10 @@ def _check_export(
         export = _collect_public_export_snapshot(vault, output, manifest)
         public_python = public_python_launcher(_resolve_public_python(vault, request.public_python), cwd=output)
         toolchain = _export_toolchain_fingerprint(vault, request, output)
-        pytest_summary_cache_path = _public_pytest_summary_cache_path(vault, request, toolchain=toolchain)
+        pytest_summary_cache_path = _public_pytest_summary_cache_path(
+            vault, request, toolchain=toolchain,
+            source_identity=source_identity, public_source_inputs=public_source_inputs,
+        )
         source_history = scan_source_history(vault, requested=request.source_history_scan)
         commands, pytest_summary = _run_public_check_commands(
             vault, request, output, command_runner, pytest_summary_cache_path,

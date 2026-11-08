@@ -648,6 +648,42 @@ def test_default_public_checks_have_independent_workspaces_and_caches(tmp_path: 
     assert reports[0]["public_export"]["output_dir"] == "<tmp>/invocation-private/export"
 
 
+@pytest.mark.parametrize("mode", ["default", "full"])
+@pytest.mark.parametrize("retained", [False, True])
+def test_public_check_reuses_initial_source_identities_for_cache_key(
+    tmp_path: Path, mode: str, retained: bool,
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(
+        mode=mode, public_out=str(tmp_path / "public") if retained else "", source_history_scan=False,
+    )
+    with (
+        patch.object(public_check_summary_module, "release_source_tree_fingerprint", wraps=public_check_summary_module.release_source_tree_fingerprint) as tree,
+        patch.object(public_check_summary_module, "_public_export_source_inputs", wraps=public_check_summary_module._public_export_source_inputs) as public_inputs,
+        patch.object(public_check_summary_module, "_persist_public_pytest_summary", wraps=public_check_summary_module._persist_public_pytest_summary) as persist,
+    ):
+        def runner(argv: Sequence[str], cwd: Path, timeout: int) -> TimedProcessResult:
+            # Cache-key construction must not repeat either pre-command source scan.
+            assert tree.call_count == 1
+            assert public_inputs.call_count == 1
+            return fake_runner(argv, cwd, timeout)
+
+        report = build_report(vault, request, context=fixed_context(), command_runner=runner)
+        # The independent post-command drift checks must still read current sources.
+        assert tree.call_count == 2
+        assert public_inputs.call_count == 2
+        persist.assert_called_once()
+        written_cache = persist.call_args.args[1]
+
+    assert report["status"] == "pass"
+    # Independent inspection still computes current identities and finds the same cache.
+    assert written_cache == _public_pytest_summary_cache_path(vault, request)
+    assert json.loads(written_cache.read_text())["counts"]["passed"] == 217
+
+
 @pytest.mark.parametrize("changed", ["source", "export"])
 @pytest.mark.parametrize("relative", ["README.md", "ops/script-output-surfaces.json"])
 @pytest.mark.parametrize("existing_cache", [False, True])
@@ -666,15 +702,14 @@ def test_public_check_rejects_input_changes_during_validation(
             (target / relative).write_text("changed after snapshot\n", encoding="utf-8")
         return fake_runner(argv, cwd, timeout)
 
-    cache = tmp_path / "pytest-summary-cache.json"
+    request = PublicCheckRequest(source_history_scan=False)
+    cache = _public_pytest_summary_cache_path(vault, request)
     if existing_cache:
+        cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text('{"prior": "cache"}\n', encoding="utf-8")
     original = cache.read_bytes() if existing_cache else None
-    with (
-        patch.object(public_check_summary_module, "_public_pytest_summary_cache_path", return_value=cache),
-        pytest.raises(ValueError, match="inputs changed"),
-    ):
-        build_report(vault, context=fixed_context(), command_runner=runner)
+    with pytest.raises(ValueError, match="inputs changed"):
+        build_report(vault, request, context=fixed_context(), command_runner=runner)
     assert (cache.read_bytes() if cache.exists() else None) == original
 
 
