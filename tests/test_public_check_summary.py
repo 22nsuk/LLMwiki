@@ -167,7 +167,7 @@ def test_cli_refresh_reuses_private_export_after_toolchain_miss(
 
 
 @pytest.mark.parametrize("retained", [False, True])
-@pytest.mark.parametrize("outcome", ["hit", "source_miss", "history_miss", "reuse_only", "pass", "fail"])
+@pytest.mark.parametrize("outcome", ["hit", "source_miss", "history_miss", "array", "null", "reuse_only", "pass", "fail"])
 def test_cli_session_preserves_publication_and_locking(
     tmp_path: Path, monkeypatch, retained: bool, outcome: str,
 ) -> None:
@@ -182,6 +182,8 @@ def test_cli_session_preserves_publication_and_locking(
     elif outcome == "history_miss":
         report["input_fingerprints"]["source_history_state"] = "0" * 64
     destination = write_report(vault, report)
+    if outcome in {"array", "null"}:
+        destination.write_text("[]" if outcome == "array" else "null", encoding="utf-8")
     before = destination.read_bytes(), destination.stat().st_mtime_ns
     candidate = vault / "tmp/candidate.json"
     candidate.parent.mkdir(exist_ok=True)
@@ -402,20 +404,24 @@ def test_make_current_or_refresh_uses_one_cli_and_promotes_only_execution(tmp_pa
         "PYTEST_FLAGS=", "PUBLIC_OUT=", f"PUBLIC_CHECK_SUMMARY_OUT={destination}",
         f"PUBLIC_CHECK_SUMMARY_REUSE_FROM={destination}", f"PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT={candidate}",
     ]
-    for index, outcome in enumerate(("hit", "pass", "fail"), 1):
+    for index, outcome in enumerate(("hit", "array", "null", "pass", "fail"), 1):
+        if outcome in {"array", "null"}:
+            destination.write_text("[]" if outcome == "array" else "null", encoding="utf-8")
         before = destination.read_bytes(), destination.stat().st_mtime_ns
-        if outcome != "hit":
+        if outcome in {"pass", "fail"}:
             monkeypatch.setenv("PYTEST_ADDOPTS", "-q" if outcome == "pass" else "-x")
         actual = command + (["PYTEST_FLAGS=fail-check"] if outcome == "fail" else [])
         result = subprocess.run(actual, cwd=REPO_ROOT, capture_output=True, text=True, timeout=30)
         assert (result.returncode == 0) == (outcome != "fail"), result.stdout + result.stderr
         assert invocations.read_text().splitlines() == ["invoke"] * index
-        if outcome != "pass":
+        if outcome in {"hit", "fail"}:
             assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
         if outcome == "hit":
             assert '"summary_mode": "reused"' in result.stdout
             assert candidate.read_text() == "stale candidate\n"
-        elif outcome == "pass":
+        elif outcome != "fail":
+            assert '"summary_mode": "executed"' in result.stdout
+            assert candidate.read_bytes() == destination.read_bytes()
             assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
         else:
             assert json.loads(candidate.read_text())["status"] == "fail"

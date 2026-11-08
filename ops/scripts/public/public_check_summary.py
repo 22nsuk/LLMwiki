@@ -1168,6 +1168,9 @@ def _reusable_summary_diagnostics(
     except (OSError, json.JSONDecodeError) as exc:
         diagnostics["reason"] = f"summary_unavailable:{type(exc).__name__}"
         return diagnostics
+    if not isinstance(payload, dict):
+        diagnostics["reason"] = "summary_invalid:not_object"
+        return diagnostics
     summary = payload.get("summary")
     summary = summary if isinstance(summary, dict) else {}
     input_fingerprints = payload.get("input_fingerprints")
