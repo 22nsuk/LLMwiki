@@ -8,20 +8,21 @@ from typing import cast
 
 import yaml
 
-from ops.scripts.core.workflow_action_pin_catalog import (
-    PINNED_ATTEST_BUILD_PROVENANCE_ACTION,
-    PINNED_CHECKOUT_ACTION,
-    PINNED_CI_CHECKOUT_ACTION,
-    PINNED_CODEQL_ANALYZE_ACTION,
-    PINNED_CODEQL_INIT_ACTION,
-    PINNED_DEPENDENCY_REVIEW_ACTION,
-    PINNED_DOWNLOAD_ARTIFACT_ACTION,
-    PINNED_RELEASE_SECURITY_CHECKOUT_ACTION,
-    PINNED_SETUP_PYTHON_ACTION,
-    PINNED_SETUP_UV_ACTION,
-    PINNED_UPLOAD_ARTIFACT_ACTION,
-    WORKFLOW_ACTION_PIN_RULES,
-)
+from ops.scripts.core.workflow_action_pin_catalog import WORKFLOW_ACTION_PIN_RULES
+from ops.scripts.core.workflow_action_pins import workflow_action_pins
+
+_PINS = workflow_action_pins(Path(__file__).resolve().parents[1])
+PINNED_CI_CHECKOUT_ACTION = _PINS["checkout-ci"]
+PINNED_RELEASE_SECURITY_CHECKOUT_ACTION = _PINS["checkout-release-security"]
+PINNED_SETUP_PYTHON_ACTION = _PINS["setup-python"]
+PINNED_SETUP_UV_ACTION = _PINS["setup-uv"]
+PINNED_UPLOAD_ARTIFACT_ACTION = _PINS["upload-artifact"]
+PINNED_DOWNLOAD_ARTIFACT_ACTION = _PINS["download-artifact"]
+PINNED_ATTEST_BUILD_PROVENANCE_ACTION = _PINS["attest-build-provenance"]
+PINNED_CODEQL_INIT_ACTION = _PINS["codeql-init"]
+PINNED_CODEQL_ANALYZE_ACTION = _PINS["codeql-analyze"]
+PINNED_DEPENDENCY_REVIEW_ACTION = _PINS["dependency-review"]
+PINNED_CHECKOUT_ACTION = PINNED_RELEASE_SECURITY_CHECKOUT_ACTION
 
 PINNED_CODEQL_ACTION_PREFIX = "github/codeql-action/"
 PINNED_ACTION_REF_RE = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")

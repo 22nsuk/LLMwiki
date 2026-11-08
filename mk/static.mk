@@ -26,7 +26,7 @@ static-local: ruff typecheck
 
 lock-freshness-check: uv-lock-check
 
-static: static-local lock-freshness-check
+static: static-local lock-freshness-check workflow-action-pins-sync-check
 
 uv-lock-check:
 	UV_DEFAULT_INDEX="$(UV_CANONICAL_INDEX_URL)" $(UV) lock --check $(UV_LOCK_CHECK_INDEX_FLAGS)

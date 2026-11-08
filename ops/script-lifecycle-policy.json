@@ -2707,6 +2707,15 @@
       "replacement": "python -m ops.scripts.public.public_surface_snapshot"
     },
     {
+      "canonical_module": "ops.scripts.public.public_toolchain_runtime",
+      "console_scripts": [],
+      "install_state": "not_installed",
+      "lifecycle": "helper",
+      "rationale": "Generated from ops_scripts_scan; lifecycle and replacement may be overridden.",
+      "removal_ready": false,
+      "replacement": "python -m ops.scripts.public.public_toolchain_runtime"
+    },
+    {
       "canonical_module": "ops.scripts.public.review_surface_manifest",
       "console_scripts": [],
       "install_state": "not_installed",

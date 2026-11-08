@@ -212,6 +212,7 @@
           "ops/scripts/public/export_public_repo.py",
           "ops/scripts/public/public_surface_policy.py",
           "ops/scripts/public/public_check_summary.py",
+          "ops/scripts/public/public_toolchain_runtime.py",
           "ops/scripts/public/source_history_scan_runtime.py"
         ],
         "commands": [
