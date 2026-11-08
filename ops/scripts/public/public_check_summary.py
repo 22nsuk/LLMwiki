@@ -1165,7 +1165,7 @@ def _reusable_summary_diagnostics(
     }
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         diagnostics["reason"] = f"summary_unavailable:{type(exc).__name__}"
         return diagnostics
     if not isinstance(payload, dict):

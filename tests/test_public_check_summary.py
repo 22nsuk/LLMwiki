@@ -404,9 +404,11 @@ def test_make_current_or_refresh_uses_one_cli_and_promotes_only_execution(tmp_pa
         "PYTEST_FLAGS=", "PUBLIC_OUT=", f"PUBLIC_CHECK_SUMMARY_OUT={destination}",
         f"PUBLIC_CHECK_SUMMARY_REUSE_FROM={destination}", f"PUBLIC_CHECK_SUMMARY_CANDIDATE_OUT={candidate}",
     ]
-    for index, outcome in enumerate(("hit", "array", "null", "pass", "fail"), 1):
+    for index, outcome in enumerate(("hit", "array", "null", "invalid_utf8", "pass", "fail"), 1):
         if outcome in {"array", "null"}:
             destination.write_text("[]" if outcome == "array" else "null", encoding="utf-8")
+        elif outcome == "invalid_utf8":
+            destination.write_bytes(b"\xff")
         before = destination.read_bytes(), destination.stat().st_mtime_ns
         if outcome in {"pass", "fail"}:
             monkeypatch.setenv("PYTEST_ADDOPTS", "-q" if outcome == "pass" else "-x")
@@ -588,12 +590,17 @@ def test_reuse_skips_history_after_environment_rejection(tmp_path: Path, monkeyp
 
 
 @pytest.mark.parametrize("reuse_only", [False, True])
-def test_cli_early_rejection_preserves_refresh_and_reuse_only(tmp_path: Path, reuse_only: bool) -> None:
+@pytest.mark.parametrize("invalid_utf8", [False, True])
+def test_cli_early_rejection_preserves_refresh_and_reuse_only(
+    tmp_path: Path, reuse_only: bool, invalid_utf8: bool,
+) -> None:
     seed_minimal_vault(tmp_path)
     seed_public_policy_file(tmp_path)
     request = PublicCheckRequest(source_history_scan=False)
     report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
     destination = write_report(tmp_path, report)
+    if invalid_utf8:
+        destination.write_bytes(b"\xff")
     before = destination.read_bytes(), destination.stat().st_mtime_ns
     candidate = tmp_path / "tmp/candidate.json"
 
@@ -612,8 +619,12 @@ def test_cli_early_rejection_preserves_refresh_and_reuse_only(tmp_path: Path, re
             *(["--reuse-only"] if reuse_only else []),
         ])
     diagnostics = json.JSONDecoder().raw_decode(stdout.getvalue())[0]["reuse_diagnostics"]
-    assert "public_check_config" in diagnostics["reason"]
-    assert "public_python_toolchain" not in diagnostics["checks"]
+    if invalid_utf8:
+        assert diagnostics["reason"] == "summary_unavailable:UnicodeDecodeError"
+        assert diagnostics["reusable"] is False
+    else:
+        assert "public_check_config" in diagnostics["reason"]
+        assert "public_python_toolchain" not in diagnostics["checks"]
     workspace.assert_not_called()
     assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
     if reuse_only:
