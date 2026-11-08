@@ -45,7 +45,7 @@
       "properties": {
         "public_python_toolchain": {
           "$ref": "#/$defs/sha256",
-          "description": "Bounded live probe of the requested Python launcher and installed validation environment; required for reuse. Legacy summaries without it require fresh validation."
+          "description": "Bounded live probe of the resolved launcher target and effective validation environment, with probe-local paths normalized; required for reuse. Equivalent launcher aliases share toolchain identity, while distinct virtualenvs remain distinct. Legacy or changed fingerprints require fresh validation."
         },
         "public_export_source": {
           "$ref": "#/$defs/sha256",

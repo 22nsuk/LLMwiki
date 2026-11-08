@@ -341,6 +341,16 @@ report. A second probe before publication rejects environment changes during
 validation. Legacy summaries without the binding need fresh validation. This
 identity detects environment replacement and metadata changes; it is not an
 integrity scan of every installed package source file.
+Launcher aliases of the same executable and effective environment share a
+toolchain identity; virtualenv prefixes and wrapper executable identities still
+distinguish different environments. Request-less diagnostics probe the current
+interpreter, so pass the original request when checking a different environment.
+Explicit requests also retain their existing configuration identity checks.
+Probe-local search paths (including relative or empty `PYTHONPATH` entries) are
+normalized without changing the inherited environment. Every search-path entry
+is included, also when `PYTHONSAFEPATH` suppresses the initial current-directory
+entry. The fingerprint revision changes, so prior reports and caches require
+fresh validation once.
 
 Export traversal prunes excluded directories before descending, while preserving
 explicit included-report exceptions and sorted inventories. Selected unreadable

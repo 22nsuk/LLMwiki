@@ -37,6 +37,7 @@ from ops.scripts.public.public_check_summary import (
     reusable_summary_diagnostics,
     write_report,
 )
+from ops.scripts.public.public_toolchain_runtime import public_toolchain_fingerprint
 from ops.scripts.public.source_history_scan_runtime import scan_source_history
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import seed_minimal_vault
@@ -128,12 +129,82 @@ def fake_runner(
     )
 
 
+def test_public_check_reuse_accepts_same_interpreter_alias(tmp_path: Path) -> None:
+    executable = Path(sys.executable)
+    alias = next((
+        path for name in ("python", "python3")
+        if (path := executable.with_name(name)) != executable
+        and path.exists() and path.resolve() == executable.resolve()
+    ), None)
+    if alias is None:
+        pytest.skip("test interpreter has no equivalent launcher alias")
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    request = PublicCheckRequest(public_python=str(alias), source_history_scan=False)
+    report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(tmp_path, report)
+    assert reusable_summary_diagnostics(tmp_path, destination)["reusable"]
+    assert reusable_summary_diagnostics(tmp_path, destination, request)["reusable"]
+
+
+@pytest.mark.parametrize("pythonpath", [".", "plugins", os.pathsep.join([".", "", "plugins"])])
+@pytest.mark.parametrize("safe_path", ["", "1"])
+def test_public_check_reuse_with_relative_pythonpath(
+    tmp_path: Path, monkeypatch, pythonpath: str, safe_path: str,
+) -> None:
+    monkeypatch.setenv("PYTHONPATH", pythonpath)
+    monkeypatch.setenv("PYTHONSAFEPATH", safe_path)
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    request = PublicCheckRequest(source_history_scan=False)
+    report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(tmp_path, report)
+    cache = _public_pytest_summary_cache_path(tmp_path, request)
+    assert cache.is_file()
+    assert reusable_summary_diagnostics(tmp_path, destination, request)["reusable"]
+    assert _public_pytest_summary_cache_path(tmp_path, request) == cache
+    monkeypatch.setenv("PYTHONPATH", pythonpath + os.pathsep + "other-plugins")
+    assert not reusable_summary_diagnostics(tmp_path, destination, request)["reusable"]
+    assert _public_pytest_summary_cache_path(tmp_path, request) != cache
+
+
+def test_public_toolchain_accepts_relative_path_launcher(monkeypatch) -> None:
+    executable = Path(sys.executable)
+    monkeypatch.chdir(executable.parent)
+    monkeypatch.setenv("PATH", ".")
+    assert public_toolchain_fingerprint(executable.name) == public_toolchain_fingerprint(str(executable))
+
+
+def test_public_toolchain_distinguishes_virtualenvs(tmp_path: Path) -> None:
+    import sysconfig
+
+    environment = tmp_path / "environment"
+    subprocess.run(
+        [sys.executable, "-m", "venv", "--without-pip", str(environment)],
+        check=True, capture_output=True, timeout=30,
+    )
+    python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    result = subprocess.run(
+        [str(python), "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
+        check=True, capture_output=True, text=True, timeout=15,
+    )
+    # Reuse installed test dependencies; the environment prefix must still differ.
+    (Path(result.stdout.strip()) / "test-dependencies.pth").write_text(
+        sysconfig.get_path("purelib") + "\n", encoding="utf-8",
+    )
+    assert public_toolchain_fingerprint(str(python)) != public_toolchain_fingerprint(sys.executable)
+
+
 @pytest.mark.parametrize("change", ["missing", "replaced", "metadata", "flags", "legacy"])
 def test_public_check_reuse_binds_live_toolchain(tmp_path: Path, monkeypatch, change: str) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()
     seed_minimal_vault(vault)
     seed_public_policy_file(vault)
+    if change == "metadata":
+        packages = tmp_path / "packages"
+        packages.mkdir()
+        monkeypatch.setenv("PYTHONPATH", str(packages))
     python = sys.executable
     launcher = tmp_path / "python-launcher"
     if change in {"missing", "replaced"}:
@@ -157,7 +228,6 @@ def test_public_check_reuse_binds_live_toolchain(tmp_path: Path, monkeypatch, ch
         metadata = tmp_path / "packages" / "pytest-999.0.dist-info"
         metadata.mkdir(parents=True)
         (metadata / "METADATA").write_text("Metadata-Version: 2.1\nName: pytest\nVersion: 999.0\n")
-        monkeypatch.setenv("PYTHONPATH", str(metadata.parent))
     elif change == "flags":
         monkeypatch.setenv("PYTEST_ADDOPTS", "-k synthetic")
     else:

@@ -18,11 +18,21 @@ from pathlib import Path
 def digest(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
+probe_root = Path.cwd()
+
+def path_identity(value):
+    if value is None:
+        return None
+    path = Path(value).resolve()
+    if path.is_relative_to(probe_root):
+        return '<probe>/' + path.relative_to(probe_root).as_posix()
+    return str(path)
+
 packages = []
 for distribution in importlib.metadata.distributions():
     packages.append((
         distribution.metadata['Name'], distribution.version,
-        str(distribution.locate_file('').resolve()),
+        path_identity(distribution.locate_file('')),
         tuple(digest(distribution.read_text(name) or '') for name in
               ('METADATA', 'RECORD', 'direct_url.json')),
     ))
@@ -31,16 +41,18 @@ for name in ('pytest', 'ruff', 'mypy'):
     spec = importlib.util.find_spec(name)
     if spec is None:
         raise RuntimeError('required validation module is unavailable')
-    tools[name] = (importlib.metadata.version(name), spec.origin)
+    tools[name] = (importlib.metadata.version(name), path_identity(spec.origin))
 executable = Path(sys.executable).resolve(strict=True)
 with executable.open('rb') as handle:
     executable_digest = hashlib.file_digest(handle, 'sha256').hexdigest()
 payload = {
-    'version': 1, 'python': sys.version, 'implementation': sys.implementation.name,
+    'version': 2, 'python': sys.version, 'implementation': sys.implementation.name,
     'platform': platform.platform(), 'prefix': sys.prefix, 'base_prefix': sys.base_prefix,
     'executable': str(executable), 'executable_sha256': executable_digest,
     'packages': sorted(packages), 'tools': tools,
-    'search_path': sys.path[1:],
+    # Keep every entry: safe-path mode does not prepend the usual empty entry.
+    # Only the probe's own disposable directory is independent of the environment.
+    'search_path': [path_identity(path) for path in sys.path],
     'environment': {name: os.environ.get(name, '') for name in (
         'PYTHONPATH', 'PYTHONHOME', 'PYTHONNOUSERSITE', 'PYTHONSAFEPATH',
         'PYTEST_ADDOPTS', 'PYTEST_PLUGINS', 'MYPYPATH',
@@ -58,6 +70,9 @@ def public_toolchain_fingerprint(public_python: str) -> str:
         launcher = shutil.which(public_python)
         if launcher is None:
             raise ValueError("public Python launcher is unavailable")
+        # Freeze relative PATH resolution before moving into the probe directory.
+        # Invoke the original alias: resolving it can bypass a virtualenv's prefix.
+        launcher = str(Path(launcher).absolute())
         path = Path(launcher).resolve(strict=True)
         before = path.stat()
         with path.open("rb") as handle:
@@ -82,7 +97,9 @@ def public_toolchain_fingerprint(public_python: str) -> str:
     except OSError as exc:
         raise ValueError("public Python toolchain is unavailable") from exc
     identity = (
-        launcher, str(path), before.st_dev, before.st_ino, before.st_mtime_ns,
+        # Equivalent aliases share the target identity; the probe still binds the
+        # effective prefix, imports and metadata, so distinct venvs stay distinct.
+        str(path), before.st_dev, before.st_ino, before.st_mtime_ns,
         before.st_size, before.st_mode, launcher_digest, digest,
     )
     return hashlib.sha256(json.dumps(identity).encode()).hexdigest()
