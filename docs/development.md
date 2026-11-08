@@ -361,6 +361,15 @@ Reuse checks inspect retained exports without rewriting them, under the same
 output lock; private exports are reconstructed from current public sources and
 removed afterward. This adds one public export copy to private-summary reuse and
 standalone cache-key inspection, so the probe can see exported modules and metadata.
+Reuse diagnostics reject incompatible report metadata, missing required identities,
+request configuration, or local policy before scanning source contents. Source
+changes then reject reuse before export reconstruction, toolchain probing, and
+history scanning. A failed export/toolchain check also skips the history scan.
+The `not_current:` reason lists failures in the evaluated stages; deferred checks
+and their current/expected values are omitted, never reported as passing. Request
+configuration comparisons remain available on rejection. A reusable result still
+requires all applicable checks, including source/export drift checks around the
+live probe. Reuse-only checks do not rewrite the stored report.
 Changed or unavailable exports and probe failures reject reuse. The fingerprint
 revision changes, so prior reports and caches require fresh validation once.
 

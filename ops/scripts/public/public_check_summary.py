@@ -1100,6 +1100,19 @@ def _retained_export_is_current(output: Path, payload: dict[str, Any]) -> bool:
         return False
 
 
+def _not_current_summary(
+    diagnostics: dict[str, Any], checks: dict[str, bool], comparisons: dict[str, Any],
+) -> dict[str, Any]:
+    # Only evaluated checks are reported; deferred work cannot establish currentness.
+    failed = [name for name, passed in checks.items() if not passed]
+    return {
+        **diagnostics,
+        "reason": f"not_current:{','.join(failed)}",
+        "checks": checks,
+        **comparisons,
+    }
+
+
 def reusable_summary_diagnostics(
     vault: Path,
     path_value: str | Path,
@@ -1118,13 +1131,48 @@ def reusable_summary_diagnostics(
     except (OSError, json.JSONDecodeError) as exc:
         diagnostics["reason"] = f"summary_unavailable:{type(exc).__name__}"
         return diagnostics
-    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     summary = payload.get("summary")
     summary = summary if isinstance(summary, dict) else {}
     input_fingerprints = payload.get("input_fingerprints")
     input_fingerprints = (
         input_fingerprints if isinstance(input_fingerprints, dict) else {}
     )
+    checks = {
+        "artifact_kind": payload.get("artifact_kind") == "public_check_summary",
+        "producer": payload.get("producer") == PRODUCER,
+        "status": payload.get("status") == "pass",
+        "public_check_status": summary.get("public_check_status") == "pass",
+        "local_corpus_policy": local_corpus_policy_is_current(vault, payload),
+    }
+    comparisons: dict[str, Any] = {
+        "observed_source_tree_fingerprint": str(payload.get("source_tree_fingerprint", "")),
+    }
+    required_fingerprints = {
+        "source_tree_fingerprint": payload.get("source_tree_fingerprint"),
+        PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY: input_fingerprints.get(PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY),
+        PUBLIC_TOOLCHAIN_FINGERPRINT_KEY: input_fingerprints.get(PUBLIC_TOOLCHAIN_FINGERPRINT_KEY),
+    }
+    if request is not None:
+        required_fingerprints[SOURCE_HISTORY_STATE_FINGERPRINT_KEY] = input_fingerprints.get(SOURCE_HISTORY_STATE_FINGERPRINT_KEY)
+        expected_source_command = _public_check_source_command(request)
+        observed_source_command = str(payload.get("source_command", ""))
+        checks["source_command"] = observed_source_command == expected_source_command
+        expected_config = _public_check_config_fingerprint(vault, request)
+        observed_config = str(input_fingerprints.get(PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY, ""))
+        checks[PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY] = observed_config == expected_config
+        comparisons.update({
+            "expected_public_check_config_fingerprint": expected_config,
+            "observed_public_check_config_fingerprint": observed_config,
+            "expected_source_command": expected_source_command,
+            "observed_source_command": observed_source_command,
+        })
+    for name, value in required_fingerprints.items():
+        if not isinstance(value, str) or not value:
+            checks[name] = False
+    if not all(checks.values()):
+        return _not_current_summary(diagnostics, checks, comparisons)
+
+    current_source_tree_fingerprint = release_source_tree_fingerprint(vault)
     try:
         current_public_source_fingerprint = hashlib.sha256(
             _public_export_source_inputs(vault).encode("utf-8")
@@ -1132,18 +1180,14 @@ def reusable_summary_diagnostics(
     except OSError as exc:
         diagnostics["reason"] = f"public_export_source_unavailable:{type(exc).__name__}"
         return diagnostics
-    checks = {
-        "artifact_kind": payload.get("artifact_kind") == "public_check_summary",
-        "producer": payload.get("producer") == PRODUCER,
-        "status": payload.get("status") == "pass",
-        "public_check_status": summary.get("public_check_status") == "pass",
-        "source_tree_fingerprint": payload.get("source_tree_fingerprint")
-        == current_source_tree_fingerprint,
-        PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY: input_fingerprints.get(
-            PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY
-        ) == current_public_source_fingerprint,
-        "local_corpus_policy": local_corpus_policy_is_current(vault, payload),
-    }
+    comparisons["current_source_tree_fingerprint"] = current_source_tree_fingerprint
+    checks["source_tree_fingerprint"] = payload.get("source_tree_fingerprint") == current_source_tree_fingerprint
+    checks[PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY] = (
+        input_fingerprints.get(PUBLIC_EXPORT_SOURCE_FINGERPRINT_KEY) == current_public_source_fingerprint
+    )
+    if not all(checks.values()):
+        return _not_current_summary(diagnostics, checks, comparisons)
+
     try:
         effective_request = request or PublicCheckRequest()
         if effective_request.public_out:
@@ -1170,20 +1214,10 @@ def reusable_summary_diagnostics(
     except (OSError, ValueError, RuntimeError) as exc:
         checks[PUBLIC_TOOLCHAIN_FINGERPRINT_KEY] = False
         diagnostics["toolchain_error"] = sanitize_report_text(vault, str(exc))
+    if not all(checks.values()):
+        return _not_current_summary(diagnostics, checks, comparisons)
+
     if request is not None:
-        expected_source_command = _public_check_source_command(request)
-        observed_source_command = str(payload.get("source_command", ""))
-        checks["source_command"] = observed_source_command == expected_source_command
-        expected_public_check_config_fingerprint = _public_check_config_fingerprint(
-            vault, request
-        )
-        observed_public_check_config_fingerprint = str(
-            input_fingerprints.get(PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY, "")
-        )
-        checks[PUBLIC_CHECK_CONFIG_FINGERPRINT_KEY] = (
-            observed_public_check_config_fingerprint
-            == expected_public_check_config_fingerprint
-        )
         expected_source_history_state_fingerprint = hashlib.sha256(
             source_history_state_fingerprint(
                 vault,
@@ -1197,30 +1231,12 @@ def reusable_summary_diagnostics(
             observed_source_history_state_fingerprint
             == expected_source_history_state_fingerprint
         )
-    failed = [name for name, passed in checks.items() if not passed]
-    if failed:
-        diagnostics["reason"] = f"not_current:{','.join(failed)}"
-        diagnostics["checks"] = checks
-        diagnostics["current_source_tree_fingerprint"] = current_source_tree_fingerprint
-        diagnostics["observed_source_tree_fingerprint"] = str(
-            payload.get("source_tree_fingerprint", "")
-        )
-        if request is not None:
-            diagnostics["expected_public_check_config_fingerprint"] = (
-                expected_public_check_config_fingerprint
-            )
-            diagnostics["observed_public_check_config_fingerprint"] = (
-                observed_public_check_config_fingerprint
-            )
-            diagnostics["expected_source_command"] = expected_source_command
-            diagnostics["observed_source_command"] = observed_source_command
-            diagnostics["expected_source_history_state_fingerprint"] = (
-                expected_source_history_state_fingerprint
-            )
-            diagnostics["observed_source_history_state_fingerprint"] = (
-                observed_source_history_state_fingerprint
-            )
-        return diagnostics
+        comparisons.update({
+            "expected_source_history_state_fingerprint": expected_source_history_state_fingerprint,
+            "observed_source_history_state_fingerprint": observed_source_history_state_fingerprint,
+        })
+    if not all(checks.values()):
+        return _not_current_summary(diagnostics, checks, comparisons)
     diagnostics.update(
         {
             "reusable": True,

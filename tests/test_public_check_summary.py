@@ -13,7 +13,8 @@ import threading
 import unittest
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import redirect_stdout
+from contextlib import ExitStack, redirect_stdout
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -127,6 +128,190 @@ def fake_runner(
         timeout_seconds=timeout_seconds,
         termination_reason="completed",
     )
+
+
+@pytest.mark.parametrize("retained", [False, True])
+@pytest.mark.parametrize(
+    ("change", "failed_check", "preflight"),
+    [
+        ("artifact_kind", "artifact_kind", True),
+        ("producer", "producer", True),
+        ("status", "status", True),
+        ("summary_status", "public_check_status", True),
+        ("missing_source", "source_tree_fingerprint", True),
+        ("public_export_source", "public_export_source", True),
+        ("public_python_toolchain", "public_python_toolchain", True),
+        ("source_history_state", "source_history_state", True),
+        ("public_check_config", "public_check_config", True),
+        ("config", "public_check_config", True),
+        ("mode", "source_command", True),
+        ("local_policy", "local_corpus_policy", True),
+        ("source", "source_tree_fingerprint", False),
+        ("generated_source", "public_export_source", False),
+    ],
+)
+def test_stale_reuse_stops_before_export_probe_and_history(
+    tmp_path: Path, retained: bool, change: str, failed_check: str, preflight: bool,
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(tmp_path / "public") if retained else "")
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    checked_request = request
+    if change in {"artifact_kind", "producer", "status"}:
+        report[change] = "invalid"
+    elif change == "summary_status":
+        report["summary"]["public_check_status"] = "fail"
+    elif change == "missing_source":
+        report.pop("source_tree_fingerprint")
+    elif change in {
+        "public_export_source", "public_python_toolchain", "source_history_state", "public_check_config",
+    }:
+        report["input_fingerprints"].pop(change)
+    elif change == "config":
+        checked_request = replace(request, pytest_flags="-q")
+    elif change == "mode":
+        checked_request = replace(request, mode="full", pytest_mark_expr="")
+    elif change == "local_policy":
+        (vault / LOCAL_CORPUS_POLICY_PATH).write_text('{"schema_version": 1, "overrides": {}}\n')
+    elif change == "source":
+        (vault / "README.md").write_text("# Changed public source\n")
+    else:
+        (vault / "ops/script-output-surfaces.json").write_text('{"version": 1}\n')
+    destination = vault / "ops/reports/public-check-summary.json"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(report))
+    before = destination.read_bytes(), destination.stat().st_mtime_ns
+
+    with ExitStack() as stack:
+        observed = {
+            name: stack.enter_context(patch.object(
+                public_check_summary_module, name,
+                wraps=getattr(public_check_summary_module, name),
+            ))
+            for name in (
+                "release_source_tree_fingerprint", "_public_export_source_inputs",
+                "_toolchain_workspace", "_export_toolchain_fingerprint", "source_history_state_fingerprint",
+            )
+        }
+        diagnostics = reusable_summary_diagnostics(vault, destination, checked_request)
+
+    assert not diagnostics["reusable"]
+    assert diagnostics["checks"][failed_check] is False
+    assert failed_check in diagnostics["reason"]
+    for name in ("_toolchain_workspace", "_export_toolchain_fingerprint", "source_history_state_fingerprint"):
+        observed[name].assert_not_called()
+    if preflight:
+        observed["release_source_tree_fingerprint"].assert_not_called()
+        observed["_public_export_source_inputs"].assert_not_called()
+    else:
+        observed["release_source_tree_fingerprint"].assert_called_once()
+        observed["_public_export_source_inputs"].assert_called_once()
+    # Deferred checks are absent, not reported as successful observations.
+    for key in ("retained_export", "public_python_toolchain", "source_history_state"):
+        assert diagnostics["checks"].get(key) is not True
+    if change in {"config", "mode", "public_check_config"}:
+        assert diagnostics["expected_public_check_config_fingerprint"] != diagnostics["observed_public_check_config_fingerprint"]
+        assert "expected_source_command" in diagnostics
+    assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize("retained", [False, True])
+def test_current_reuse_still_checks_live_export_toolchain_and_history(tmp_path: Path, retained: bool) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    request = PublicCheckRequest(public_out=str(tmp_path / "public") if retained else "")
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(vault, report)
+    before = destination.read_bytes(), destination.stat().st_mtime_ns
+    with ExitStack() as stack:
+        observed = {
+            name: stack.enter_context(patch.object(
+                public_check_summary_module, name,
+                wraps=getattr(public_check_summary_module, name),
+            ))
+            for name in (
+                "release_source_tree_fingerprint", "_public_export_source_inputs",
+                "_export_toolchain_fingerprint", "source_history_state_fingerprint",
+                "_retained_export_is_current",
+            )
+        }
+        assert reusable_summary_diagnostics(vault, destination, request)["reusable"]
+    observed["_export_toolchain_fingerprint"].assert_called_once()
+    observed["source_history_state_fingerprint"].assert_called_once()
+    assert observed["release_source_tree_fingerprint"].call_count == 2
+    assert observed["_public_export_source_inputs"].call_count == 2
+    assert observed["_retained_export_is_current"].call_count == (2 if retained else 0)
+    assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize("change", ["toolchain", "retained_export"])
+def test_reuse_skips_history_after_environment_rejection(tmp_path: Path, monkeypatch, change: str) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    seed_minimal_vault(vault)
+    seed_public_policy_file(vault)
+    output = tmp_path / "public"
+    request = PublicCheckRequest(public_out=str(output) if change == "retained_export" else "")
+    report = build_report(vault, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(vault, report)
+    if change == "toolchain":
+        monkeypatch.setenv("PYTEST_ADDOPTS", "-k changed")
+    else:
+        (output / "README.md").write_text("# Changed export\n")
+    with patch.object(
+        public_check_summary_module, "source_history_state_fingerprint",
+        wraps=public_check_summary_module.source_history_state_fingerprint,
+    ) as history:
+        diagnostics = reusable_summary_diagnostics(vault, destination, request)
+    assert not diagnostics["reusable"]
+    assert diagnostics["checks"]["public_python_toolchain"] is False
+    assert "source_history_state" not in diagnostics["checks"]
+    history.assert_not_called()
+
+
+@pytest.mark.parametrize("reuse_only", [False, True])
+def test_cli_early_rejection_preserves_refresh_and_reuse_only(tmp_path: Path, reuse_only: bool) -> None:
+    seed_minimal_vault(tmp_path)
+    seed_public_policy_file(tmp_path)
+    request = PublicCheckRequest(source_history_scan=False)
+    report = build_report(tmp_path, request, context=fixed_context(), command_runner=fake_runner)
+    destination = write_report(tmp_path, report)
+    before = destination.read_bytes(), destination.stat().st_mtime_ns
+    candidate = tmp_path / "tmp/candidate.json"
+
+    def refresh(vault: Path, requested: PublicCheckRequest) -> dict[str, Any]:
+        return build_report(vault, requested, context=fixed_context(), command_runner=fake_runner)
+
+    stdout = io.StringIO()
+    with (
+        patch.object(public_check_summary_module, "build_report", side_effect=refresh) as run,
+        patch.object(public_check_summary_module, "_toolchain_workspace", wraps=public_check_summary_module._toolchain_workspace) as workspace,
+        redirect_stdout(stdout),
+    ):
+        exit_code = public_check_summary_module.main([
+            "--vault", str(tmp_path), "--out", str(candidate), "--reuse-from", str(destination),
+            "--reuse-if-current", "--skip-source-history-scan", "--pytest-flags=-q",
+            *(["--reuse-only"] if reuse_only else []),
+        ])
+    diagnostics = json.JSONDecoder().raw_decode(stdout.getvalue())[0]["reuse_diagnostics"]
+    assert "public_check_config" in diagnostics["reason"]
+    assert "public_python_toolchain" not in diagnostics["checks"]
+    workspace.assert_not_called()
+    assert (destination.read_bytes(), destination.stat().st_mtime_ns) == before
+    if reuse_only:
+        assert exit_code == 1
+        assert not candidate.exists()
+        run.assert_not_called()
+    else:
+        assert exit_code == 0
+        run.assert_called_once()
+        assert json.loads(candidate.read_text())["status"] == "pass"
+        assert reusable_summary_diagnostics(tmp_path, candidate, replace(request, pytest_flags="-q"))["reusable"]
 
 
 def test_public_check_reuse_accepts_same_interpreter_alias(tmp_path: Path) -> None:
