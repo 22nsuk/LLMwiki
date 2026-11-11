@@ -41,4 +41,5 @@ Fail: The substance runtime reports any failure (for example `summary_repeats_ti
 ## EVAL 8: Synthesis decisionability
 Question: If the page is a `synthesis--` or `query--` page, does it end in an operational decision or takeaway rather than only summary?
 Pass: The `Decision / takeaway` body contains text beyond whitespace, punctuation and HTML comments. A reasoned decision to defer or abstain is allowed.
+HTML comments are removed before locating the section, so headings inside comments neither create nor terminate the decision section.
 Fail: The section is missing or its body is empty under that rule. This structural floor does not establish the quality or correctness of a decision; source-backed judgment still requires review.

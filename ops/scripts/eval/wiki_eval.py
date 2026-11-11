@@ -310,8 +310,8 @@ def _source_page_substance_result(text: str) -> dict[str, Any]:
 
 
 def _decisionability_result(text: str) -> dict[str, Any]:
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
     body = section_body(text, "Decision / takeaway") or ""
-    body = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
     return {
         "eval": "decisionability",
         "pass": any(character.isalnum() for character in body),
