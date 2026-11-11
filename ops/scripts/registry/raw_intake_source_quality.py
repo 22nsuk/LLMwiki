@@ -26,6 +26,12 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_intake_input_runtime import (
+        TEXTUAL_RAW_SUFFIXES,
+        IntakeFile,
+        intake_content_inputs,
+        read_intake_inputs,
+    )
 else:
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
@@ -41,6 +47,12 @@ else:
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_intake_input_runtime import (
+        TEXTUAL_RAW_SUFFIXES,
+        IntakeFile,
+        intake_content_inputs,
+        read_intake_inputs,
+    )
 
 
 DEFAULT_MATRIX = (
@@ -52,7 +64,6 @@ PRODUCER = "ops.scripts.raw_intake_source_quality"
 SCHEMA_PATH = "ops/schemas/raw-intake-source-quality-report.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.raw_intake_source_quality"
 REVIEWED_ROUTE_STATUSES = {"approved", "reviewed"}
-TEXTUAL_RAW_SUFFIXES = {".md", ".markdown", ".txt", ".html", ".htm"}
 BOILERPLATE_PATTERNS = (
     re.compile(r"^(skip to|본문 바로가기|메뉴|로그인|회원가입|구독|공유|광고)\b", re.I),
     re.compile(r"^(copyright|all rights reserved)\b", re.I),
@@ -127,16 +138,12 @@ def _sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _raw_lead_state(vault: Path, raw_path: str) -> dict[str, Any]:
-    raw_path = raw_path.strip()
-    if not raw_path:
-        return {"status": "missing_path", "char_count": 0, "sha256": ""}
-    resolved = _resolved_input_path(vault, raw_path)
-    if not resolved.exists():
-        return {"status": "missing_file", "char_count": 0, "sha256": ""}
-    if resolved.suffix.lower() not in TEXTUAL_RAW_SUFFIXES:
+def _raw_lead_state(raw: IntakeFile, raw_path: str) -> dict[str, Any]:
+    if raw.status != "present":
+        return {"status": raw.status, "char_count": 0, "sha256": ""}
+    if Path(raw_path).suffix.lower() not in TEXTUAL_RAW_SUFFIXES:
         return {"status": "not_textual", "char_count": 0, "sha256": ""}
-    raw_text = resolved.read_text(encoding="utf-8", errors="replace")
+    raw_text = raw.text
     body_lines = [
         line.strip()
         for line in _strip_frontmatter(raw_text).splitlines()
@@ -154,7 +161,7 @@ def _raw_lead_state(vault: Path, raw_path: str) -> dict[str, Any]:
 
 
 def _source_quality_for_entry(
-    vault: Path,
+    inputs: dict[str, IntakeFile],
     entry: dict[str, Any],
     *,
     min_summary_chars: int,
@@ -162,22 +169,23 @@ def _source_quality_for_entry(
     min_key_point_chars: int,
     min_raw_lead_chars: int,
 ) -> dict[str, Any]:
-    source_page = str(entry.get("source_page", "")).strip()
-    raw_path = str(entry.get("raw_path", "")).strip()
+    source_page = str(entry.get("source_page") or "").strip()
+    raw_path = str(entry.get("raw_path") or "").strip()
     review_status = str(entry.get("review_status", "")).strip()
     proposed_action = str(entry.get("proposed_action", "")).strip()
-    source_path = _resolved_input_path(vault, source_page)
+    source = inputs[source_page]
+    raw = inputs[raw_path]
     issues: list[str] = []
     source_page_status = "ok"
     summary_chars = 0
     key_point_count = 0
     key_point_chars = 0
 
-    if not source_page or not source_path.exists():
+    if source.status != "present":
         source_page_status = "missing"
         issues.append("missing_source_page")
     else:
-        source_text = source_path.read_text(encoding="utf-8", errors="replace")
+        source_text = source.text
         summary = _section_text(source_text, "Summary")
         key_points = _section_text(source_text, "Key points")
         summary_chars = len(re.sub(r"\s+", " ", summary).strip())
@@ -194,7 +202,9 @@ def _source_quality_for_entry(
             issues.append("source_page_substance_admission_failed")
             issues.extend(str(item) for item in substance.get("failures", []))
 
-    raw_lead = _raw_lead_state(vault, raw_path)
+    raw_lead = _raw_lead_state(raw, raw_path)
+    if raw.status != "present":
+        issues.append(f"raw_{raw.status}")
     if raw_lead["status"] == "empty":
         issues.append("raw_body_empty")
     if raw_lead["status"] in {"ok", "empty", "insufficient"} and raw_lead["char_count"] < min_raw_lead_chars:
@@ -210,7 +220,7 @@ def _source_quality_for_entry(
     has_hard_source_page_issue = any(issue in hard_source_page_issue_names for issue in issues)
     if not issues:
         quality_status = "pass"
-    elif not reviewed or "raw_body_empty" in issues:
+    elif not reviewed or raw.status != "present" or "raw_body_empty" in issues:
         quality_status = "fail"
     elif proposed_action == "keep_source_only_seed":
         quality_status = "review"
@@ -257,9 +267,11 @@ def build_report(
     entries = matrix.get("matrix")
     if not isinstance(entries, list):
         entries = []
+    entries = [entry for entry in entries if isinstance(entry, dict)]
+    inputs = read_intake_inputs(vault, entries)
     rows = [
         _source_quality_for_entry(
-            vault,
+            inputs,
             entry,
             min_summary_chars=min_summary_chars,
             min_key_points=min_key_points,
@@ -267,7 +279,6 @@ def build_report(
             min_raw_lead_chars=min_raw_lead_chars,
         )
         for entry in entries
-        if isinstance(entry, dict)
     ]
     counts = Counter(row["quality_status"] for row in rows)
     status = "fail" if counts.get("fail", 0) else "attention" if counts.get("review", 0) else "pass"
@@ -281,9 +292,13 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=["ops/scripts/registry/raw_intake_source_quality.py"],
+            source_paths=[
+                "ops/scripts/registry/raw_intake_source_quality.py",
+                "ops/scripts/registry/raw_intake_input_runtime.py",
+            ],
             file_inputs={"matrix": resolved_matrix_path},
             text_inputs={
+                **intake_content_inputs(entries, inputs),
                 "min_summary_chars": str(min_summary_chars),
                 "min_key_points": str(min_key_points),
                 "min_key_point_chars": str(min_key_point_chars),

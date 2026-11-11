@@ -226,6 +226,25 @@ focused on navigation rather than source inventories, and use an evidence map
 only when it improves the analysis instead of duplicating `Evidence considered`
 or `Source trace`.
 
+`make raw-intake-source-quality` and `make raw-intake-absorption-closeout`
+require each matrix raw path to resolve to a readable regular file inside the
+vault. Missing paths/files, directories, unreadable files, and paths outside the
+vault block admission even for reviewed source-only seeds. Present binary raw
+is accepted without a textual lead check. Route proposal reports apply the same
+raw availability check; source pages may still be awaiting generation, and
+unavailable identity metadata remains marked as skipped.
+
+Both report producers bind the complete raw and source-page file sets in
+`input_fingerprints.raw_files` and `input_fingerprints.source_pages`. Each digest
+covers sorted unique matrix paths, availability states, and full-file SHA-256
+hashes from the same reads used by the checks. Raw tail edits, source body edits,
+deletion/restoration, and changes to the referenced file set affect these
+digests. Reordering matrix rows leaves the file-set digests unchanged; the
+separate matrix byte fingerprint still changes. These digests are separate from
+the public `source_tree_fingerprint` and do not expose private file contents.
+Regenerate older reports before relying on corpus content identity: reports
+without these keys remain readable historical evidence but cannot establish it.
+
 ## Compatibility Surface
 
 Some lifecycle-policy flat module paths such as

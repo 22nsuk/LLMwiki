@@ -45,6 +45,7 @@
     "source_tree_fingerprint": { "type": "string", "minLength": 1 },
     "input_fingerprints": {
       "type": "object",
+      "description": "New reports bind raw_files and source_pages as sorted path/status/full-byte-SHA256 manifests. Legacy reports without these keys do not establish corpus content identity.",
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
     "schema_version": { "type": "integer", "minimum": 1 },
@@ -121,7 +122,7 @@
       "properties": {
         "status": {
           "type": "string",
-          "enum": ["ok", "insufficient", "empty", "missing_path", "missing_file", "not_textual"]
+          "enum": ["ok", "insufficient", "empty", "missing_path", "missing_file", "not_file", "unreadable", "invalid_path", "not_textual"]
         },
         "char_count": { "type": "integer", "minimum": 0 },
         "sha256": { "type": "string" }
