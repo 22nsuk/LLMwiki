@@ -79,6 +79,32 @@ def test_reviewed_missing_target_is_proposal_only_and_cli_blocks_closeout(intake
         ("[[wiki/source--fake.md]]", True),
         ("> [[source--fake]]", True),
         ("> > [[source--fake]]", True),
+        (">     [[source--fake]]", False),
+        ("> >     [[source--fake]]", False),
+        ("> \t[[source--fake]]", True),  # Tab reaches column 4: prose after '> '.
+        ("> \t\t[[source--fake]]", False),
+        ("- Example:\n\n      [[source--fake]]", False),
+        ("- >     [[source--fake]]", False),
+        ("> - Example:\n>\n>       [[source--fake]]", False),
+        ("- ~~~md\n  [[source--fake]]\n  ~~~", False),
+        ("- > ~~~md\n  > [[source--fake]]\n  > ~~~", False),
+        (">     example\n>\n> [[source--fake]]", True),
+        ("> Paragraph\n>     [[source--fake]]", True),
+        ("- Paragraph\n    [[source--fake]]", True),
+        ("- > [[source--fake]]", True),
+        ("| Evidence |\n| --- |\n| [[source--fake]] |", True),
+        (r"\\[[source--fake]]", True),
+        ("&#91;&#91;source--fake]]", False),
+        ("[[source--<!-- hidden -->fake]]", False),
+        ("[Example](https://example.com/[[source--fake]])", False),
+        ("![[source--fake]]", True),
+        ("![Example [[source--fake]]](image.png)", False),
+        ('<span title="[[source--fake]]">Example</span>', False),
+        ("<span>[[source--fake]]</span>", True),
+        ("Text <!--\n[[source--fake]]\n-->", False),
+        ("`` ` [[source--fake]] ``", False),
+        ("`unclosed [[source--fake]]", True),
+        ("`<!--` [[source--fake]]", True),
         ("source--fake", False),
         ("[[source--fake-other]]", False),
         ("<!-- [[source--fake]] -->", False),
@@ -133,11 +159,19 @@ def test_closeout_ignores_quoted_fenced_code(intake, prefix, fence, ending):
     assert report["status"] == expected
 
 
-def test_closeout_rejects_source_containing_only_quoted_code(intake):
+@pytest.mark.parametrize(
+    "body",
+    [
+        "> ~~~md\n> raw/fake.pdf\n> ~~~\n",
+        ">     raw/fake.pdf\n",
+        "> >     raw/fake.pdf\n",
+        "-     raw/fake.pdf\n",
+        "<!-- raw/fake.pdf -->",
+    ],
+)
+def test_closeout_rejects_source_without_prose(intake, body):
     vault, entry = intake
-    (vault / entry["source_page"]).write_text(
-        "> ~~~md\n> raw/fake.pdf\n> ~~~\n", encoding="utf-8"
-    )
+    (vault / entry["source_page"]).write_text(body, encoding="utf-8")
     (vault / "wiki/synthesis--target.md").write_text("[[source--fake]]")
     report = report_for(vault, entry)
     assert report["status"] == "fail"

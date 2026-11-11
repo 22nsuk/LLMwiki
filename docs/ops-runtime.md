@@ -255,8 +255,12 @@ Route report version 2 separates review from reflection:
   `create_new_synthesis_family`, the concrete concept/synthesis target must be a
   readable file and contain a visible wikilink back to that source. Plain source
   names, routing metadata, HTML comments and code examples do not count as links.
-  This includes fenced code inside nested blockquotes; visible prose links after
-  the fence or outside its quote container still count.
+  Closeout parses CommonMark blocks and inline tokens (with Markdown tables),
+  retaining the existing wikilink target, anchor and alias syntax. Fenced and
+  indented code are excluded inside lists and nested blockquotes as well as at
+  the document root. Escaped brackets, HTML tokens, image alt text and link
+  destinations do not create wikilink evidence; visible prose links after a code
+  block still count. The source-body check uses the same parsed prose boundary.
 - `target` can identify a unique flat page stem or a vault-relative `wiki/` or
   `system/` page path. When it is a proposed family label, add the reviewed
   `target_page` binding to the matrix; the gate does not guess a page from a

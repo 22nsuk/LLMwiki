@@ -5,7 +5,10 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from ops.scripts.eval.wikilink_runtime import extract_wikilinks
+from markdown_it import MarkdownIt
+from markdown_it.rules_inline import StateInline
+
+from ops.scripts.eval.wikilink_runtime import WIKILINK_RE
 
 from .raw_intake_input_runtime import IntakeFile, read_intake_file
 
@@ -35,47 +38,37 @@ def _resolve_page(page_paths: dict[str, list[str]], ref: str) -> tuple[str, str]
     return "", "ambiguous_page_reference" if candidates else "unresolved_page_reference"
 
 
-def _without_fenced_code(text: str) -> str:
-    visible: list[str] = []
-    fence = ""
-    fence_depth = 0
-    for line in text.splitlines(keepends=True):
-        content = line
-        depth = 0
-        while quote := re.match(r" {0,3}>[ \t]?", content):
-            content = content[quote.end() :]
-            depth += 1
-        # A quoted fence cannot consume prose outside its quote container.
-        if fence and depth < fence_depth:
-            fence = ""
-        if fence:
-            if depth == fence_depth and re.fullmatch(
-                r" {0,3}"
-                + re.escape(fence[0])
-                + "{"
-                + str(len(fence))
-                + r",}[ \t]*\n?",
-                content,
-            ):
-                fence = ""
-            visible.append("\n")
-            continue
-        opener = re.match(r" {0,3}(`{3,}|~{3,})([^\n]*)", content)
-        if opener and not (opener[1][0] == "`" and "`" in opener[2]):
-            fence, fence_depth = opener[1], depth
-            visible.append("\n")
-        else:
-            visible.append(line)
-    return "".join(visible)
+def _wikilink_rule(state: StateInline, silent: bool) -> bool:
+    match = WIKILINK_RE.match(state.src, state.pos, state.posMax)
+    if match is None:
+        return False
+    if not silent:
+        token = state.push("wikilink", "", 0)
+        token.content = match[1]
+    state.pos = match.end()
+    return True
 
 
-def _visible_body(text: str) -> str:
+def _body_evidence(text: str) -> tuple[bool, list[str]]:
+    """Read prose and wikilinks from Markdown structure, not rendered text.
+
+    Recognize wikilinks during inline parsing so escaped/entity-decoded brackets,
+    code, comments and link destinations cannot manufacture evidence.
+    """
     text = re.sub(r"\A---\s*\n.*?\n---\s*(?:\n|$)", "", text, flags=re.DOTALL)
-    text = re.sub(r"<!--.*?(?:-->|\Z)", "", text, flags=re.DOTALL)
-    text = _without_fenced_code(text)
-    text = re.sub(r"(`+).*?\1", "", text, flags=re.DOTALL)
-    text = re.sub(r"(?m)^(?: {4}|\t).*?(?:\n|$)", "", text)
-    return text.replace(r"\[", "")
+    parser = MarkdownIt("commonmark").enable("table")
+    parser.inline.ruler.before("link", "wikilink", _wikilink_rule)
+    has_prose = False
+    links: list[str] = []
+    for block in parser.parse(text):
+        if block.type != "inline":
+            continue
+        for token in block.children or []:
+            if token.type in {"text", "wikilink"} and token.content.strip():
+                has_prose = True
+            if token.type == "wikilink":
+                links.append(token.content)
+    return has_prose, links
 
 
 def _check(name: str, expected: str, observed: str) -> dict[str, str]:
@@ -111,8 +104,10 @@ def absorption_audit(
         or not Path(source_path).stem.startswith("source--")
     ):
         source_status = "invalid_source_page"
-    elif source_status == "present" and not _visible_body(source_file.text).strip():
-        source_status = "empty_source_page"
+    elif source_status == "present":
+        has_prose, _ = _body_evidence(source_file.text)
+        if not has_prose:
+            source_status = "empty_source_page"
     checks = audit["checks"]
     checks.append(_check("source_page_readable", "present", source_status))
     if action != "keep_source_only_seed":
@@ -138,9 +133,10 @@ def absorption_audit(
                         "absorption_target_kind", "concept_or_synthesis", target_kind
                     )
                 )
+                _, links = _body_evidence(target_file.text)
                 linked = any(
                     _resolve_page(page_paths, link) == (source_path, "resolved")
-                    for link in extract_wikilinks(_visible_body(target_file.text))
+                    for link in links
                 )
                 checks.append(
                     _check(
