@@ -35,15 +35,44 @@ def _resolve_page(page_paths: dict[str, list[str]], ref: str) -> tuple[str, str]
     return "", "ambiguous_page_reference" if candidates else "unresolved_page_reference"
 
 
+def _without_fenced_code(text: str) -> str:
+    visible: list[str] = []
+    fence = ""
+    fence_depth = 0
+    for line in text.splitlines(keepends=True):
+        content = line
+        depth = 0
+        while quote := re.match(r" {0,3}>[ \t]?", content):
+            content = content[quote.end() :]
+            depth += 1
+        # A quoted fence cannot consume prose outside its quote container.
+        if fence and depth < fence_depth:
+            fence = ""
+        if fence:
+            if depth == fence_depth and re.fullmatch(
+                r" {0,3}"
+                + re.escape(fence[0])
+                + "{"
+                + str(len(fence))
+                + r",}[ \t]*\n?",
+                content,
+            ):
+                fence = ""
+            visible.append("\n")
+            continue
+        opener = re.match(r" {0,3}(`{3,}|~{3,})([^\n]*)", content)
+        if opener and not (opener[1][0] == "`" and "`" in opener[2]):
+            fence, fence_depth = opener[1], depth
+            visible.append("\n")
+        else:
+            visible.append(line)
+    return "".join(visible)
+
+
 def _visible_body(text: str) -> str:
     text = re.sub(r"\A---\s*\n.*?\n---\s*(?:\n|$)", "", text, flags=re.DOTALL)
     text = re.sub(r"<!--.*?(?:-->|\Z)", "", text, flags=re.DOTALL)
-    text = re.sub(
-        r"(?m)^ {0,3}(`{3,}|~{3,})[^\n]*\n.*?(?:^ {0,3}\1[^\n]*(?:\n|$)|\Z)",
-        "",
-        text,
-        flags=re.DOTALL,
-    )
+    text = _without_fenced_code(text)
     text = re.sub(r"(`+).*?\1", "", text, flags=re.DOTALL)
     text = re.sub(r"(?m)^(?: {4}|\t).*?(?:\n|$)", "", text)
     return text.replace(r"\[", "")

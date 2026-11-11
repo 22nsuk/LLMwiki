@@ -255,6 +255,8 @@ Route report version 2 separates review from reflection:
   `create_new_synthesis_family`, the concrete concept/synthesis target must be a
   readable file and contain a visible wikilink back to that source. Plain source
   names, routing metadata, HTML comments and code examples do not count as links.
+  This includes fenced code inside nested blockquotes; visible prose links after
+  the fence or outside its quote container still count.
 - `target` can identify a unique flat page stem or a vault-relative `wiki/` or
   `system/` page path. When it is a proposed family label, add the reviewed
   `target_page` binding to the matrix; the gate does not guess a page from a

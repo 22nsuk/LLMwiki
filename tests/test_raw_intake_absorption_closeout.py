@@ -77,6 +77,8 @@ def test_reviewed_missing_target_is_proposal_only_and_cli_blocks_closeout(intake
         ("[[source--fake]]", True),
         ("[[wiki/source--fake#Summary|Evidence]]", True),
         ("[[wiki/source--fake.md]]", True),
+        ("> [[source--fake]]", True),
+        ("> > [[source--fake]]", True),
         ("source--fake", False),
         ("[[source--fake-other]]", False),
         ("<!-- [[source--fake]] -->", False),
@@ -84,6 +86,11 @@ def test_reviewed_missing_target_is_proposal_only_and_cli_blocks_closeout(intake
         ("    [[source--fake]]\n", False),
         (r"\[[source--fake]]", False),
         ("```md\n[[source--fake]]\n```", False),
+        ("> ~~~~md\n> ~~~\n> [[source--fake]]\n> ~~~~", False),
+        ("> ~~~md\n> ```\n> [[source--fake]]\n> ~~~", False),
+        ("> ~~~md\n> ~~~ still code\n> [[source--fake]]\n> ~~~", False),
+        ("> ~~~md\n> example\n> ~~~~\n> [[source--fake]]", True),
+        ("> > ~~~md\n> > example\n> [[source--fake]]", True),
         ("---\nsource: '[[source--fake]]'\n---\n# Routing metadata only", False),
     ],
 )
@@ -93,6 +100,53 @@ def test_closeout_requires_visible_target_to_source_wikilink(intake, link, passe
     report = report_for(vault, entry)
     assert report["status"] == ("pass" if passes else "fail")
     assert report["summary"]["absorption_pass_count"] == int(passes)
+
+
+@pytest.mark.parametrize("prefix", ["> ", ">> ", " > > "])
+@pytest.mark.parametrize("fence", ["~~~", "```"])
+@pytest.mark.parametrize(
+    "ending", ["closed", "unclosed", "outside_link", "quoted_link"]
+)
+def test_closeout_ignores_quoted_fenced_code(intake, prefix, fence, ending):
+    vault, entry = intake
+    body = f"{prefix}{fence}md\n{prefix}[[source--fake]]\n"
+    if ending in {"closed", "quoted_link"}:
+        body += f"{prefix}{fence}\n"
+    if ending == "outside_link":
+        # An unclosed fence ends with its quote container, not the document.
+        body += "[[source--fake]]\n"
+    elif ending == "quoted_link":
+        body += f"{prefix}[[source--fake]]\n"
+    (vault / "wiki/synthesis--target.md").write_text(body, encoding="utf-8")
+    report = report_for(vault, entry)
+    expected = "pass" if ending.endswith("link") else "fail"
+    row = report["proposals"][0]
+    assert row["route_status"] == "pass"
+    assert row["absorption_audit"]["status"] == expected
+    link_check = next(
+        check
+        for check in row["absorption_audit"]["checks"]
+        if check["name"] == "target_links_source"
+    )
+    assert link_check["status"] == expected
+    assert row["closeout_status"] == expected
+    assert report["status"] == expected
+
+
+def test_closeout_rejects_source_containing_only_quoted_code(intake):
+    vault, entry = intake
+    (vault / entry["source_page"]).write_text(
+        "> ~~~md\n> raw/fake.pdf\n> ~~~\n", encoding="utf-8"
+    )
+    (vault / "wiki/synthesis--target.md").write_text("[[source--fake]]")
+    report = report_for(vault, entry)
+    assert report["status"] == "fail"
+    assert report["proposals"][0]["absorption_audit"]["checks"][0] == {
+        "name": "source_page_readable",
+        "status": "fail",
+        "expected": "present",
+        "observed": "empty_source_page",
+    }
 
 
 @pytest.mark.parametrize(
