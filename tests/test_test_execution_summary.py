@@ -294,9 +294,11 @@ def test_collection_output_overrides_preserve_nodeids_and_execution_settings(
     monkeypatch.setenv("PYTEST_ADDOPTS", env_options)
     (tmp_path / "pytest.ini").write_text(f"[pytest]\n{ini}", encoding="utf-8")
     (tmp_path / "tests").mkdir(exist_ok=True)
+    # pytest 9.2 returns numeric verbosity ini values as integers; older versions
+    # return strings. Verify the configured value without depending on that type.
     (tmp_path / "tests/test_sample.py").write_text(
         "def test_selected(request):\n"
-        f"    assert request.config.getini('verbosity_test_cases') == {execution_verbosity!r}\n"
+        f"    assert str(request.config.getini('verbosity_test_cases')) == {execution_verbosity!r}\n"
         "def test_other():\n    pass\n",
         encoding="utf-8",
     )
