@@ -61,6 +61,54 @@ class WikiEvalRuntimeTest(unittest.TestCase):
             synthesis_results = _page_results(report, synthesis_path)
             self.assertFalse(synthesis_results["decisionability"])
 
+    def test_decision_body_requires_content_and_allows_reasoned_abstention(self) -> None:
+        cases = [
+            ("\n", False),
+            ("  \n- \n", False),
+            ("<!-- draft decision -->\n", False),
+            ("보류: 표본이 부족하므로 추가 비교가 필요하다.\n", True),
+        ]
+        for body, expected in cases:
+            with self.subTest(body=body), tempfile.TemporaryDirectory() as temp_dir:
+                vault = Path(temp_dir)
+                seed_minimal_vault(vault)
+                path = vault / "wiki" / "synthesis--fake.md"
+                path.write_text(path.read_text().replace(
+                    "## Decision / takeaway\n- x\n",
+                    "## Decision / takeaway\n" + body,
+                ))
+                report = evaluate(vault, context=_fixed_context())
+                self.assertEqual(_page_results(report, path)["decisionability"], expected)
+
+    def test_decisionability_ignores_headings_inside_html_comments(self) -> None:
+        cases = [
+            ("## Decision / takeaway\n<!-- old recommendation\n# Archived\ndraft\n-->\n", False),
+            ("## Decision / takeaway\n<!-- old recommendation\n## Archived\ndraft\n-->\n", False),
+            (
+                "## Decision / takeaway\n<!--\n## Archived\ndraft\n-->\n"
+                "보류: 표본이 부족하므로 추가 비교가 필요하다.\n",
+                True,
+            ),
+            ("<!--\n## Decision / takeaway\nDiscarded decision.\n-->\n", False),
+        ]
+        for section, expected in cases:
+            with self.subTest(section=section), tempfile.TemporaryDirectory() as temp_dir:
+                vault = Path(temp_dir)
+                seed_minimal_vault(vault)
+                paths = [vault / "wiki" / f"{prefix}--fake.md" for prefix in ("synthesis", "query")]
+                for path in paths:
+                    path.write_text(
+                        path.read_text(encoding="utf-8").replace("## Decision / takeaway\n- x\n", section),
+                        encoding="utf-8",
+                    )
+
+                report = evaluate(vault, context=_fixed_context())
+
+                self.assertEqual(report["status"], "pass" if expected else "fail")
+                for path in paths:
+                    with self.subTest(page=path.name):
+                        self.assertEqual(_page_results(report, path)["decisionability"], expected)
+
     def test_evaluate_rejects_cohort_fingerprint_source_page(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

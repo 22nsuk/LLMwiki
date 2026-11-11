@@ -100,3 +100,33 @@ Example Corp closed a $40M Series B led by Acme Capital in March 2026. The round
         self.assertIn("generic_snapshot_caveat", result["failures"])
         self.assertIn("generic_open_question_fingerprint", result["failures"])
         self.assertIn("summary_repeats_title", result["failures"])
+
+    def test_human_title_section_overrides_source_slug(self) -> None:
+        title = "Example Company Announces New Plant"
+        text = f"""# source--example-plant
+
+## Title
+{title}
+
+## Summary
+{title}. {title}.
+
+## Key points
+- {title}
+- {title}
+- {title}
+- {title}
+
+## Limitations / caveats
+- This announcement does not establish that construction has started.
+"""
+        result = evaluate_source_page_substance(text)
+        self.assertFalse(result["pass"])
+        self.assertIn("summary_repeats_title", result["failures"])
+        self.assertIn("first_key_point_repeats_title", result["failures"])
+        self.assertEqual(result["metrics"]["title_independent_fact_count"], 0)
+        substantive = text.replace(
+            f"{title}. {title}.",
+            "The proposed site covers 40 hectares. Construction is scheduled for May 2027.",
+        ).replace(f"- {title}", "- Construction remains subject to permit approval.")
+        self.assertTrue(evaluate_source_page_substance(substantive)["pass"])

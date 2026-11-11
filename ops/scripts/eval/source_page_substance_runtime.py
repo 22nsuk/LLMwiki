@@ -29,6 +29,9 @@ def _bullet_lines(section_text: str) -> list[str]:
 
 
 def _page_title(text: str) -> str:
+    title_section = (section_body(text, "Title") or "").strip()
+    if title_section:
+        return title_section.splitlines()[0].strip()
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("# "):

@@ -35,9 +35,11 @@ Fail: Placeholder markers appear in narrative sections.
 ## EVAL 7: Source page substance
 Question: If the page is a `source--` page, does it contain source-specific substance rather than title repetition, boilerplate fingerprints, or count-padding?
 Pass: `ops/scripts/eval/source_page_substance_runtime.py` reports `pass: true` (minimum section counts plus semantic checks such as title-independent summary facts, non-boilerplate key points, and non-generic limitations/open questions).
+Title comparisons use the human-readable `Title` section when present, falling back to the H1 for legacy pages. These are textual admission heuristics, not verification of factual support or truth.
 Fail: The substance runtime reports any failure (for example `summary_repeats_title`, `boilerplate_key_point_pattern`, or `generic_snapshot_caveat`), even when bullet counts alone look sufficient.
 
 ## EVAL 8: Synthesis decisionability
 Question: If the page is a `synthesis--` or `query--` page, does it end in an operational decision or takeaway rather than only summary?
-Pass: The page contains a concrete `Decision / takeaway`.
-Fail: The page only summarizes evidence and never decides.
+Pass: The `Decision / takeaway` body contains text beyond whitespace, punctuation and HTML comments. A reasoned decision to defer or abstain is allowed.
+HTML comments are removed before locating the section, so headings inside comments neither create nor terminate the decision section.
+Fail: The section is missing or its body is empty under that rule. This structural floor does not establish the quality or correctness of a decision; source-backed judgment still requires review.

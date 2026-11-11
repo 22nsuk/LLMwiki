@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -309,9 +310,11 @@ def _source_page_substance_result(text: str) -> dict[str, Any]:
 
 
 def _decisionability_result(text: str) -> dict[str, Any]:
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
+    body = section_body(text, "Decision / takeaway") or ""
     return {
         "eval": "decisionability",
-        "pass": section_exists(text, "Decision / takeaway"),
+        "pass": any(character.isalnum() for character in body),
     }
 
 
