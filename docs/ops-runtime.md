@@ -206,6 +206,29 @@ authority by themselves.
 
 ## Raw Intake And Registry Maintenance
 
+All three intake modes (`raw-intake-source-quality`, `raw-intake-route-proposal`,
+and `raw-intake-absorption-closeout`) validate the complete matrix before reading
+raw/source/target files. The installed `raw-intake-absorption-matrix` schema owns
+admission; the input's schema declaration or a vault-local schema cannot relax it.
+Malformed JSON, duplicate JSON keys, nonstandard numeric constants, invalid
+root/row types, missing fields and unknown fields are rejected without dropping
+rows. Registry IDs must be nonempty, whitespace-free and unique. `source_count`
+must equal the row count, and `action_counts`, `confidence_counts`, `target_counts`
+must exactly tally the trimmed row values (no unused zero-count keys).
+
+A legitimate empty batch still supplies the full schema-required envelope,
+`source_count: 0`, `matrix: []`, and three empty count maps. Its pass means no work
+was requested, with zero per-source results. An absent matrix is never an empty
+batch. Regenerate old matrices with placeholder count maps before reuse.
+
+Library callers receive `IntakeMatrixError` on admission failure. Both CLIs return
+exit code 2 and an stderr diagnostic even without `--fail-on-fail`; they do not
+write a report or overwrite a previous output. Callers must honor this exit code
+and must not interpret a retained old report as the result of the failed command.
+Valid matrices retain the existing per-source report and exit-code contracts.
+Older successful reports do not establish that this admission check was run;
+regenerate them with the current producer before reuse.
+
 Full-vault raw intake work should move through the reviewable surfaces in this
 order:
 

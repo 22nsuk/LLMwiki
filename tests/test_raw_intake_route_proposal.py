@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -34,9 +35,9 @@ def write_matrix(path: Path, entries: list[dict[str, Any]]) -> None:
                 "generated_at": "2026-04-22T00:00:00Z",
                 "scope": "unit-test",
                 "source_count": len(entries),
-                "action_counts": {},
-                "confidence_counts": {},
-                "target_counts": {},
+                "action_counts": dict(Counter(entry["proposed_action"].strip() for entry in entries)),
+                "confidence_counts": dict(Counter(entry["confidence"].strip() for entry in entries)),
+                "target_counts": dict(Counter(entry["target"].strip() for entry in entries)),
                 "matrix": entries,
             },
             ensure_ascii=False,

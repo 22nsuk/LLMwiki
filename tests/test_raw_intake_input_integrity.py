@@ -10,6 +10,7 @@ import pytest
 from ops.scripts.core.runtime_context import RuntimeContext
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.registry import raw_intake_route_proposal, raw_intake_source_quality
+from ops.scripts.registry.raw_intake_input_runtime import IntakeMatrixError
 from tests.cli_test_runtime import invoke_cli_main
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 from tests.test_raw_intake_route_proposal import matrix_entry, write_matrix
@@ -156,7 +157,7 @@ def test_content_fingerprints_bind_full_contents_and_absence(intake, report_buil
 
 def test_content_fingerprints_are_order_independent_and_bind_file_set(intake, report_builder):
     vault, entry = intake
-    other = {**entry, "raw_path": "raw/other.md", "source_page": "wiki/source--other.md"}
+    other = {**entry, "registry_id": "W-002", "raw_path": "raw/other.md", "source_page": "wiki/source--other.md"}
     for field in ("raw_path", "source_page"):
         (vault / other[field]).write_bytes((vault / entry[field]).read_bytes())
     write_matrix(vault / "matrix.json", [entry, other])
@@ -165,7 +166,7 @@ def test_content_fingerprints_are_order_independent_and_bind_file_set(intake, re
     reordered = report_builder(vault)
     for key in ("raw_files", "source_pages"):
         assert first["input_fingerprints"][key] == reordered["input_fingerprints"][key]
-    write_matrix(vault / "matrix.json", [entry, other, entry])
+    write_matrix(vault / "matrix.json", [entry, other, {**entry, "registry_id": "W-003"}])
     duplicated = report_builder(vault)
     for key in ("raw_files", "source_pages"):
         assert first["input_fingerprints"][key] == duplicated["input_fingerprints"][key]
@@ -206,7 +207,11 @@ def test_unusable_raw_path_cannot_admit(intake, report_builder, path_kind):
             (vault / "raw/link.md").symlink_to(outside)
             entry["raw_path"] = "raw/link.md"
     write_matrix(vault / "matrix.json", [entry])
-    assert report_builder(vault)["status"] == "fail"
+    if path_kind == "null":
+        with pytest.raises(IntakeMatrixError, match="raw_path"):
+            report_builder(vault)
+    else:
+        assert report_builder(vault)["status"] == "fail"
 
 
 def test_line_endings_keep_checks_stable_but_bind_original_bytes(intake, report_builder):

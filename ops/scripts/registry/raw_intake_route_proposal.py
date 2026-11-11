@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import re
 import sys
 from collections import Counter
@@ -32,7 +31,9 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     )
     from ops.scripts.registry.raw_intake_input_runtime import (
         IntakeFile,
+        IntakeMatrixError,
         intake_content_inputs,
+        load_intake_matrix as load_matrix,
         read_intake_inputs,
     )
 else:
@@ -54,7 +55,9 @@ else:
     )
     from ops.scripts.registry.raw_intake_input_runtime import (
         IntakeFile,
+        IntakeMatrixError,
         intake_content_inputs,
+        load_intake_matrix as load_matrix,
         read_intake_inputs,
     )
 
@@ -388,10 +391,6 @@ def _proposal_for_entry(
     }
 
 
-def load_matrix(matrix_path: Path) -> dict[str, Any]:
-    return json.loads(matrix_path.read_text(encoding="utf-8"))
-
-
 def build_report(
     vault: Path,
     *,
@@ -406,10 +405,7 @@ def build_report(
     generated_at = runtime_context.isoformat_z()
     resolved_matrix_path = _resolved_input_path(vault, matrix_path)
     matrix = load_matrix(resolved_matrix_path)
-    entries = matrix.get("matrix")
-    if not isinstance(entries, list):
-        entries = []
-    entries = [entry for entry in entries if isinstance(entry, dict)]
+    entries = matrix["matrix"]
     inputs = read_intake_inputs(vault, entries)
     page_paths = corpus_page_paths(vault) if mode == "absorption_closeout" else {}
     audits = [
@@ -536,7 +532,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     vault = Path(args.vault).resolve()
-    report = build_report(vault, matrix_path=args.matrix, mode=args.mode)
+    try:
+        report = build_report(vault, matrix_path=args.matrix, mode=args.mode)
+    except IntakeMatrixError as exc:
+        print(f"intake matrix admission failed: {exc}", file=sys.stderr)
+        return 2
     path = write_report(vault, report, args.out)
     print(display_path(vault, path))
     if args.fail_on_fail and report["status"] == "fail":

@@ -2,11 +2,63 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ops.scripts.core.schema_constants_runtime import (
+    RAW_INTAKE_ABSORPTION_MATRIX_SCHEMA_PATH,
+)
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
+
 TEXTUAL_RAW_SUFFIXES = {".md", ".markdown", ".txt", ".html", ".htm"}
+
+
+class IntakeMatrixError(ValueError):
+    """The batch cannot be admitted; no per-source checks have run."""
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise IntakeMatrixError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise IntakeMatrixError(f"invalid JSON constant: {value}")
+
+
+def load_intake_matrix(matrix_path: Path) -> dict[str, Any]:
+    try:
+        matrix = json.loads(
+            matrix_path.read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_json_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise IntakeMatrixError(f"cannot read JSON matrix: {exc}") from exc
+    # Use the shipped contract, not a schema selected by the input document.
+    schema_path = Path(__file__).resolve().parents[3] / RAW_INTAKE_ABSORPTION_MATRIX_SCHEMA_PATH
+    errors = validate_with_schema(matrix, load_schema(schema_path))
+    if errors:
+        raise IntakeMatrixError("invalid intake matrix: " + "; ".join(errors))
+    entries = matrix["matrix"]
+    if matrix["source_count"] != len(entries):
+        errors.append("source_count must equal the number of matrix rows")
+    ids = Counter(entry["registry_id"] for entry in entries)
+    if any(count > 1 for count in ids.values()):
+        errors.append("registry_id must be unique across matrix rows")
+    for name, field in (("action_counts", "proposed_action"), ("confidence_counts", "confidence"), ("target_counts", "target")):
+        expected = dict(Counter(entry[field].strip() for entry in entries))
+        if matrix[name] != expected:
+            errors.append(f"{name} must exactly match matrix row counts (trimmed {field})")
+    if errors:
+        raise IntakeMatrixError("invalid intake matrix: " + "; ".join(errors))
+    return matrix
 
 
 @dataclass(frozen=True)

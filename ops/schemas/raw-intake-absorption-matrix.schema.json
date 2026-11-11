@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Raw Intake Absorption Matrix",
+  "description": "Admission requires this shape, unique registry IDs, source_count equal to row count, and exact action/confidence/target tallies over trimmed row values. A valid empty batch has zero source_count, an empty matrix, and three empty count maps.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -75,7 +76,9 @@
       ],
       "properties": {
         "registry_id": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "not": { "pattern": "\\s" }
         },
         "title": {
           "type": "string"
