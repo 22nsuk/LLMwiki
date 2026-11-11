@@ -48,6 +48,7 @@
     "source_tree_fingerprint": { "type": "string", "minLength": 1 },
     "input_fingerprints": {
       "type": "object",
+      "description": "New reports bind raw_files and source_pages as sorted path/status/full-byte-SHA256 manifests. Legacy reports without these keys do not establish corpus content identity.",
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
     "schema_version": { "type": "integer", "minimum": 1 },
@@ -201,6 +202,7 @@
     },
     "identityAudit": {
       "type": "object",
+      "description": "Unavailable canonical raw adds a failing raw_file_readable check, including binary raw. Skipped metadata comparisons never excuse this failure.",
       "additionalProperties": false,
       "required": ["status", "checks"],
       "properties": {

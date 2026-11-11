@@ -25,6 +25,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_intake_input_runtime import (
+        IntakeFile,
+        intake_content_inputs,
+        read_intake_inputs,
+    )
 else:
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
@@ -37,6 +42,11 @@ else:
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_intake_input_runtime import (
+        IntakeFile,
+        intake_content_inputs,
+        read_intake_inputs,
+    )
 
 
 DEFAULT_MATRIX = (
@@ -117,27 +127,6 @@ def _frontmatter_value(text: str, field: str) -> str:
     return ""
 
 
-def _resolved_optional_path(vault: Path, value: str) -> Path | None:
-    if not value:
-        return None
-    path = Path(value)
-    if path.is_absolute():
-        return None
-    resolved_vault = vault.resolve()
-    resolved = (resolved_vault / path).resolve()
-    try:
-        resolved.relative_to(resolved_vault)
-    except ValueError:
-        return None
-    return resolved
-
-
-def _read_optional_text(path: Path | None) -> str:
-    if path is None or not path.is_file():
-        return ""
-    return path.read_text(encoding="utf-8", errors="replace")
-
-
 def _source_page_title(text: str) -> str:
     title = (section_body(text, "Title") or "").strip()
     return title.splitlines()[0].strip() if title else ""
@@ -189,18 +178,14 @@ def _identity_check(name: str, expected: str, observed: str) -> dict[str, str]:
     }
 
 
-def _identity_audit(vault: Path | None, entry: dict[str, Any]) -> dict[str, Any]:
-    if vault is None:
-        return {"status": "skipped", "checks": []}
-
+def _identity_audit(inputs: dict[str, IntakeFile], entry: dict[str, Any]) -> dict[str, Any]:
     matrix_title = _string_value(entry, "title")
     matrix_raw_path = _string_value(entry, "raw_path")
     matrix_source_url = _string_value(entry, "source_url")
 
-    raw_text = _read_optional_text(_resolved_optional_path(vault, matrix_raw_path))
-    source_text = _read_optional_text(
-        _resolved_optional_path(vault, _string_value(entry, "source_page"))
-    )
+    raw = inputs[matrix_raw_path]
+    raw_text = raw.text
+    source_text = inputs[_string_value(entry, "source_page")].text
     raw_title = _frontmatter_value(raw_text, "title")
     raw_source_url = _frontmatter_value(raw_text, "source")
     source_title = _source_page_title(source_text) if source_text else ""
@@ -218,6 +203,13 @@ def _identity_audit(vault: Path | None, entry: dict[str, Any]) -> dict[str, Any]
         _identity_check("matrix_source_url_matches_raw_source_url", matrix_source_url, raw_source_url),
         _identity_check("raw_source_url_matches_source_page_url", raw_source_url, source_url),
     ]
+    if raw.status != "present":
+        checks.append({
+            "name": "raw_file_readable",
+            "status": "fail",
+            "expected": "present",
+            "observed": raw.status,
+        })
     statuses = {check["status"] for check in checks}
     source_page_blocked = any(
         check["name"] in SOURCE_PAGE_IDENTITY_CHECKS
@@ -317,7 +309,7 @@ def _route_audit(
     }
 
 
-def _proposal_for_entry(entry: dict[str, Any], *, vault: Path | None = None) -> dict[str, Any]:
+def _proposal_for_entry(entry: dict[str, Any], *, inputs: dict[str, IntakeFile]) -> dict[str, Any]:
     action = _string_value(entry, "proposed_action")
     target = _string_value(entry, "target")
     rationale = _string_value(entry, "rationale")
@@ -342,7 +334,7 @@ def _proposal_for_entry(entry: dict[str, Any], *, vault: Path | None = None) -> 
     if action == "keep_source_only_seed":
         review_reasons.append("source-only seed posture requires future absorption review")
 
-    identity_audit = _identity_audit(vault, entry)
+    identity_audit = _identity_audit(inputs, entry)
     if identity_audit["status"] == "fail":
         issues.append("identity_mismatch")
 
@@ -394,10 +386,11 @@ def build_report(
     entries = matrix.get("matrix")
     if not isinstance(entries, list):
         entries = []
+    entries = [entry for entry in entries if isinstance(entry, dict)]
+    inputs = read_intake_inputs(vault, entries)
     proposals = [
-        _proposal_for_entry(entry, vault=vault.resolve())
+        _proposal_for_entry(entry, inputs=inputs)
         for entry in entries
-        if isinstance(entry, dict)
     ]
     blocking = [
         {
@@ -427,9 +420,12 @@ def build_report(
             source_command=SOURCE_COMMAND,
             resolved_policy_path=resolved_policy_path,
             schema_path=SCHEMA_PATH,
-            source_paths=["ops/scripts/registry/raw_intake_route_proposal.py"],
+            source_paths=[
+                "ops/scripts/registry/raw_intake_route_proposal.py",
+                "ops/scripts/registry/raw_intake_input_runtime.py",
+            ],
             file_inputs={"matrix": resolved_matrix_path},
-            text_inputs={"mode": mode},
+            text_inputs={"mode": mode, **intake_content_inputs(entries, inputs)},
         ),
         "vault": report_path(vault, vault),
         "mode": mode,

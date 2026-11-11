@@ -18,6 +18,13 @@ SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "raw-intake-route-proposal-report.
 MATRIX_SCHEMA_PATH = REPO_ROOT / "ops" / "schemas" / "raw-intake-absorption-matrix.schema.json"
 
 
+def seed_route_vault(vault: Path) -> None:
+    seed_minimal_vault(vault)
+    raw = vault / "raw" / "source.md"
+    raw.parent.mkdir(exist_ok=True)
+    raw.write_text("Canonical source awaiting identity metadata and source generation.\n", encoding="utf-8")
+
+
 def write_matrix(path: Path, entries: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -65,7 +72,7 @@ class RawIntakeRouteProposalTests(unittest.TestCase):
             launcher = Path(temp_dir) / "launcher"
             vault.mkdir()
             launcher.mkdir()
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(matrix_path, [matrix_entry()])
 
@@ -92,7 +99,7 @@ class RawIntakeRouteProposalTests(unittest.TestCase):
     def test_route_proposal_is_deterministic_and_schema_valid(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(matrix_path, [matrix_entry()])
 
@@ -115,7 +122,7 @@ class RawIntakeRouteProposalTests(unittest.TestCase):
     def test_route_identity_audit_passes_when_raw_and_source_page_match(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             raw_path = vault / "raw" / "source.md"
             raw_path.parent.mkdir(parents=True, exist_ok=True)
             raw_path.write_text(
@@ -191,7 +198,7 @@ Stable Identity
     def test_route_identity_audit_fails_when_source_page_title_is_unresolved(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             raw_path = vault / "raw" / "source.md"
             raw_path.parent.mkdir(parents=True, exist_ok=True)
             raw_path.write_text(
@@ -261,7 +268,7 @@ tags:
             temp_root = Path(temp_dir)
             vault = temp_root / "vault"
             vault.mkdir()
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             raw_path = vault / "raw" / "source.md"
             raw_path.parent.mkdir(parents=True, exist_ok=True)
             raw_path.write_text(
@@ -320,7 +327,7 @@ Stable Identity
     def test_route_identity_audit_fails_title_mismatch_before_closeout(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             raw_path = vault / "raw" / "source.md"
             raw_path.parent.mkdir(parents=True, exist_ok=True)
             raw_path.write_text(
@@ -367,7 +374,7 @@ source: "https://example.test/source"
     def test_route_audit_flags_broad_term_matches_before_source_generation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(
                 matrix_path,
@@ -411,7 +418,7 @@ source: "https://example.test/source"
     def test_route_audit_uses_token_boundaries_for_broad_terms(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(
                 matrix_path,
@@ -436,7 +443,7 @@ source: "https://example.test/source"
     def test_route_audit_ignores_route_vocabulary_in_target_and_rationale(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(
                 matrix_path,
@@ -468,7 +475,7 @@ source: "https://example.test/source"
     def test_route_audit_records_explicit_rule_and_manual_override_reason(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(
                 matrix_path,
@@ -499,7 +506,7 @@ source: "https://example.test/source"
     def test_route_audit_schema_requires_manual_override_reason_when_recorded(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(
                 matrix_path,
@@ -525,7 +532,7 @@ source: "https://example.test/source"
     def test_route_audit_schema_requires_match_evidence_when_review_required(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(
                 matrix_path,
@@ -547,7 +554,7 @@ source: "https://example.test/source"
     def test_absorption_closeout_fails_unreviewed_actions_before_writes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
-            seed_minimal_vault(vault)
+            seed_route_vault(vault)
             matrix_path = vault / "runs" / "matrix.json"
             write_matrix(
                 matrix_path,
