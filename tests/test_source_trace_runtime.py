@@ -6,6 +6,7 @@ from pathlib import Path
 
 from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.core.source_trace_profile_runtime import (
+    EXTERNAL_UNVERIFIED,
     MISSING_EXPORT_EXCLUDED_BOUND,
     MISSING_EXPORT_EXCLUDED_UNBOUND,
     MISSING_GENERATED_REBUILDABLE,
@@ -15,8 +16,10 @@ from ops.scripts.core.source_trace_profile_runtime import (
     PRESENT,
     PUBLIC_CODE_MIRROR_PROFILE,
     RELEASE_ARCHIVE_PROFILE,
+    SOURCE_PACKAGE_PROFILE,
     STRICT_PROFILE,
     classify_source_trace_targets,
+    source_trace_profile_summary,
 )
 from ops.scripts.core.source_trace_runtime import (
     extract_source_trace_refs,
@@ -29,6 +32,27 @@ from tests.minimal_vault_runtime import seed_open_question_smoke_vault
 
 
 class SourceTraceRuntimeTests(unittest.TestCase):
+    def test_external_urls_are_declared_unverified_in_every_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "existing.md").write_text("Local snapshot", encoding="utf-8")
+            for profile in (STRICT_PROFILE, RELEASE_ARCHIVE_PROFILE, SOURCE_PACKAGE_PROFILE, PUBLIC_CODE_MIRROR_PROFILE):
+                with self.subTest(profile=profile):
+                    targets = classify_source_trace_targets(root, "`https://example.invalid/source` `existing.md` `missing.md`", profile=profile)
+                    external, local, missing = targets
+                    self.assertEqual(external["classification"], EXTERNAL_UNVERIFIED)
+                    self.assertIsNone(external["exists"])
+                    self.assertEqual(external["verification_status"], "not_checked")
+                    self.assertFalse(external["blocks_profile"])
+                    self.assertFalse(external["profile_allows_missing"])
+                    self.assertEqual(local["classification"], PRESENT)
+                    self.assertEqual(local["verification_status"], "local_existence_checked")
+                    self.assertTrue(missing["blocks_profile"])
+                    summary = source_trace_profile_summary(targets)
+                    self.assertEqual(summary["external_unverified_count"], 1)
+                    self.assertEqual(summary["missing_count"], 1)
+                    self.assertEqual(summary["blocking_missing_count"], 1)
+
     def test_extract_and_resolve_missing_source_trace_targets(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

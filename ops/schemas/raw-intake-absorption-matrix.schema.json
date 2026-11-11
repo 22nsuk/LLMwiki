@@ -99,7 +99,13 @@
           "type": "string"
         },
         "target": {
-          "type": "string"
+          "type": "string",
+          "description": "Reviewed route destination: a page stem/path or a proposed family label. A label alone cannot establish absorption."
+        },
+        "target_page": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reviewed concrete wiki/system page path or unique flat page stem for closeout, required when target is only a family label."
         },
         "rationale": {
           "type": "string"

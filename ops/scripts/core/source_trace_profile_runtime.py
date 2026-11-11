@@ -21,6 +21,7 @@ SOURCE_PACKAGE_PROFILE = "source_package"
 PUBLIC_CODE_MIRROR_PROFILE = "public_code_mirror"
 
 PRESENT = "present"
+EXTERNAL_UNVERIFIED = "external_unverified"
 MISSING_UNCLASSIFIED = "missing_unclassified"
 MISSING_INVALID_PATH = "missing_invalid_path"
 MISSING_EXPORT_EXCLUDED_BOUND = "missing_export_excluded_bound"
@@ -68,10 +69,17 @@ UNBOUND_EXPORT_EXCLUDED_PREFIXES = ("tmp/", "build/")
 
 
 def _requirement(status: str, rel_path: str) -> dict[str, str]:
+    if status == EXTERNAL_UNVERIFIED:
+        return {
+            "authority": "external reference declared; access and content not checked",
+            "digest": "no fetched content or snapshot digest is bound",
+            "linkage": "URL declaration only",
+            "repair_target": "verify access and claim support separately; retain a source snapshot for replay",
+        }
     if status == PRESENT:
         return {
             "authority": "path exists in the current execution profile",
-            "digest": "file content is available to the caller",
+            "digest": "existence checked only; content readability and digest not verified",
             "linkage": "direct source trace target",
             "repair_target": "",
         }
@@ -163,9 +171,9 @@ def classify_source_trace_targets(
         resolved = resolve_source_trace_ref(vault, ref, resolution_map)
         normalized_ref = normalize_source_trace_ref(ref)
         if resolved is None:
-            status = PRESENT
+            status = EXTERNAL_UNVERIFIED
             resolved_path = ""
-            exists = True
+            exists: bool | None = None
         else:
             resolved_absolute = resolved if resolved.is_absolute() else (Path.cwd() / resolved).resolve()
             resolved_path = report_source_trace_path(vault.resolve(), resolved_absolute)
@@ -192,6 +200,7 @@ def classify_source_trace_targets(
                 "ref": normalized_ref,
                 "resolved_path": resolved_path,
                 "exists": exists,
+                "verification_status": "not_checked" if resolved is None else "local_existence_checked",
                 "classification": status,
                 "profile": profile,
                 "profile_allows_missing": source_trace_profile_allows_missing(
@@ -253,6 +262,7 @@ def source_trace_profile_summary(targets: list[dict[str, Any]]) -> dict[str, Any
         classification_counts[classification] = classification_counts.get(classification, 0) + 1
     return {
         "target_count": len(targets),
+        "external_unverified_count": classification_counts.get(EXTERNAL_UNVERIFIED, 0),
         "classification_counts": classification_counts,
         "missing_count": sum(
             count

@@ -25,6 +25,11 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_intake_absorption_runtime import (
+        absorption_audit,
+        absorption_content_inputs,
+        corpus_page_paths,
+    )
     from ops.scripts.registry.raw_intake_input_runtime import (
         IntakeFile,
         intake_content_inputs,
@@ -42,6 +47,11 @@ else:
     from ops.scripts.core.policy_runtime import load_policy, report_path
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_intake_absorption_runtime import (
+        absorption_audit,
+        absorption_content_inputs,
+        corpus_page_paths,
+    )
     from ops.scripts.registry.raw_intake_input_runtime import (
         IntakeFile,
         intake_content_inputs,
@@ -309,7 +319,9 @@ def _route_audit(
     }
 
 
-def _proposal_for_entry(entry: dict[str, Any], *, inputs: dict[str, IntakeFile]) -> dict[str, Any]:
+def _proposal_for_entry(
+    entry: dict[str, Any], *, inputs: dict[str, IntakeFile], absorption: dict[str, Any], mode: str,
+) -> dict[str, Any]:
     action = _string_value(entry, "proposed_action")
     target = _string_value(entry, "target")
     rationale = _string_value(entry, "rationale")
@@ -338,10 +350,17 @@ def _proposal_for_entry(entry: dict[str, Any], *, inputs: dict[str, IntakeFile])
     if identity_audit["status"] == "fail":
         issues.append("identity_mismatch")
 
-    closeout_status = "fail" if issues else "pass"
-    review_gate = "satisfied" if review_status in REVIEWED_ROUTE_STATUSES else "required"
-    if closeout_status == "fail":
-        review_gate = "required"
+    route_status = "fail" if issues else "pass"
+    review_gate = "satisfied" if route_status == "pass" else "required"
+    closeout_status = "not_checked"
+    if mode == "absorption_closeout":
+        if action != "discard_from_active_routes":
+            source_raw_path = _source_page_raw_path(inputs[_string_value(entry, "source_page")].text)
+            if not source_raw_path or source_raw_path != _string_value(entry, "raw_path"):
+                issues.append("source_raw_path_not_bound")
+        if absorption["status"] == "fail":
+            issues.append("absorption_incomplete")
+        closeout_status = "fail" if issues else "pass"
 
     return {
         "registry_id": _string_value(entry, "registry_id"),
@@ -361,6 +380,8 @@ def _proposal_for_entry(entry: dict[str, Any], *, inputs: dict[str, IntakeFile])
         ),
         "identity_audit": identity_audit,
         "review_gate": review_gate,
+        "route_status": route_status,
+        "absorption_audit": absorption,
         "closeout_status": closeout_status,
         "issues": issues,
         "review_reasons": review_reasons,
@@ -378,6 +399,8 @@ def build_report(
     mode: str = "route_proposal",
     context: RuntimeContext | None = None,
 ) -> dict[str, Any]:
+    if mode not in {"route_proposal", "absorption_closeout"}:
+        raise ValueError(f"unsupported raw intake mode: {mode}")
     policy, resolved_policy_path = load_policy(vault)
     runtime_context = context or RuntimeContext.from_policy(policy)
     generated_at = runtime_context.isoformat_z()
@@ -388,9 +411,16 @@ def build_report(
         entries = []
     entries = [entry for entry in entries if isinstance(entry, dict)]
     inputs = read_intake_inputs(vault, entries)
-    proposals = [
-        _proposal_for_entry(entry, inputs=inputs)
+    page_paths = corpus_page_paths(vault) if mode == "absorption_closeout" else {}
+    audits = [
+        absorption_audit(vault, entry, inputs, page_paths)
+        if mode == "absorption_closeout"
+        else {"status": "not_checked", "target_page": "", "checks": []}
         for entry in entries
+    ]
+    proposals = [
+        _proposal_for_entry(entry, inputs=inputs, absorption=audit, mode=mode)
+        for entry, audit in zip(entries, audits, strict=True)
     ]
     blocking = [
         {
@@ -399,7 +429,7 @@ def build_report(
             "issues": proposal["issues"],
         }
         for proposal in proposals
-        if proposal["closeout_status"] == "fail"
+        if proposal["issues"]
     ]
     review_gate_counts = Counter(proposal["review_gate"] for proposal in proposals)
     closeout_counts = Counter(proposal["closeout_status"] for proposal in proposals)
@@ -423,10 +453,15 @@ def build_report(
             source_paths=[
                 "ops/scripts/registry/raw_intake_route_proposal.py",
                 "ops/scripts/registry/raw_intake_input_runtime.py",
+                "ops/scripts/registry/raw_intake_absorption_runtime.py",
             ],
             file_inputs={"matrix": resolved_matrix_path},
-            text_inputs={"mode": mode, **intake_content_inputs(entries, inputs)},
+            text_inputs={
+                "mode": mode, **intake_content_inputs(entries, inputs),
+                **(absorption_content_inputs(audits, inputs, page_paths) if mode == "absorption_closeout" else {}),
+            },
         ),
+        "schema_version": 2,
         "vault": report_path(vault, vault),
         "mode": mode,
         "status": status,
@@ -449,6 +484,9 @@ def build_report(
             "review_satisfied_count": int(review_gate_counts.get("satisfied", 0)),
             "closeout_pass_count": int(closeout_counts.get("pass", 0)),
             "closeout_fail_count": int(closeout_counts.get("fail", 0)),
+            "closeout_not_checked_count": int(closeout_counts.get("not_checked", 0)),
+            "absorption_pass_count": sum(audit["status"] == "pass" for audit in audits),
+            "absorption_not_applicable_count": sum(audit["status"] == "not_applicable" for audit in audits),
             "audit_clear_count": int(audit_status_counts.get("clear", 0)),
             "audit_review_required_count": int(
                 audit_status_counts.get("review_required", 0)

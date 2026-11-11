@@ -48,7 +48,7 @@
     "source_tree_fingerprint": { "type": "string", "minLength": 1 },
     "input_fingerprints": {
       "type": "object",
-      "description": "New reports bind raw_files and source_pages as sorted path/status/full-byte-SHA256 manifests. Legacy reports without these keys do not establish corpus content identity.",
+      "description": "Version 2 binds raw_files and source_pages; closeout also binds target_pages full-byte manifests and absorption_page_paths for resolution. Version 1 does not establish absorption completion.",
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
     "schema_version": { "type": "integer", "minimum": 1 },
@@ -121,6 +121,9 @@
         "review_satisfied_count": { "type": "integer", "minimum": 0 },
         "closeout_pass_count": { "type": "integer", "minimum": 0 },
         "closeout_fail_count": { "type": "integer", "minimum": 0 },
+        "closeout_not_checked_count": { "type": "integer", "minimum": 0 },
+        "absorption_pass_count": { "type": "integer", "minimum": 0 },
+        "absorption_not_applicable_count": { "type": "integer", "minimum": 0 },
         "audit_clear_count": { "type": "integer", "minimum": 0 },
         "audit_review_required_count": { "type": "integer", "minimum": 0 },
         "audit_manual_override_count": { "type": "integer", "minimum": 0 },
@@ -138,6 +141,44 @@
       "items": { "$ref": "#/$defs/proposal" }
     }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "schema_version": { "minimum": 2 } } },
+      "then": {
+        "properties": {
+          "input_fingerprints": { "required": ["raw_files", "source_pages"] },
+          "summary": { "required": ["closeout_not_checked_count", "absorption_pass_count", "absorption_not_applicable_count"] },
+          "proposals": { "items": { "required": ["route_status", "absorption_audit"] } }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "mode": { "const": "route_proposal" } } },
+            "then": { "properties": { "proposals": { "items": { "properties": {
+              "closeout_status": { "const": "not_checked" },
+              "absorption_audit": { "properties": { "status": { "const": "not_checked" } } }
+            } } } } },
+            "else": { "properties": {
+              "input_fingerprints": { "required": ["target_pages", "absorption_page_paths"] },
+              "proposals": { "items": {
+                "properties": {
+                  "closeout_status": { "enum": ["pass", "fail"] },
+                  "absorption_audit": { "properties": { "status": { "enum": ["pass", "fail", "not_applicable"] } } }
+                },
+                "allOf": [{
+                  "if": { "properties": { "closeout_status": { "const": "pass" } } },
+                  "then": { "properties": {
+                    "route_status": { "const": "pass" },
+                    "issues": { "maxItems": 0 },
+                    "absorption_audit": { "properties": { "status": { "enum": ["pass", "not_applicable"] } } }
+                  } }
+                }]
+              } }
+            } }
+          }
+        ]
+      }
+    }
+  ],
   "$defs": {
     "stringMap": {
       "type": "object",
@@ -189,7 +230,9 @@
         "route_audit": { "$ref": "#/$defs/routeAudit" },
         "identity_audit": { "$ref": "#/$defs/identityAudit" },
         "review_gate": { "type": "string", "enum": ["satisfied", "required"] },
-        "closeout_status": { "type": "string", "enum": ["pass", "fail"] },
+        "route_status": { "type": "string", "enum": ["pass", "fail"] },
+        "absorption_audit": { "$ref": "#/$defs/absorptionAudit" },
+        "closeout_status": { "type": "string", "enum": ["pass", "fail", "not_checked"] },
         "issues": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
@@ -198,7 +241,42 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         }
-      }
+      },
+      "allOf": [{
+        "if": {
+          "required": ["absorption_audit"],
+          "properties": { "absorption_audit": { "properties": { "status": { "const": "not_applicable" } } } }
+        },
+        "then": { "properties": { "proposed_action": { "enum": ["keep_source_only_seed", "discard_from_active_routes"] } } }
+      }]
+    },
+    "absorptionAudit": {
+      "type": "object",
+      "description": "Structural evidence of readable pages and a target-to-source wikilink; not claim validation or a proof of a textual diff. Seed/discard decisions are explicitly not applicable.",
+      "additionalProperties": false,
+      "required": ["status", "target_page", "checks"],
+      "properties": {
+        "status": { "enum": ["not_checked", "not_applicable", "pass", "fail"] },
+        "target_page": { "type": "string" },
+        "checks": { "type": "array", "items": { "$ref": "#/$defs/identityCheck" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "not_checked" } } },
+          "then": { "properties": { "target_page": { "const": "" }, "checks": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "pass" } } },
+          "then": { "properties": {
+            "target_page": { "minLength": 1 },
+            "checks": { "minItems": 1, "items": { "properties": { "status": { "const": "pass" } } } }
+          } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "fail" } } },
+          "then": { "properties": { "checks": { "contains": { "properties": { "status": { "const": "fail" } } } } } }
+        }
+      ]
     },
     "identityAudit": {
       "type": "object",
