@@ -245,6 +245,48 @@ the public `source_tree_fingerprint` and do not expose private file contents.
 Regenerate older reports before relying on corpus content identity: reports
 without these keys remain readable historical evidence but cannot establish it.
 
+Route report version 2 separates review from reflection:
+
+- `route_proposal` checks assignment review and input identity. Its
+  `route_status` can pass while `closeout_status` and `absorption_audit.status`
+  remain `not_checked`; it does not count any completed closeout.
+- `absorption_closeout` retains those checks and requires a readable source page
+  with a raw-path binding. For `refresh_existing_synthesis` and
+  `create_new_synthesis_family`, the concrete concept/synthesis target must be a
+  readable file and contain a visible wikilink back to that source. Plain source
+  names, routing metadata, HTML comments and code examples do not count as links.
+- `target` can identify a unique flat page stem or a vault-relative `wiki/` or
+  `system/` page path. When it is a proposed family label, add the reviewed
+  `target_page` binding to the matrix; the gate does not guess a page from a
+  topic label. Qualified links disambiguate identical stems across corpora.
+  Missing, ambiguous, unreadable, non-file and outside-vault targets fail.
+- `update_existing_source` requires the target to be the source page itself;
+  a self-link is unnecessary. `keep_source_only_seed` requires the retained
+  source but reports absorption as `not_applicable`. `discard_from_active_routes`
+  also reports `not_applicable`: this approves a disposition, not proof of
+  deletion. Neither disposition contributes to `absorption_pass_count`.
+
+Closeout also binds `input_fingerprints.target_pages` (sorted path, availability,
+full-byte SHA-256) and `absorption_page_paths` (the page-name set used to resolve
+stems). Target edits, removal/restoration or newly ambiguous names invalidate
+that evidence. These checks read the files without changing corpus pages.
+Version 1 route reports remain schema-readable historical records, but their
+`closeout_status: pass` established only route review; regenerate them with
+`--mode absorption_closeout` before relying on completion. Consumers of version
+2 must use `route_status` for proposal readiness and `closeout_status` plus the
+absorption audit for reflection. A structural pass establishes current file and
+linkage presence, not a before/after textual change, faithful claim integration
+or semantic correctness; those still require source-backed review.
+
+Source-trace eval report version 2 similarly separates declaration from
+verification. Backticked external URLs are `external_unverified`, `exists: null`,
+and `verification_status: not_checked` in every distribution profile. They are
+reported separately from missing local paths and do not fail a check whose
+`assurance_scope` is `local_path_existence_only`. No URL fetch or claim check is
+performed. A local `present` result checks existence only. Regenerate version 1
+reports before using these distinctions; a previous URL `present` result is not
+evidence that it was ever retrieved or verified.
+
 ## Compatibility Surface
 
 Some lifecycle-policy flat module paths such as

@@ -7,16 +7,36 @@ from pathlib import Path
 import pytest
 
 from ops.scripts.core.policy_runtime import load_policy
+from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.eval.wiki_eval import evaluate
 from ops.scripts.eval.wiki_lint import lint
 from ops.scripts.eval.wiki_snapshot_runtime import build_wiki_runtime_snapshot
-from tests.minimal_vault_runtime import seed_open_question_smoke_vault
+from tests.minimal_vault_runtime import REPO_ROOT, seed_open_question_smoke_vault
 from tests.vault_test_runtime import lint_and_evaluate_with_shared_snapshot
 
 pytestmark = pytest.mark.slow
 
 
 class SourceTraceChecksTest(unittest.TestCase):
+    def test_url_only_trace_does_not_claim_access_or_content_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            seed_open_question_smoke_vault(root, "https://example.invalid/source")
+            lint_report, report = lint_and_evaluate_with_shared_snapshot(root)
+            self.assertNotIn("source_trace_target_missing", {issue["type"] for issue in lint_report["errors"]})
+            page = next(page for page in report["pages"] if page["page"] == (root / "wiki/source--fake.md").as_posix())
+            result = next(result for result in page["results"] if result["eval"] == "source_trace_targets_exist")
+            self.assertTrue(result["pass"])
+            self.assertEqual(result["assurance_scope"], "local_path_existence_only")
+            self.assertEqual(result["detail"]["classified_missing_targets"], [])
+            target = result["detail"]["external_unverified_targets"][0]
+            self.assertEqual(target["classification"], "external_unverified")
+            self.assertIsNone(target["exists"])
+            schema = load_schema(REPO_ROOT / "ops/schemas/eval-report.schema.json")
+            self.assertEqual(validate_with_schema(report, schema), [])
+            target["exists"] = True
+            self.assertTrue(validate_with_schema(report, schema))
+
     def test_wiki_lint_and_eval_surface_missing_source_trace_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "vault"

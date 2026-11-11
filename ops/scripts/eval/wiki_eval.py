@@ -27,6 +27,8 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.core.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
     from ops.scripts.core.source_trace_profile_runtime import (
+        EXTERNAL_UNVERIFIED,
+        MISSING_STATUSES,
         source_trace_profile_summary,
     )
     from ops.scripts.eval.source_page_substance_runtime import (
@@ -69,6 +71,8 @@ else:
     from ops.scripts.core.runtime_context import RuntimeContext
     from ops.scripts.core.schema_constants_runtime import EVAL_REPORT_SCHEMA_PATH
     from ops.scripts.core.source_trace_profile_runtime import (
+        EXTERNAL_UNVERIFIED,
+        MISSING_STATUSES,
         source_trace_profile_summary,
     )
 
@@ -175,6 +179,7 @@ def _base_report(vault: Path, inputs: EvalInputs) -> dict[str, Any]:
                 ),
             },
         ),
+        "schema_version": 2,
         "vault": report_path(vault, vault),
         "policy": {
             "path": report_path(vault, inputs.resolved_policy_path),
@@ -243,18 +248,24 @@ def _source_trace_results(vault: Path, text: str, inputs: EvalInputs) -> list[di
     classified_missing_targets = [
         target
         for target in profile_targets
-        if target.get("classification") != "present"
+        if target.get("classification") in MISSING_STATUSES
+    ]
+    external_targets = [
+        target for target in profile_targets
+        if target["classification"] == EXTERNAL_UNVERIFIED
     ]
     target_result: dict[str, Any] = {
         "eval": "source_trace_targets_exist",
         "pass": len(missing_targets) == 0,
+        "assurance_scope": "local_path_existence_only",
     }
-    if classified_missing_targets:
+    if classified_missing_targets or external_targets:
         target_result["detail"] = {
             "profile": "release_archive" if inputs.release_archive_profile else "strict",
             "summary": source_trace_profile_summary(profile_targets),
             "blocking_missing_targets": missing_targets,
             "classified_missing_targets": classified_missing_targets,
+            "external_unverified_targets": external_targets,
         }
     return [
         {

@@ -9,13 +9,24 @@ Fail: Any required heading is missing.
 
 ## EVAL 2: Source trace present
 Question: Does the page include a `Source trace` section that satisfies the policy minimum?
-Pass: `Source trace` exists and lists at least `readiness_gate.min_source_trace_items` source file or snapshot.
+Pass: `Source trace` exists and lists at least `readiness_gate.min_source_trace_items` references. This counts declarations; an external URL does not establish an accessible snapshot or verified evidence.
 Fail: `Source trace` is missing or empty.
 
 ## EVAL 3: Source trace targets exist
 Question: Do the backticked local file paths in `Source trace` resolve to real files in the vault?
 Pass: Every backticked local path in `Source trace` exists.
 Fail: Any backticked local path in `Source trace` is missing.
+The report's `assurance_scope: local_path_existence_only` limits this pass to the
+local path check under the selected distribution profile. A URL declaration is
+`external_unverified`, with `exists: null` and `verification_status: not_checked`.
+The evaluator performs no network access or content verification. URL targets
+appear in `external_unverified_targets` and `external_unverified_count`, separately
+from missing local paths; they do not fail the local existence check. Even a
+URL-only trace can therefore pass this check without any verified external
+evidence. Local `present` means existence only, not readable or factually
+supporting content. Access, snapshot identity and claim support require separate
+source review. Version 1 reports that labelled URLs `present` must be regenerated
+before interpreting their assurance; version 2 records these limits explicitly.
 
 ## EVAL 4: Link integration
 Question: Does the page link to at least the policy minimum number of relevant wiki pages?

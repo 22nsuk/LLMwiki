@@ -166,5 +166,288 @@
         }
       }
     }
-  }
+  },
+  "$defs": {
+    "sourceTraceTarget": {
+      "type": "object",
+      "required": [
+        "ref",
+        "resolved_path",
+        "exists",
+        "classification",
+        "verification_status",
+        "profile",
+        "profile_allows_missing",
+        "blocks_profile",
+        "authority_requirement",
+        "digest_requirement",
+        "linkage_requirement",
+        "repair_target"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string"
+        },
+        "resolved_path": {
+          "type": "string"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "authority_requirement": {
+          "type": "string"
+        },
+        "digest_requirement": {
+          "type": "string"
+        },
+        "linkage_requirement": {
+          "type": "string"
+        },
+        "repair_target": {
+          "type": "string"
+        },
+        "exists": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "classification": {
+          "enum": [
+            "present",
+            "external_unverified",
+            "missing_invalid_path",
+            "missing_unclassified",
+            "missing_export_excluded_bound",
+            "missing_export_excluded_unbound",
+            "missing_private_surface_expected",
+            "missing_generated_rebuildable"
+          ]
+        },
+        "verification_status": {
+          "enum": [
+            "not_checked",
+            "local_existence_checked"
+          ]
+        },
+        "profile_allows_missing": {
+          "type": "boolean"
+        },
+        "blocks_profile": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "external_unverified"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "exists": {
+                "type": "null"
+              },
+              "resolved_path": {
+                "const": ""
+              },
+              "verification_status": {
+                "const": "not_checked"
+              },
+              "blocks_profile": {
+                "const": false
+              },
+              "profile_allows_missing": {
+                "const": false
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "exists": {
+                "type": "boolean"
+              },
+              "verification_status": {
+                "const": "local_existence_checked"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "minimum": 2
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "pages": {
+            "items": {
+              "properties": {
+                "results": {
+                  "items": {
+                    "if": {
+                      "required": [
+                        "eval"
+                      ],
+                      "properties": {
+                        "eval": {
+                          "const": "source_trace_targets_exist"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "assurance_scope"
+                      ],
+                      "properties": {
+                        "assurance_scope": {
+                          "const": "local_path_existence_only"
+                        },
+                        "detail": {
+                          "type": "object",
+                          "required": [
+                            "profile",
+                            "summary",
+                            "blocking_missing_targets",
+                            "classified_missing_targets",
+                            "external_unverified_targets"
+                          ],
+                          "properties": {
+                            "profile": {
+                              "enum": [
+                                "strict",
+                                "release_archive"
+                              ]
+                            },
+                            "summary": {
+                              "type": "object",
+                              "required": [
+                                "target_count",
+                                "classification_counts",
+                                "missing_count",
+                                "blocking_missing_count",
+                                "allowed_missing_count",
+                                "external_unverified_count"
+                              ],
+                              "properties": {
+                                "target_count": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "missing_count": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "blocking_missing_count": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "allowed_missing_count": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "external_unverified_count": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "classification_counts": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            },
+                            "blocking_missing_targets": {
+                              "type": "array",
+                              "items": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/$defs/sourceTraceTarget"
+                                  },
+                                  {
+                                    "properties": {
+                                      "classification": {
+                                        "enum": [
+                                          "missing_invalid_path",
+                                          "missing_unclassified",
+                                          "missing_export_excluded_bound",
+                                          "missing_export_excluded_unbound",
+                                          "missing_private_surface_expected",
+                                          "missing_generated_rebuildable"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "classified_missing_targets": {
+                              "type": "array",
+                              "items": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/$defs/sourceTraceTarget"
+                                  },
+                                  {
+                                    "properties": {
+                                      "classification": {
+                                        "enum": [
+                                          "missing_invalid_path",
+                                          "missing_unclassified",
+                                          "missing_export_excluded_bound",
+                                          "missing_export_excluded_unbound",
+                                          "missing_private_surface_expected",
+                                          "missing_generated_rebuildable"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "external_unverified_targets": {
+                              "type": "array",
+                              "items": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/$defs/sourceTraceTarget"
+                                  },
+                                  {
+                                    "properties": {
+                                      "classification": {
+                                        "enum": [
+                                          "external_unverified"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "description": "Version 2 explicitly limits source trace existence to local paths. External URL declarations remain unverified; neither version establishes remote access or claim support."
 }
