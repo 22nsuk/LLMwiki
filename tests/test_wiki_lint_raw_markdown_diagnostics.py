@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from ops.scripts.eval.wiki_lint import lint
+from ops.scripts.eval.wiki_lint_review_classification import classify_review_candidates
 from tests.minimal_vault_runtime import seed_minimal_vault
 
 
@@ -25,6 +26,10 @@ class WikiLintRawMarkdownDiagnosticsTest(unittest.TestCase):
             self.assertEqual(candidates[0]["page"], "raw/capture.md")
             self.assertEqual(candidates[0]["detail"]["reasons"], ["raw_capture_summary_only"])
             self.assertFalse(any(item["type"] == "raw_snapshot_capture_review" for item in report["errors"] + report["warnings"]))
+            classified = classify_review_candidates(candidates)[0]
+            self.assertEqual(classified["primary_bucket"], "documentation_candidate")
+            self.assertFalse(classified["refactor_candidate"])
+            self.assertEqual(classified["suggested_action"], "review_source_capture_preserve_raw")
 
     def test_lint_surfaces_missing_raw_markdown_frontmatter(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

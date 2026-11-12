@@ -313,7 +313,9 @@ Markdown capture review runs through the existing normalization report, wiki
 lint and intake source-quality report. `raw_markdown_normalize` adds
 `raw_capture_*` codes to `manual_review_reasons`; `make lint` lists them as
 `raw_snapshot_capture_review` review candidates, including raw files without a
-source page. Source quality adds the same codes to `issues`. An otherwise valid,
+source page. A capture review candidate is classified as `documentation_candidate` with
+`refactor_candidate: false` and action `review_source_capture_preserve_raw`.
+Source quality adds the same codes to `issues`. An otherwise valid,
 reviewed intake remains `review` / `attention` while a signal is present; route
 approval does not clear it. Existing empty/unavailable raw hard failures remain.
 

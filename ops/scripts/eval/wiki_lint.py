@@ -624,6 +624,7 @@ def _run_documentation_and_raw_passes(
             acc.review_candidates.append({
                 "type": "raw_snapshot_capture_review",
                 "page": raw_report.path,
+                "suggested_action": "review_source_capture_preserve_raw",
                 "detail": {"reasons": raw_report.capture_review_reasons, "assurance": "lexical_review_only"},
             })
 
