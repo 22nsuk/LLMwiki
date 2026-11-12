@@ -309,6 +309,34 @@ The report shape is unchanged. Older reports remain readable, but regenerate
 them before using the new paragraph-selection and short-text diagnostics;
 historical `ok` alone did not imply the configured length threshold was met.
 
+Markdown capture review runs through the existing normalization report, wiki
+lint and intake source-quality report. `raw_markdown_normalize` adds
+`raw_capture_*` codes to `manual_review_reasons`; `make lint` lists them as
+`raw_snapshot_capture_review` review candidates, including raw files without a
+source page. Source quality adds the same codes to `issues`. An otherwise valid,
+reviewed intake remains `review` / `attention` while a signal is present; route
+approval does not clear it. Existing empty/unavailable raw hard failures remain.
+
+The shared, read-only detector recognizes missing body text, explicit automatic
+summary blocks without article prose, article-like text after a copyright
+boundary or a second distinct top-level title, and disjoint title vocabulary.
+It compares declared titles with the first H1, article prose and human-readable
+filenames. Slugs/IDs without spaces, short titles and cross-script translations
+are excluded from the corresponding title comparisons. Recognized navigation,
+recommendations, comments and code fences are excluded from analysis. Binary
+and HTML intake inputs do not receive this Markdown capture review.
+
+These are lexical review signals, not semantic contradiction detection, URL
+verification or proof of a complete article. Paraphrases, shared vocabulary,
+unrecognized captions/UI, multilingual text and unexpected page layouts can
+produce false positives or missed cases. The detector never edits raw or
+repairs titles; `--write` still performs only the normalizer's existing permitted
+metadata/noise cleanup, and skips duplicate-preface removal for flagged captures
+so the suspect article prefix remains reviewable. Review the original source, preserve historical captures
+and register recovered bodies separately. A clear result means no recognized
+signal. Old report shapes remain readable; regenerate reports before relying on
+the new checks. Capture review does not change route/absorption authority.
+
 Both report producers bind the complete raw and source-page file sets in
 `input_fingerprints.raw_files` and `input_fingerprints.source_pages`. Each digest
 covers sorted unique matrix paths, availability states, and full-file SHA-256

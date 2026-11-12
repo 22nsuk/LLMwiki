@@ -25,6 +25,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -33,6 +34,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         load_intake_matrix as load_matrix,
         read_intake_inputs,
     )
+    from ops.scripts.registry.raw_markdown_runtime import split_frontmatter
 else:
     from ops.scripts.core.artifact_freshness_runtime import (
         build_canonical_report_envelope,
@@ -48,6 +50,7 @@ else:
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -56,6 +59,7 @@ else:
         load_intake_matrix as load_matrix,
         read_intake_inputs,
     )
+    from ops.scripts.registry.raw_markdown_runtime import split_frontmatter
 
 
 DEFAULT_MATRIX = (
@@ -210,6 +214,11 @@ def _source_quality_for_entry(
         issues.append("raw_body_empty")
     if raw_lead["status"] in {"ok", "empty", "insufficient"} and raw_lead["char_count"] < min_raw_lead_chars:
         issues.append("cleaned_raw_lead_below_min_chars")
+    if raw.status == "present" and Path(raw_path).suffix.lower() in {".md", ".markdown", ".txt"}:
+        _, metadata, body = split_frontmatter(raw.text)
+        issues.extend(capture_review_reasons(
+            body=body, title=str(metadata.get("title") or ""), filename=Path(raw_path).name,
+        ))
 
     reviewed = review_status in REVIEWED_ROUTE_STATUSES
     hard_source_page_issue_names = {
@@ -289,6 +298,8 @@ def build_report(
             source_paths=[
                 "ops/scripts/registry/raw_intake_source_quality.py",
                 "ops/scripts/registry/raw_intake_input_runtime.py",
+                "ops/scripts/registry/raw_capture_review_runtime.py",
+                "ops/scripts/registry/raw_markdown_runtime.py",
             ],
             file_inputs={"matrix": resolved_matrix_path},
             text_inputs={

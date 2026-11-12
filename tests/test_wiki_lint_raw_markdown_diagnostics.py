@@ -9,6 +9,23 @@ from tests.minimal_vault_runtime import seed_minimal_vault
 
 
 class WikiLintRawMarkdownDiagnosticsTest(unittest.TestCase):
+    def test_capture_review_is_advisory_even_without_a_source_page(self) -> None:
+        from tests.test_raw_capture_review_runtime import SUMMARY, TITLE
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            (vault / "raw" / "capture.md").write_text(
+                f'---\ntitle: "{TITLE}"\nsource: "https://example.com/story"\n'
+                'published: "unknown"\ncreated: "unknown"\n---\n\n' + SUMMARY,
+            )
+            report = lint(vault)
+            candidates = [item for item in report["review_candidates"] if item["type"] == "raw_snapshot_capture_review"]
+            self.assertEqual(len(candidates), 1)
+            self.assertEqual(candidates[0]["page"], "raw/capture.md")
+            self.assertEqual(candidates[0]["detail"]["reasons"], ["raw_capture_summary_only"])
+            self.assertFalse(any(item["type"] == "raw_snapshot_capture_review" for item in report["errors"] + report["warnings"]))
+
     def test_lint_surfaces_missing_raw_markdown_frontmatter(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

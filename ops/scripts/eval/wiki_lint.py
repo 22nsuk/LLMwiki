@@ -614,11 +614,18 @@ def _run_documentation_and_raw_passes(
         def issue(self, issue: dict, threshold_key: str) -> None:
             add_issue(issue, config.lint_thresholds[threshold_key], acc.errors, acc.warnings)
 
-    raw_markdown_quality_pass(
+    raw_reports = raw_markdown_quality_pass(
         vault,
         emitter=_RawMarkdownEmitter(),
         raw_markdown_contract=config.raw_markdown_contract,
     )
+    for raw_report in raw_reports:
+        if raw_report.capture_review_reasons:
+            acc.review_candidates.append({
+                "type": "raw_snapshot_capture_review",
+                "page": raw_report.path,
+                "detail": {"reasons": raw_report.capture_review_reasons, "assurance": "lexical_review_only"},
+            })
 
 
 def _lint_status(errors: list[dict], warnings: list[dict]) -> str:
@@ -653,6 +660,8 @@ def _build_lint_report(
                 "ops/scripts/eval/wiki_quality_runtime.py",
                 "ops/scripts/core/source_trace_profile_runtime.py",
                 "ops/scripts/core/source_trace_runtime.py",
+                "ops/scripts/registry/raw_markdown_runtime.py",
+                "ops/scripts/registry/raw_capture_review_runtime.py",
             ],
             path_group_inputs={
                 "pages": sorted(runtime_context.page_relative_paths.values()),
