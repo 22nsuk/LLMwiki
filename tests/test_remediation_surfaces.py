@@ -17,9 +17,6 @@ from ops.scripts.public.review_surface_manifest import (
     validate_review_surface_output_paths,
 )
 from ops.scripts.registry.source_substance_cohort_classify import build_report
-from ops.scripts.test.generate_release_governance_from_lane_registry import (
-    validate_alignment,
-)
 from tests.minimal_vault_runtime import REPO_ROOT, seed_minimal_vault
 
 pytestmark = [
@@ -30,11 +27,6 @@ pytestmark = [
 
 
 class RemediationSurfaceTests(unittest.TestCase):
-    def test_release_governance_alignment_passes_for_repo(self) -> None:
-        report = validate_alignment(REPO_ROOT)
-        self.assertEqual(report["status"], "pass")
-        self.assertEqual(report["mismatched_fields"], [])
-
     def test_review_surface_manifest_counts_public_surfaces(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

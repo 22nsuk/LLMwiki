@@ -4,7 +4,8 @@
 
 원칙:
 - template는 `ops/`에 둔다.
-- 실제 실행 artifact는 `runs/<run-id>/`에 둔다.
+- 실제 실행 artifact는 `runs/<run-id>/`에 둔다. standalone maintenance task의
+  진단 기록은 `ops/reports/task-improvement-observations/<task-id>/`에도 둘 수 있다.
 - template는 contract sample이지, live state를 담는 곳이 아니다.
 
 starter bundle:
@@ -18,6 +19,10 @@ starter bundle:
   - `open-questions.md`
 - `improvement-observations.json`
   - standalone repo maintenance task follow-up sample
+- `knowledge-reuse-cost-record.md`
+  - 신규 source의 최초 구축부터 후속 질의·갱신·복구까지 이어 쓰는 수동 비용 기록
+  - [운영 절차](../../docs/ops-runtime.md#reusing-knowledge-and-recording-maintenance-cost)를
+    따른다. populated record는 private 진단 자료이며 promotion authority가 아니다.
 - `mechanism-run/`
   - `system_mechanism` experiment starter
   - `seed.yaml`

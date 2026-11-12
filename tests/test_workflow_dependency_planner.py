@@ -3749,6 +3749,7 @@ class WorkflowDependencyPlannerTests(unittest.TestCase):
 
 
 class ReleaseGovernanceLaneRegistryTests(unittest.TestCase):
+    @pytest.mark.default_test_boundary
     def test_release_governance_ci_matrix_matches_lane_registry(self) -> None:
         report = validate_alignment(REPO_ROOT)
         self.assertEqual(report["status"], "pass")

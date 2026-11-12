@@ -204,6 +204,43 @@ objective lane checks that bind HEAD, source fingerprint, and domain-specific
 currentness. Self-declared current fields are diagnostic metadata, not
 authority by themselves.
 
+## Reusing Knowledge And Recording Maintenance Cost
+
+For full-vault queries, start with the appropriate corpus router and reuse the
+existing concept, synthesis, or query page when its evidence and scope cover the
+question. Preserve source attribution, evaluation conditions, and uncertainty
+in the answer. Reopen raw evidence when the page omits the needed support,
+conflicts with another source, appears stale, or makes a stronger claim than its
+citation supports. A structural quality pass does not establish factual accuracy.
+
+Update pages when new evidence or a demonstrated mismatch changes their content.
+A review may correctly end with `no_op`; record the reason and the review effort
+without manufacturing an edit. When a correction changes a shared claim, follow
+it into the relevant concept/synthesis, router, and registry note, then complete
+the local supplement's log and final validation steps. Review a bounded source
+batch against raw evidence instead of padding summaries to satisfy a heuristic.
+
+At the next genuinely new source intake, start a private copy of the
+[knowledge reuse cost record](../ops/templates/knowledge-reuse-cost-record.md)
+before source discovery or drafting. Carry that record into later sessions so
+initial construction, review, updates, reuse, and recovery remain attributable
+to the same source. Completed examples reused for development are familiar
+cases, not fresh holdout evidence. The blank template is public; populated
+records and their source/answer snapshots belong under a private run or task
+report directory. This is a manual diagnostic record, not a promotion artifact
+or an automatically enforced runtime gate.
+
+Compare answers only after checking the same source-grounded acceptance criteria.
+Keep original answers and charge repair and re-review to the appropriate attempt.
+Record failed attempts, no-op review, shared preparation, and orchestration
+separately. Preserve unknown construction cost, tokens, cache usage, billing, and
+natural error frequency as unknown; text bytes are not token or price estimates.
+Do not infer whole-life savings from query latency alone. Label sums of task
+durations separately from campaign wall time and human/CPU time, avoid counting
+nested intervals twice, and identify any allocations of shared cost. Synthetic
+recovery drills do not estimate natural error rates, and warm-session recovery
+does not establish fresh-session recovery cost.
+
 ## Raw Intake And Registry Maintenance
 
 All three intake modes (`raw-intake-source-quality`, `raw-intake-route-proposal`,
