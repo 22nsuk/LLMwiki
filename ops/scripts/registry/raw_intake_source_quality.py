@@ -103,7 +103,7 @@ def _is_boilerplate_line(line: str) -> bool:
     return any(pattern.search(stripped) for pattern in BOILERPLATE_PATTERNS)
 
 
-def extract_clean_lead(text: str, *, max_chars: int = 700) -> str:
+def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) -> str:
     body = _strip_frontmatter(text)
     paragraphs: list[str] = []
     current: list[str] = []
@@ -122,11 +122,16 @@ def extract_clean_lead(text: str, *, max_chars: int = 700) -> str:
         current.append(stripped)
     if current:
         paragraphs.append(" ".join(current))
+    fallback = ""
     for paragraph in paragraphs:
         normalized = re.sub(r"\s+", " ", paragraph).strip()
-        if len(normalized) >= 40:
+        if not normalized:
+            continue
+        if not fallback:
+            fallback = normalized
+        if len(normalized) >= min_chars:
             return normalized[:max_chars].rstrip()
-    return ""
+    return fallback[:max_chars].rstrip()
 
 
 def _section_text(text: str, heading: str) -> str:
@@ -141,21 +146,14 @@ def _sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _raw_lead_state(raw: IntakeFile, raw_path: str) -> dict[str, Any]:
+def _raw_lead_state(raw: IntakeFile, raw_path: str, *, min_chars: int) -> dict[str, Any]:
     if raw.status != "present":
         return {"status": raw.status, "char_count": 0, "sha256": ""}
     if Path(raw_path).suffix.lower() not in TEXTUAL_RAW_SUFFIXES:
         return {"status": "not_textual", "char_count": 0, "sha256": ""}
-    raw_text = raw.text
-    body_lines = [
-        line.strip()
-        for line in _strip_frontmatter(raw_text).splitlines()
-        if line.strip()
-        and not line.lstrip().startswith("#")
-        and not _is_boilerplate_line(line)
-    ]
-    lead = extract_clean_lead(raw_text)
-    status = "ok" if lead else "insufficient" if body_lines else "empty"
+    # A normalized space at the excerpt boundary must not lower an eligible lead below the minimum.
+    lead = extract_clean_lead(raw.text, min_chars=min_chars, max_chars=max(700, min_chars + 1))
+    status = "empty" if not lead else "ok" if len(lead) >= min_chars else "insufficient"
     return {
         "status": status,
         "char_count": len(lead),
@@ -205,7 +203,7 @@ def _source_quality_for_entry(
             issues.append("source_page_substance_admission_failed")
             issues.extend(str(item) for item in substance.get("failures", []))
 
-    raw_lead = _raw_lead_state(raw, raw_path)
+    raw_lead = _raw_lead_state(raw, raw_path, min_chars=min_raw_lead_chars)
     if raw.status != "present":
         issues.append(f"raw_{raw.status}")
     if raw_lead["status"] == "empty":
