@@ -257,6 +257,21 @@ is accepted without a textual lead check. Route proposal reports apply the same
 raw availability check; source pages may still be awaiting generation, and
 unavailable identity metadata remains marked as skipped.
 
+Source quality selects the first cleaned paragraph meeting
+`--min-raw-lead-chars` (default 80), so a shorter photo caption or introduction
+does not hide a later qualifying paragraph. It does not concatenate separate
+short paragraphs to satisfy the minimum. If none qualifies, it retains the
+first non-empty cleaned paragraph's length and hash with status `insufficient`;
+the existing review/fail rules still apply. Empty or navigation-only captures
+remain hard failures. `ok` means only that the cleaned length meets the minimum,
+not that the text has been verified as article evidence: long captions and
+unrecognized boilerplate still need source review. The report excerpt limit is
+at least the configured minimum, including values above 700 characters.
+
+The report shape is unchanged. Older reports remain readable, but regenerate
+them before using the new paragraph-selection and short-text diagnostics;
+historical `ok` alone did not imply the configured length threshold was met.
+
 Both report producers bind the complete raw and source-page file sets in
 `input_fingerprints.raw_files` and `input_fingerprints.source_pages`. Each digest
 covers sorted unique matrix paths, availability states, and full-file SHA-256

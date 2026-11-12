@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -124,6 +125,64 @@ def test_cli_returns_failure_for_missing_raw(intake, cli):
     completed = invoke_cli_main(cli_main, args)
     assert completed.exit_code == 1, completed.stderr
     assert json.loads((vault / "report.json").read_text())["status"] == "fail"
+
+
+@pytest.mark.parametrize(
+    ("prefix", "body", "minimum", "expected_status", "expected_lead"),
+    [
+        ("A photograph of the experimental equipment. Credit: Example.", "Article body " * 10, 80, "pass", "Article body " * 10),
+        ("A brief but substantive introduction to the article's subject.", "Article body " * 10, 80, "pass", "Article body " * 10),
+        ("Short introduction.", "x" * 80, 80, "pass", "x" * 80),
+        ("Short introduction.", "x" * 79, 80, "attention", "Short introduction."),
+        ("", "Brief source text.", 10, "pass", "Brief source text."),
+        ("x" * 90, "y" * 140, 120, "pass", "y" * 140),
+        ("x" * 90, "y" * 750, 701, "pass", "y" * 702),
+        ("x" * 90, "y" * 700 + " zzz", 701, "pass", "y" * 700 + " z"),
+        ("", "y" * 699 + " zzz", 700, "pass", "y" * 699 + " z"),
+        ("x" * 90, "y" * 140, 80, "pass", "x" * 90),
+        ("", "A photograph of the experimental equipment. Credit: Example.", 80, "attention", "A photograph of the experimental equipment. Credit: Example."),
+        ("x" * 45, "y" * 45, 80, "attention", "x" * 45),
+        ("", "# Heading\n\n[Home](/)\n\n![image](photo.png)", 80, "fail", ""),
+        ("", "", 80, "fail", ""),
+    ],
+)
+def test_quality_lead_selects_a_paragraph_meeting_the_configured_minimum(
+    intake, prefix, body, minimum, expected_status, expected_lead,
+):
+    vault, entry = intake
+    (vault / entry["raw_path"]).write_text(f"{prefix}\n\n{body}\n", encoding="utf-8")
+    report = raw_intake_source_quality.build_report(
+        vault, matrix_path="matrix.json", min_raw_lead_chars=minimum,
+    )
+    assert validate_with_schema(report, load_schema(REPO_ROOT / report["$schema"])) == []
+    finding = report["findings"][0]
+    expected_lead = expected_lead.strip()
+    assert report["status"] == expected_status
+    assert finding["cleaned_raw_lead"] == {
+        "status": "empty" if not expected_lead else "ok" if len(expected_lead) >= minimum else "insufficient",
+        "char_count": len(expected_lead),
+        "sha256": hashlib.sha256(expected_lead.encode()).hexdigest() if expected_lead else "",
+    }
+    assert ("cleaned_raw_lead_below_min_chars" in finding["issues"]) == (len(expected_lead) < minimum)
+    assert ("raw_body_empty" in finding["issues"]) == (not expected_lead)
+
+
+def test_quality_cli_uses_custom_lead_minimum(intake):
+    vault, entry = intake
+    (vault / entry["raw_path"]).write_text("x" * 90 + "\n\n" + "y" * 140)
+
+    def cli_main(argv):
+        raise SystemExit(raw_intake_source_quality.main(argv))
+
+    completed = invoke_cli_main(
+        cli_main,
+        ["--vault", str(vault), "--matrix", "matrix.json", "--out", "report.json",
+         "--min-raw-lead-chars", "120", "--fail-on-attention"],
+    )
+    assert completed.exit_code == 0, completed.stderr
+    report = json.loads((vault / "report.json").read_text())
+    assert report["status"] == "pass"
+    assert report["findings"][0]["cleaned_raw_lead"]["char_count"] == 140
 
 
 def test_content_fingerprints_bind_full_contents_and_absence(intake, report_builder):

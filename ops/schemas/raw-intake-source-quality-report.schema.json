@@ -95,7 +95,10 @@
         "min_summary_chars": { "type": "integer", "minimum": 0 },
         "min_key_points": { "type": "integer", "minimum": 0 },
         "min_key_point_chars": { "type": "integer", "minimum": 0 },
-        "min_raw_lead_chars": { "type": "integer", "minimum": 0 }
+        "min_raw_lead_chars": {
+          "type": "integer", "minimum": 0,
+          "description": "Minimum used both to select a cleaned paragraph and to check its length. Paragraphs are not concatenated to reach this threshold."
+        }
       }
     },
     "summary": {
@@ -117,6 +120,7 @@
   "$defs": {
     "cleanedRawLead": {
       "type": "object",
+      "description": "First cleaned paragraph meeting min_raw_lead_chars, or the first non-empty cleaned paragraph if none qualifies. ok means the length threshold is met, insufficient preserves the shorter paragraph's count/hash, and empty means no cleaned text remains. This heuristic does not verify article semantics or distinguish every caption from prose. Regenerate legacy reports to apply this selection rule.",
       "additionalProperties": false,
       "required": ["status", "char_count", "sha256"],
       "properties": {
