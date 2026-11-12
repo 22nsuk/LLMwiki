@@ -227,6 +227,17 @@ be applied without changing every recipe. Override those variables to
 `$(PYTEST_SERIAL_FLAGS)` only when investigating a parallel-isolation failure.
 Volatile counts and durations belong in the generated execution summaries,
 JUnit XML, and logs, not in durable docs.
+
+Before consolidating tests, compare their inputs, fixtures, assertions, and lane
+selection. Identical bodies can cover different parametrized failures or run in
+different required lanes. Transfer the required markers to the retained owner
+and verify collection against the registry; keep valid controls and demonstrate
+that the same scoped faults still fail. Measure execution cost separately from
+collection/startup and distinguish a focused saving from whole-lane runtime.
+Retain comparison evidence privately with the task. Such evidence does not
+override the mechanism promotion gate's existing test-count checks; any policy
+change needs its own explicit contract and validation.
+
 Both `--junit-xml PATH` and `--junitxml PATH` (including `=PATH` forms)
 are output options: their paths do not restrict collection, become test-target
 fingerprints, or supply a focused selector for the pytest entrypoint guard.
