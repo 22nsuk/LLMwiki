@@ -11,6 +11,7 @@ from typing import Any
 
 from ops.scripts.core.policy_runtime import report_path
 from ops.scripts.core.yaml_runtime import parse_simple_yaml
+from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons
 
 FRONTMATTER_FIELD_ORDER = [
     "title",
@@ -91,6 +92,7 @@ class RawMarkdownQualityReport:
     cookie_noise_present: bool
     blob_noise_present: bool
     replacement_char_present: bool
+    capture_review_reasons: list[str]
     manual_review_required: bool
     manual_review_reasons: list[str]
 
@@ -409,7 +411,7 @@ def _strip_duplicate_preface(body: str, title: str | None) -> str:
     return body[title_matches[-1].start() :]
 
 
-def _cleanup_body(body: str, *, title: str | None) -> tuple[str, list[str]]:
+def _cleanup_body(body: str, *, title: str | None, preserve_preface: bool = False) -> tuple[str, list[str]]:
     removed_noise_classes: list[str] = []
     updated = body
 
@@ -425,7 +427,8 @@ def _cleanup_body(body: str, *, title: str | None) -> tuple[str, list[str]]:
     if removed_blob:
         removed_noise_classes.append("blob_localhost")
 
-    updated = _strip_duplicate_preface(updated, title)
+    if not preserve_preface:
+        updated = _strip_duplicate_preface(updated, title)
     updated = updated.strip("\n")
     if updated:
         updated += "\n"
@@ -486,6 +489,8 @@ def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityRe
         manual_review_reasons.append("replacement_char")
     if source is None:
         manual_review_reasons.append("missing_source")
+    capture_reasons = capture_review_reasons(body=body, title=title or "", filename=path.name)
+    manual_review_reasons.extend(capture_reasons)
 
     return RawMarkdownQualityReport(
         path=report_path(vault, path),
@@ -498,6 +503,7 @@ def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityRe
         cookie_noise_present=cookie_noise_present,
         blob_noise_present=blob_noise_present,
         replacement_char_present=replacement_char_present,
+        capture_review_reasons=capture_reasons,
         manual_review_required=bool(manual_review_reasons),
         manual_review_reasons=manual_review_reasons,
     )
@@ -506,13 +512,19 @@ def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityRe
 def normalize_raw_markdown_file(vault: Path, path: Path) -> RawMarkdownNormalizationResult:
     document = load_raw_markdown_document(path)
     metadata = _build_normalized_metadata(document)
-    cleaned_body, removed_noise_classes = _cleanup_body(document.body, title=_string_value(metadata.get("title")))
+    capture_reasons = capture_review_reasons(
+        body=document.body, title=_string_value(metadata.get("title")) or "", filename=path.name,
+    )
+    cleaned_body, removed_noise_classes = _cleanup_body(
+        document.body, title=_string_value(metadata.get("title")), preserve_preface=bool(capture_reasons),
+    )
 
     manual_review_reasons: list[str] = []
     if REPLACEMENT_CHAR in cleaned_body:
         manual_review_reasons.append("replacement_char")
     if _string_value(metadata.get("source")) is None:
         manual_review_reasons.append("missing_source")
+    manual_review_reasons.extend(capture_reasons)
 
     semantic_change = _metadata_changed(document, metadata) or _body_changed(document.body, cleaned_body)
     normalized_text = document.text

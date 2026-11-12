@@ -141,6 +141,7 @@
         },
         "primary_bucket": {
           "type": "string",
+          "description": "documentation_candidate includes source capture reviews that require manual provenance checks, not raw refactoring.",
           "enum": ["function_budget", "documentation_candidate", "true_refactor_target"]
         },
         "refactor_candidate": { "type": "boolean" },
