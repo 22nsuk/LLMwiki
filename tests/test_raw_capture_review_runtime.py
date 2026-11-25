@@ -19,6 +19,7 @@ SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article 
 PHOTO_CREDIT = "Photo credit: Example Archive. Copyright 2024."
 PHOTO_AND_LEAD = "*도서관 외관. 무단 전재 및 재배포 금지. /사진=자료실* " + ARTICLE
 TRAILING_CREDIT = " /사진=자료실 © Example Archive"
+CREDITED_FOOTER = "Copyright 2024 Example Press /사진=자료실"
 REPORT_COVER = f"# {TITLE}\n\nPrepared for the council\n\n# Research Report 27\n\n© 2024 Example Council"
 REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\n\n" + ARTICLE
 
@@ -85,6 +86,13 @@ def test_trailing_photo_credit_preserves_article_lead(lead, credit):
     assert capture_review_reasons(body=line, title="", filename="capture.md") == []
 
 
+@pytest.mark.parametrize("marker", ["*", "**", "_", "__"])
+def test_emphasized_lead_and_photo_credit(marker):
+    line = f"{marker}{ARTICLE}{TRAILING_CREDIT}{marker}"
+    assert extract_clean_lead(line) == ARTICLE
+    assert capture_review_reasons(body=line, title=TITLE, filename="capture.md") == []
+
+
 def test_korean_summary_disclaimer_and_related_photo_caption_are_not_article_body():
     body = (
         "송고 2024년03월05일\n\n**세 줄 요약**\n\n"
@@ -116,6 +124,8 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (False, True, ARTICLE, []),
         (True, False, PHOTO_AND_LEAD, []),
         (False, False, ARTICLE + TRAILING_CREDIT, []),
+        (False, False, f"**{ARTICLE}{TRAILING_CREDIT}**", []),
+        (False, False, f"{ARTICLE}\n\n{CREDITED_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, True, PHOTO_AND_LEAD + f"\n\n# {TITLE}\n\n" + ARTICLE, []),
         (False, False, REPORT, []),
         (False, False, REPORT + "\n\nCopyright Example Press\n\n" + OTHER, ["raw_capture_multiple_articles"]),

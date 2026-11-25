@@ -8,7 +8,8 @@ from pathlib import Path
 SUMMARY_START = re.compile(r"^(?:세\s*줄\s*요약|AI\s*요약|AI[- ]generated summary|Auto(?:matic)? summary)$", re.I)
 SUMMARY_END = re.compile(r"인공지능이 자동으로|기사 본문과 함께|End of (?:AI|auto).*summary|Read the full article", re.I)
 RELATED_START = re.compile(r"^(?:관심기사 예측|관련\s*기사|함께 (?:읽기|보면)|추천\s*기사|.*뉴스를 추천해|Related (?:articles|stories)|Recommended (?:articles|stories))", re.I)
-FOOTER = re.compile(r"^(?:[<\[\\\s]*(?:저작권자|Copyright|©)|.*무단\s*전재.*재배포)", re.I)
+FOOTER_START = re.compile(r"^[<\[\\\s]*(?:저작권자|Copyright|©)", re.I)
+REPRINT_NOTICE = re.compile(r"무단\s*전재.*재배포", re.I)
 COPYRIGHT_MARK = re.compile(r"©|ⓒ|copyright\b|저작권자|무단\s*전재", re.I)
 OPENING_CREDIT = re.compile(r"^(?:©|copyright\s+(?:©\s*)?\d{4}\b)", re.I)
 PHOTO_CREDIT = re.compile(
@@ -51,22 +52,30 @@ def _disjoint_title(title: str, other: str) -> bool:
     return not any(a.startswith(b) or b.startswith(a) for a in left for b in right)
 
 
-def without_photo_credit(line: str) -> str:
-    """Keep article text sharing a line with a rights-bearing photo credit."""
-    if not COPYRIGHT_MARK.search(line):
-        return line
-    emphasis = re.match(r"^(\*{1,2}|_{1,2})(.+?)\1(.*)$", line)
-    if emphasis and COPYRIGHT_MARK.search(emphasis[2]) and PHOTO_CREDIT.search(emphasis[2]):
-        return emphasis[3].lstrip()
-    credit = PHOTO_CREDIT.search(line)
-    if credit is None:
-        return line
+def _photo_credit_prefix(line: str, credit: re.Match[str]) -> str:
     prefix = line[:credit.start()].rstrip()
-    if FOOTER.search(_plain(prefix)):
+    plain = _plain(prefix)
+    if FOOTER_START.match(plain):
+        return prefix
+    if REPRINT_NOTICE.search(plain):
         return ""
     if credit[0].startswith("/") or prefix.endswith((".", "!", "?", "。", "！", "？")):
         return prefix
     return ""
+
+
+def without_photo_credit(line: str) -> str:
+    """Keep article text and footer boundaries sharing a line with a photo credit."""
+    if not COPYRIGHT_MARK.search(line):
+        return line
+    emphasis = re.match(r"^(\*{1,2}|_{1,2})(.+?)\1(.*)$", line)
+    if emphasis and COPYRIGHT_MARK.search(emphasis[2]):
+        credit = PHOTO_CREDIT.search(emphasis[2])
+        if credit:
+            prefix = _photo_credit_prefix(emphasis[2], credit)
+            return " ".join(filter(None, (prefix, emphasis[3].lstrip())))
+    credit = PHOTO_CREDIT.search(line)
+    return _photo_credit_prefix(line, credit) if credit else line
 
 
 def _on_report_cover(headings: list[tuple[str, int]], prose: list[str]) -> bool:
@@ -143,7 +152,7 @@ def _article_parts(body: str) -> tuple[list[str], list[str], bool, bool]:
             continue
         if summary:
             continue
-        if FOOTER.search(plain):
+        if FOOTER_START.match(plain) or REPRINT_NOTICE.search(plain):
             flush()
             if not (footer or saw_summary):
                 if cover_end is None and _on_report_cover(headings, prose):

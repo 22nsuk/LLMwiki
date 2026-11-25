@@ -330,11 +330,12 @@ boundary or a second distinct top-level title, and disjoint title vocabulary.
 Photo credits with explicit attribution and opening rights notices can precede
 the article. If a Markdown caption ends mid-line, review and intake lead
 selection use the text after its closing emphasis. When a photo attribution
-follows article prose on the same line, both checks retain the preceding text.
-A labeled report cover can
-precede chapter titles formatted as H1. In that layout, a disjoint H1 triggers
-review when its section also contains substantial prose unrelated in wording
-to the first H1. A later copyright footer still marks an article boundary.
+follows article prose on the same line, both checks retain the preceding text,
+including when the prose and attribution share Markdown emphasis. An explicit
+copyright footer keeps its boundary even when a photo attribution follows it.
+A labeled report cover can precede chapter titles formatted as H1. In that
+layout, a disjoint H1 triggers review when its section also contains substantial
+prose unrelated in wording to the first H1.
 The detector compares declared titles with the first H1, article prose and human-readable
 filenames. All three report paths resolve titles in the same order: frontmatter,
 transport `Title:`, first H1, then the humanized filename. They combine signals
