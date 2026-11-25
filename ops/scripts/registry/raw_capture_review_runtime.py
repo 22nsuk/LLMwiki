@@ -9,7 +9,14 @@ SUMMARY_START = re.compile(r"^(?:세\s*줄\s*요약|AI\s*요약|AI[- ]generated 
 SUMMARY_END = re.compile(r"인공지능이 자동으로|기사 본문과 함께|End of (?:AI|auto).*summary|Read the full article", re.I)
 RELATED_START = re.compile(r"^(?:관심기사 예측|관련\s*기사|함께 (?:읽기|보면)|추천\s*기사|.*뉴스를 추천해|Related (?:articles|stories)|Recommended (?:articles|stories))", re.I)
 FOOTER = re.compile(r"^(?:[<\[\\\s]*(?:저작권자|Copyright|©)|.*무단\s*전재.*재배포)", re.I)
-UI_LINE = re.compile(r"^(?:송고\s|입력\s|수정\s|Published:|Updated:|Title:|URL Source:|Published Time:|Markdown Content:|본문 바로가기|메뉴 바로가기|광고$|닫기$|ESC 닫기$|공유$|구독$|로그인$)", re.I)
+COPYRIGHT_MARK = re.compile(r"©|ⓒ|copyright\b|저작권자|무단\s*전재", re.I)
+OPENING_CREDIT = re.compile(r"^(?:©|copyright\s+(?:©\s*)?\d{4}\b)", re.I)
+PHOTO_CREDIT = re.compile(
+    r"^(?:(?:photo(?:graph)?|image)(?:\s+credit)?|(?:사진|이미지)(?:\s*제공)?)\s*[:=]"
+    r"|/\s*(?:사진|이미지)\s*[:=]|\([©ⓒ][^()]*제공\s*[,)]", re.I,
+)
+REPORT_LABEL = re.compile(r"\breport\s+(?:no\.?\s*)?\d+\b|\b(?:annual|research|technical) report\b|보고서", re.I)
+UI_LINE = re.compile(r"^(?:(?:송고|입력|수정)(?:\s|:)|Published:|Updated:|Title:|URL Source:|Published Time:|Markdown Content:|본문 바로가기|메뉴 바로가기|광고$|닫기$|ESC 닫기$|공유$|구독$|로그인$)", re.I)
 STOP_WORDS = {"the", "and", "for", "with", "from", "this", "that", "after", "before", "news", "report", "기사", "관련", "대한"}
 MIN_TITLE_TOKENS = 3
 MIN_BODY_COMPARISON_CHARS = 160
@@ -44,10 +51,54 @@ def _disjoint_title(title: str, other: str) -> bool:
     return not any(a.startswith(b) or b.startswith(a) for a in left for b in right)
 
 
+def without_photo_credit(line: str) -> str:
+    """Keep article text sharing a line with a rights-bearing photo credit."""
+    if not COPYRIGHT_MARK.search(line):
+        return line
+    emphasis = re.match(r"^(\*{1,2}|_{1,2})(.+?)\1(.*)$", line)
+    if emphasis and COPYRIGHT_MARK.search(emphasis[2]) and PHOTO_CREDIT.search(emphasis[2]):
+        return emphasis[3].lstrip()
+    credit = PHOTO_CREDIT.search(line)
+    if credit is None:
+        return line
+    prefix = line[:credit.start()].rstrip()
+    if FOOTER.search(_plain(prefix)):
+        return ""
+    if credit[0].startswith("/") or prefix.endswith((".", "!", "?", "。", "！", "？")):
+        return prefix
+    return ""
+
+
+def _on_report_cover(headings: list[tuple[str, int]], prose: list[str]) -> bool:
+    # A report identifier can be a heading or a short line on a printed cover.
+    if any(len(p) >= MIN_BOUNDARY_PROSE_CHARS or p.endswith((".", "!", "?")) for p in prose):
+        return False
+    return any(REPORT_LABEL.search(title) for title, _ in headings) or any(REPORT_LABEL.search(p) for p in prose)
+
+
+def _has_second_article_heading(
+    headings: list[tuple[str, int]], prose: list[str], *, report_cover: bool,
+) -> bool:
+    first_lead = next((i for i, p in enumerate(prose) if len(p) >= MIN_BOUNDARY_PROSE_CHARS), len(prose))
+    for i, (title, start) in enumerate(headings[1:], 1):
+        if start <= first_lead or not _disjoint_title(headings[0][0], title):
+            continue
+        if not report_cover:
+            return True
+        # An exported report can use H1 for its chapters. Check the prose under
+        # this particular heading, so a separate story can still be detected.
+        end = headings[i + 1][1] if i + 1 < len(headings) else len(prose)
+        section = " ".join(prose[start:end])
+        if len(section) >= MIN_BOUNDARY_PROSE_CHARS and _disjoint_title(headings[0][0], section):
+            return True
+    return False
+
+
 def _article_parts(body: str) -> tuple[list[str], list[str], bool, bool]:
     """Exclude recognized UI/summary regions only for analysis, never for writes."""
     prose: list[str] = []
-    headings: list[str] = []
+    headings: list[tuple[str, int]] = []
+    cover_end: int | None = None
     current: list[str] = []
     summary = False
     saw_summary = False
@@ -78,6 +129,7 @@ def _article_parts(body: str) -> tuple[list[str], list[str], bool, bool]:
             continue
         if fence:
             continue
+        stripped = without_photo_credit(stripped)
         plain = _plain(stripped)
         if RELATED_START.search(plain):
             flush()
@@ -93,13 +145,17 @@ def _article_parts(body: str) -> tuple[list[str], list[str], bool, bool]:
             continue
         if FOOTER.search(plain):
             flush()
+            if not (footer or saw_summary):
+                if cover_end is None and _on_report_cover(headings, prose):
+                    cover_end = len(prose)
+                    continue
+                if not prose and OPENING_CREDIT.match(plain):
+                    continue
             footer = True
             continue
         if re.match(r"^#\s+", stripped):
             flush()
-            if headings and _disjoint_title(headings[0], plain) and any(len(p) >= MIN_BOUNDARY_PROSE_CHARS for p in prose):
-                extra_article = True
-            headings.append(plain)
+            headings.append((plain, len(prose)))
             continue
         if stripped.startswith("#") or UI_LINE.search(plain):
             flush()
@@ -108,12 +164,13 @@ def _article_parts(body: str) -> tuple[list[str], list[str], bool, bool]:
             flush()
             continue
         # Repeated headlines and punctuation/date-only UI are not article prose.
-        if plain in headings or re.fullmatch(r"[\W\d_]+", plain):
+        if any(plain == title for title, _ in headings) or re.fullmatch(r"[\W\d_]+", plain):
             flush()
             continue
         current.append(plain)
     flush()
-    return prose, headings, saw_summary, extra_article
+    extra_article = extra_article or _has_second_article_heading(headings, prose, report_cover=cover_end is not None)
+    return prose[cover_end:], [title for title, _ in headings], saw_summary, extra_article
 
 
 def capture_review_reasons(*, body: str, title: str, filename: str) -> list[str]:

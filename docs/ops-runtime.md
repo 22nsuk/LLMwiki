@@ -322,7 +322,15 @@ approval does not clear it. Existing empty/unavailable raw hard failures remain.
 The shared, read-only detector recognizes missing body text, explicit automatic
 summary blocks without article prose, article-like text after a copyright
 boundary or a second distinct top-level title, and disjoint title vocabulary.
-It compares declared titles with the first H1, article prose and human-readable
+Photo credits with explicit attribution and opening rights notices can precede
+the article. If a Markdown caption ends mid-line, review and intake lead
+selection use the text after its closing emphasis. When a photo attribution
+follows article prose on the same line, both checks retain the preceding text.
+A labeled report cover can
+precede chapter titles formatted as H1. In that layout, a disjoint H1 triggers
+review when its section also contains substantial prose unrelated in wording
+to the first H1. A later copyright footer still marks an article boundary.
+The detector compares declared titles with the first H1, article prose and human-readable
 filenames. All three report paths resolve titles in the same order: frontmatter,
 transport `Title:`, first H1, then the humanized filename. They combine signals
 from the original body and an analysis copy with the normalizer's recognized
@@ -338,9 +346,9 @@ These are lexical review signals, not semantic contradiction detection, URL
 verification or proof of a complete article. Paraphrases, shared vocabulary,
 unrecognized captions/UI, multilingual text and unexpected page layouts can
 produce false positives or missed cases. The detector never edits raw or
-repairs titles; `--write` still performs only the normalizer's existing permitted
-metadata/noise cleanup, and skips duplicate-preface removal for flagged captures
-so the suspect article prefix remains reviewable. Review the original source, preserve historical captures
+repairs titles. The normalizer retains the prefix before a repeated title when
+capture review flags the document or the prefix contains a copyright marker.
+Review the original source, preserve historical captures
 and register recovered bodies separately. A clear result means no recognized
 signal. Old report shapes remain readable; regenerate reports before relying on
 the new checks. Capture review does not change route/absorption authority.

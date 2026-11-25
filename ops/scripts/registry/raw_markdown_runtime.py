@@ -11,7 +11,10 @@ from typing import Any
 
 from ops.scripts.core.policy_runtime import report_path
 from ops.scripts.core.yaml_runtime import parse_simple_yaml
-from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons
+from ops.scripts.registry.raw_capture_review_runtime import (
+    COPYRIGHT_MARK,
+    capture_review_reasons,
+)
 
 FRONTMATTER_FIELD_ORDER = [
     "title",
@@ -408,7 +411,10 @@ def _strip_duplicate_preface(body: str, title: str | None) -> str:
     ]
     if len(title_matches) < 2:
         return body
-    return body[title_matches[-1].start() :]
+    start = title_matches[-1].start()
+    # A cover or photo credit may be valid content even after its review
+    # warning clears. Keep the credited prefix in the stored snapshot.
+    return body if COPYRIGHT_MARK.search(body, 0, start) else body[start:]
 
 
 def _cleanup_body(body: str, *, title: str | None, preserve_preface: bool = False) -> tuple[str, list[str]]:

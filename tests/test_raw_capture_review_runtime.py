@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons
+from ops.scripts.registry.raw_intake_source_quality import extract_clean_lead
 
 TITLE = "Library extends evening opening hours"
 ARTICLE = (
@@ -14,6 +15,12 @@ OTHER = (
     "Researchers expect the instrument to provide calibrated measurements throughout its first mission."
 )
 SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article for context.\n"
+
+PHOTO_CREDIT = "Photo credit: Example Archive. Copyright 2024."
+PHOTO_AND_LEAD = "*도서관 외관. 무단 전재 및 재배포 금지. /사진=자료실* " + ARTICLE
+TRAILING_CREDIT = " /사진=자료실 © Example Archive"
+REPORT_COVER = f"# {TITLE}\n\nPrepared for the council\n\n# Research Report 27\n\n© 2024 Example Council"
+REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\n\n" + ARTICLE
 
 
 @pytest.mark.parametrize(
@@ -30,6 +37,31 @@ SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article 
         (ARTICLE, TITLE, "Library — extends evening opening hours!.md", []),
         (OTHER, TITLE, "capture.md", ["raw_capture_title_body_mismatch"]),
         ("# Orbital telescope surveys distant galaxies\n\n" + ARTICLE, TITLE, "capture.md", ["raw_capture_heading_title_mismatch"]),
+        ("입력: 2024-03-05\n\n© Example Archive\n\n" + ARTICLE, TITLE, "capture.md", []),
+        (PHOTO_CREDIT + "\n\n" + ARTICLE, TITLE, "capture.md", []),
+        (ARTICLE + "\n\n" + PHOTO_AND_LEAD, TITLE, "capture.md", []),
+        (PHOTO_CREDIT, TITLE, "capture.md", ["raw_capture_body_missing"]),
+        ("The library facade. Copyright 2024. 무단 전재 및 재배포 금지. /사진=자료실\n\n" + ARTICLE,
+         TITLE, "capture.md", []),
+        ("# " + TITLE + "\n\n저작권자 Example Press 무단전재 및 재배포 금지\n\n" + OTHER,
+         TITLE, "capture.md", ["raw_capture_body_missing", "raw_capture_multiple_articles"]),
+        (SUMMARY + "\n" + PHOTO_CREDIT, TITLE, "capture.md", ["raw_capture_summary_only"]),
+        (PHOTO_AND_LEAD, TITLE, "capture.md", []),
+        ("*Photo credit: © Example Archive* " + OTHER, TITLE, "capture.md", ["raw_capture_title_body_mismatch"]),
+        ("Warehouses by the harbor (ⓒ Example 제공, 무단 전재 및 재배포 금지)", TITLE, "capture.md",
+         ["raw_capture_body_missing"]),
+        (f"{ARTICLE}\n\n{PHOTO_CREDIT}\n\nCopyright Example Press\n\n{OTHER}",
+         TITLE, "capture.md", ["raw_capture_multiple_articles"]),
+        ("**Photo: © Example Archive**" + OTHER, TITLE, "capture.md", ["raw_capture_title_body_mismatch"]),
+        ("Research Report 27\n\n© 2024 Example Council\n\n" + ARTICLE, TITLE, "capture.md", []),
+        (REPORT_COVER, TITLE, "capture.md", ["raw_capture_body_missing"]),
+        (REPORT_COVER + "\n\n" + SUMMARY, TITLE, "capture.md", ["raw_capture_summary_only"]),
+        (REPORT, TITLE, "capture.md", []),
+        (REPORT + "\n\n# Orbital telescope surveys distant galaxies\n\n" + OTHER,
+         TITLE, "capture.md", ["raw_capture_multiple_articles"]),
+        (REPORT + "\n\nCopyright Example Press\n\n" + OTHER, TITLE, "capture.md", ["raw_capture_multiple_articles"]),
+        ("# Annual Report\n\nBrief update.\n\nCopyright 2024 Example Press\n\n" + OTHER,
+         TITLE, "capture.md", ["raw_capture_multiple_articles"]),
         (ARTICLE + "\n\nCopyright Example Press\n\n" + OTHER, TITLE, "capture.md", ["raw_capture_multiple_articles"]),
         (ARTICLE + "\n\nCopyright Example Press\n\n## Related articles\n\n" + OTHER, TITLE, "capture.md", []),
         ("# " + TITLE + "\n\n" + ARTICLE + "\n\n# Orbital telescope surveys distant galaxies\n\n" + OTHER, TITLE, "capture.md", ["raw_capture_multiple_articles"]),
@@ -40,6 +72,17 @@ SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article 
 )
 def test_capture_review_signals(body, title, filename, expected):
     assert capture_review_reasons(body=body, title=title, filename=filename) == expected
+
+
+@pytest.mark.parametrize(("lead", "credit"), [
+    (ARTICLE, TRAILING_CREDIT),
+    (ARTICLE, " (ⓒ Example Archive 제공, 무단 전재 및 재배포 금지)"),
+    ("도서관은 저작권자와 협의해 다음 달부터 희귀 자료를 공개한다고 발표했다.", " /사진=자료실"),
+])
+def test_trailing_photo_credit_preserves_article_lead(lead, credit):
+    line = lead + credit
+    assert extract_clean_lead(line) == lead
+    assert capture_review_reasons(body=line, title="", filename="capture.md") == []
 
 
 def test_korean_summary_disclaimer_and_related_photo_caption_are_not_article_body():
@@ -71,6 +114,11 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
          ["raw_capture_heading_title_mismatch", "raw_capture_title_body_mismatch"]),
         (True, False, ARTICLE, []),
         (False, True, ARTICLE, []),
+        (True, False, PHOTO_AND_LEAD, []),
+        (False, False, ARTICLE + TRAILING_CREDIT, []),
+        (False, True, PHOTO_AND_LEAD + f"\n\n# {TITLE}\n\n" + ARTICLE, []),
+        (False, False, REPORT, []),
+        (False, False, REPORT + "\n\nCopyright Example Press\n\n" + OTHER, ["raw_capture_multiple_articles"]),
     ],
 )
 def test_capture_reports_agree_before_and_after_normalization(tmp_path, transport, cookie, article, expected):

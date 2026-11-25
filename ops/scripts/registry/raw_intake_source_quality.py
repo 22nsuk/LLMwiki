@@ -25,6 +25,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_capture_review_runtime import without_photo_credit
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -53,6 +54,7 @@ else:
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_capture_review_runtime import without_photo_credit
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -80,7 +82,7 @@ REVIEWED_ROUTE_STATUSES = {"approved", "reviewed"}
 BOILERPLATE_PATTERNS = (
     re.compile(r"^(skip to|본문 바로가기|메뉴|로그인|회원가입|구독|공유|광고)\b", re.I),
     re.compile(r"^(copyright|all rights reserved)\b", re.I),
-    re.compile(r"(무단전재|재배포 금지|저작권)", re.I),
+    re.compile(r"무단\s*전재|재배포\s*금지|^[<\[\s]*저작권(?:자|\s|[:：])"),
 )
 
 
@@ -118,7 +120,7 @@ def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) 
     paragraphs: list[str] = []
     current: list[str] = []
     for raw_line in body.splitlines():
-        stripped = raw_line.strip()
+        stripped = without_photo_credit(raw_line.strip())
         if stripped.startswith("#"):
             continue
         if _is_boilerplate_line(stripped):
