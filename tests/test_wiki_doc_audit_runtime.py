@@ -5,11 +5,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from ops.scripts.core.policy_runtime import load_policy
 from ops.scripts.eval.wiki_doc_audit_runtime import (
     documentation_markdown_surfaces,
     external_report_reference_issues,
     router_summary_count_issues,
 )
+from ops.scripts.eval.wiki_page_runtime import discover_pages
 
 
 def _write(path: Path, text: str) -> Path:
@@ -19,6 +21,28 @@ def _write(path: Path, text: str) -> Path:
 
 
 class WikiDocAuditRuntimeTests(unittest.TestCase):
+    def test_wiki_index_source_pages_tracks_wiki_source_files(self) -> None:
+        policy, _ = load_policy(Path(__file__).resolve().parents[1])
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            _write(vault / "wiki/source--unlinked.md", "# Source\n")
+            _write(vault / "wiki/concept--topic.md", "# Concept\n")
+            _write(vault / "system/source--maintenance.md", "# System source\n")
+            for declared in (0, 1, 2):
+                with self.subTest(declared=declared):
+                    _write(
+                        vault / "wiki/index.md",
+                        f"## Summary\n- Inventory for this release\n- source pages: `{declared}`\n",
+                    )
+                    pages, _ = discover_pages(vault)
+                    issues = router_summary_count_issues(vault, pages, {}, [], policy["doc_audit"])
+                    expected = {
+                        "type": "router_summary_count_drift",
+                        "page": "wiki/index.md",
+                        "detail": {"label": "source pages", "declared": declared, "actual": 1},
+                    }
+                    self.assertEqual(issues, [] if declared == 1 else [expected])
+
     def test_router_summary_count_issues_reports_registry_entry_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"
