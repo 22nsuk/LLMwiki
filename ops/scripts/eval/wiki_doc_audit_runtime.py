@@ -8,13 +8,14 @@ from ops.scripts.core.policy_runtime import report_path
 from .wiki_page_runtime import heading_body, load_text, section_body
 from .wiki_quality_runtime import resolved_wikilink_targets
 
-SUMMARY_COUNT_RE = re.compile(r"^\s*-\s*(?P<label>[^:]+):\s*`(?P<count>\d+)`\s*$", re.MULTILINE)
+SUMMARY_COUNT_RE = re.compile(r"\s*-\s*(?P<label>[^:]+):\s*`(?P<count>\d+)`\s*")
 DEFAULT_EXTERNAL_REPORT_EXTENSIONS = (".pdf", ".docx")
 
 
 def _summary_count(summary: str, label: str) -> int | None:
-    for match in SUMMARY_COUNT_RE.finditer(summary):
-        if match.group("label").strip() == label:
+    for line in summary.splitlines():
+        match = SUMMARY_COUNT_RE.fullmatch(line)
+        if match and match.group("label").strip() == label:
             return int(match.group("count"))
     return None
 

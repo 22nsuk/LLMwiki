@@ -1084,6 +1084,10 @@ doc_audit:
   - page: wiki/index.md
     summary_section: Summary
     metrics:
+    - label: source pages
+      source:
+        kind: page_prefix_count
+        prefix: wiki/source--
     - label: news / market / geopolitics sources
       source:
         kind: heading_unique_wikilinks
