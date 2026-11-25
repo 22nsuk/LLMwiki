@@ -280,6 +280,11 @@ order:
 6. Finish with `make lint`, `make stage2-eval`, and
    `make registry-preflight-check` for full-vault registry changes.
 
+When the Summary in `wiki/index.md` declares `source pages`, `make lint`
+compares that number with the `wiki/source--*.md` pages, including pages the
+index does not link to. A mismatch produces a `router_summary_count_drift`
+warning with the declared and actual counts.
+
 Synthesis and concept pages should read as reusable wiki knowledge, not intake
 or routing memos. Keep route notes in maintenance sections, keep `Related pages`
 focused on navigation rather than source inventories, and use an evidence map
