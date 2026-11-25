@@ -465,6 +465,22 @@ def _compose_text(metadata: dict[str, Any], body: str) -> str:
     return f"{frontmatter}\n"
 
 
+def raw_markdown_capture_review_reasons(document: RawMarkdownDocument) -> list[str]:
+    """Share title resolution and noise-aware analysis across all report callers."""
+    title = _extract_title(document)
+    cleaned_body, _ = _cleanup_body(document.body, title=title, preserve_preface=True)
+    reasons = capture_review_reasons(
+        body=document.body, title=title or "", filename=document.path.name,
+    )
+    # Keep original boundary signals, and detect gaps hidden by removable noise.
+    # Preface removal must wait until both views have been reviewed.
+    if cleaned_body != document.body:
+        reasons.extend(capture_review_reasons(
+            body=cleaned_body, title=title or "", filename=document.path.name,
+        ))
+    return list(dict.fromkeys(reasons))
+
+
 def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityReport:
     document = load_raw_markdown_document(path)
     body = document.body
@@ -489,7 +505,7 @@ def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityRe
         manual_review_reasons.append("replacement_char")
     if source is None:
         manual_review_reasons.append("missing_source")
-    capture_reasons = capture_review_reasons(body=body, title=title or "", filename=path.name)
+    capture_reasons = raw_markdown_capture_review_reasons(document)
     manual_review_reasons.extend(capture_reasons)
 
     return RawMarkdownQualityReport(
@@ -512,9 +528,7 @@ def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityRe
 def normalize_raw_markdown_file(vault: Path, path: Path) -> RawMarkdownNormalizationResult:
     document = load_raw_markdown_document(path)
     metadata = _build_normalized_metadata(document)
-    capture_reasons = capture_review_reasons(
-        body=document.body, title=_string_value(metadata.get("title")) or "", filename=path.name,
-    )
+    capture_reasons = raw_markdown_capture_review_reasons(document)
     cleaned_body, removed_noise_classes = _cleanup_body(
         document.body, title=_string_value(metadata.get("title")), preserve_preface=bool(capture_reasons),
     )

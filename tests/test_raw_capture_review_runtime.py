@@ -59,3 +59,72 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
     title = "도서관 야간 운영 시간 연장"
     body = "도서관은 야간에 운영하는 시간을 연장한다고 밝혔다. " * 8
     assert capture_review_reasons(body=body, title=title, filename="snapshot.md") == []
+
+
+@pytest.mark.parametrize(
+    ("transport", "cookie", "article", "expected"),
+    [
+        (False, True, SUMMARY, ["raw_capture_summary_only"]),
+        (True, True, SUMMARY, ["raw_capture_summary_only"]),
+        (False, True, SUMMARY + f"\n# {TITLE}\n\n" + SUMMARY, ["raw_capture_summary_only"]),
+        (True, False, "# Orbital telescope surveys distant galaxies\n\n" + OTHER,
+         ["raw_capture_heading_title_mismatch", "raw_capture_title_body_mismatch"]),
+        (True, False, ARTICLE, []),
+        (False, True, ARTICLE, []),
+    ],
+)
+def test_capture_reports_agree_before_and_after_normalization(tmp_path, transport, cookie, article, expected):
+    from ops.scripts.eval.wiki_lint import lint
+    from ops.scripts.registry.raw_intake_source_quality import build_report
+    from ops.scripts.registry.raw_markdown_runtime import (
+        apply_raw_markdown_normalization,
+        raw_markdown_quality_report,
+    )
+    from tests.minimal_vault_runtime import seed_minimal_vault
+    from tests.test_raw_intake_source_quality import (
+        matrix_entry,
+        write_matrix,
+        write_source,
+    )
+
+    seed_minimal_vault(tmp_path)
+    path = tmp_path / "raw" / "source.md"
+    header = (
+        f"Title: {TITLE}\nURL Source: https://example.com/story\nMarkdown Content:\n"
+        if transport else
+        f'---\ntitle: "{TITLE}"\nsource: "https://example.com/story"\n'
+        'published: "unknown"\ncreated: "unknown"\n---\n'
+    )
+    banner = "This website uses cookies\n\nAllow all Customize Allow selection Deny\n\n" if cookie else ""
+    text = header + f"# {TITLE}\n\n" + banner + article
+    # A swapped capture has only the wrong article heading, not the declared one.
+    if article.startswith("#"):
+        text = header + article
+    path.write_text(text, encoding="utf-8")
+    write_source(tmp_path / "wiki" / "source--quality.md", summary=ARTICLE, key_points=[
+        "The library trial measured weekday attendance over six weeks.",
+        "The council approved additional staffing for longer opening hours.",
+        "Weekend schedules remained outside the scope of the trial.",
+        "The announcement did not report long-term operating costs.",
+    ])
+    write_matrix(tmp_path / "matrix.json", [matrix_entry()])
+
+    for phase in ("original", "normalized"):
+        before = path.read_text(encoding="utf-8")
+        assert raw_markdown_quality_report(tmp_path, path).capture_review_reasons == expected, phase
+        candidates = [item for item in lint(tmp_path)["review_candidates"]
+                      if item["type"] == "raw_snapshot_capture_review"]
+        assert [item["detail"]["reasons"] for item in candidates] == ([expected] if expected else []), phase
+        report = build_report(tmp_path, matrix_path="matrix.json")
+        assert report["findings"][0]["issues"] == expected, phase
+        assert report["status"] == ("attention" if expected else "pass"), phase
+        assert path.read_text(encoding="utf-8") == before
+        result = apply_raw_markdown_normalization(tmp_path, path)
+        assert result.manual_review_reasons == expected, phase
+        assert article in result.text
+        if phase == "original":
+            assert ("cookie_banner" in result.removed_noise_classes) == cookie
+            assert result.quality.capture_review_reasons == expected
+        else:
+            assert not result.changed
+            assert path.read_text(encoding="utf-8") == before

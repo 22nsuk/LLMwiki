@@ -323,7 +323,13 @@ The shared, read-only detector recognizes missing body text, explicit automatic
 summary blocks without article prose, article-like text after a copyright
 boundary or a second distinct top-level title, and disjoint title vocabulary.
 It compares declared titles with the first H1, article prose and human-readable
-filenames. Slugs/IDs without spaces, short titles and cross-script translations
+filenames. All three report paths resolve titles in the same order: frontmatter,
+transport `Title:`, first H1, then the humanized filename. They combine signals
+from the original body and an analysis copy with the normalizer's recognized
+transport/cookie/blob noise removed, preserving prefaces during analysis. Thus
+removable noise cannot hide a summary-only body on the first normalization pass,
+and original boundary signals still prevent duplicate-preface removal.
+Slugs/IDs without spaces, short titles and cross-script translations
 are excluded from the corresponding title comparisons. Recognized navigation,
 recommendations, comments and code fences are excluded from analysis. Binary
 and HTML intake inputs do not receive this Markdown capture review.
