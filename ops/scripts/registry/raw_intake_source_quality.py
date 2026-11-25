@@ -25,7 +25,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
-    from ops.scripts.registry.raw_capture_review_runtime import without_photo_credit
+    from ops.scripts.registry.raw_capture_review_runtime import (
+        is_reprint_footer,
+        without_photo_credit,
+    )
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -54,7 +57,10 @@ else:
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
-    from ops.scripts.registry.raw_capture_review_runtime import without_photo_credit
+    from ops.scripts.registry.raw_capture_review_runtime import (
+        is_reprint_footer,
+        without_photo_credit,
+    )
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -82,7 +88,8 @@ REVIEWED_ROUTE_STATUSES = {"approved", "reviewed"}
 BOILERPLATE_PATTERNS = (
     re.compile(r"^(skip to|본문 바로가기|메뉴|로그인|회원가입|구독|공유|광고)\b", re.I),
     re.compile(r"^(copyright|all rights reserved)\b", re.I),
-    re.compile(r"무단\s*전재|재배포\s*금지|^[<\[\s]*저작권(?:자|\s|[:：])"),
+    re.compile(r"\[[^\]\n]*[.。]\s*재배포\s*금지[.。]"),  # bracketed photo usage terms
+    re.compile(r"^[<\[\s]*저작권(?:자|\s|[:：])"),
 )
 
 
@@ -112,7 +119,7 @@ def _is_boilerplate_line(line: str) -> bool:
         return True
     if re.fullmatch(r"\[[^\]]+\]\([^\)]+\)", stripped):
         return True
-    return any(pattern.search(stripped) for pattern in BOILERPLATE_PATTERNS)
+    return is_reprint_footer(stripped) or any(pattern.search(stripped) for pattern in BOILERPLATE_PATTERNS)
 
 
 def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) -> str:

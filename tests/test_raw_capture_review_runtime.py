@@ -20,6 +20,12 @@ PHOTO_CREDIT = "Photo credit: Example Archive. Copyright 2024."
 PHOTO_AND_LEAD = "*도서관 외관. 무단 전재 및 재배포 금지. /사진=자료실* " + ARTICLE
 TRAILING_CREDIT = " /사진=자료실 © Example Archive"
 CREDITED_FOOTER = "Copyright 2024 Example Press /사진=자료실"
+REPRINT_FOOTER = "무단 전재 및 재배포 금지"
+REPRINT_ARTICLE = (
+    "법원은 지역 신문 기사를 무단 전재한 포털 운영자에게 손해배상 책임이 있다고 판결했다. "
+    "재판부는 원문을 허가 없이 복제한 행위가 시장 경쟁을 해쳤다고 설명했으며, "
+    "운영자는 판결에 불복해 항소할 계획이라고 밝혔다."
+)
 REPORT_COVER = f"# {TITLE}\n\nPrepared for the council\n\n# Research Report 27\n\n© 2024 Example Council"
 REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\n\n" + ARTICLE
 
@@ -48,6 +54,8 @@ REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\
          TITLE, "capture.md", ["raw_capture_body_missing", "raw_capture_multiple_articles"]),
         (SUMMARY + "\n" + PHOTO_CREDIT, TITLE, "capture.md", ["raw_capture_summary_only"]),
         (PHOTO_AND_LEAD, TITLE, "capture.md", []),
+        ("*The library facade. Copyright © Example Press. 무단 전재 및 재배포 금지. /사진=자료실* " + ARTICLE,
+         TITLE, "capture.md", []),
         ("*Photo credit: © Example Archive* " + OTHER, TITLE, "capture.md", ["raw_capture_title_body_mismatch"]),
         ("Warehouses by the harbor (ⓒ Example 제공, 무단 전재 및 재배포 금지)", TITLE, "capture.md",
          ["raw_capture_body_missing"]),
@@ -77,6 +85,7 @@ def test_capture_review_signals(body, title, filename, expected):
 
 @pytest.mark.parametrize(("lead", "credit"), [
     (ARTICLE, TRAILING_CREDIT),
+    ("법원은 재배포 금지 조항이 해당 기사에 적용되는지 판단했다.", TRAILING_CREDIT),
     (ARTICLE, " (ⓒ Example Archive 제공, 무단 전재 및 재배포 금지)"),
     ("도서관은 저작권자와 협의해 다음 달부터 희귀 자료를 공개한다고 발표했다.", " /사진=자료실"),
 ])
@@ -91,6 +100,34 @@ def test_emphasized_lead_and_photo_credit(marker):
     line = f"{marker}{ARTICLE}{TRAILING_CREDIT}{marker}"
     assert extract_clean_lead(line) == ARTICLE
     assert capture_review_reasons(body=line, title=TITLE, filename="capture.md") == []
+
+
+@pytest.mark.parametrize("notice", [
+    REPRINT_FOOTER, "무단전재·재배포 금지", "재배포를 금지합니다.", "재배포 금지", "무단 전재 및 재배포를 금지합니다.",
+    "Example Press ⓒ Example Archive, 무단전재 및 재배포 금지",
+])
+def test_reprint_notice_is_a_boundary_with_or_without_a_photo_credit(notice):
+    for suffix in ("", " /사진=자료실"):
+        footer = notice + suffix
+        assert extract_clean_lead(footer) == ""
+        assert capture_review_reasons(body=f"{ARTICLE}\n\n{footer}\n\n{OTHER}", title=TITLE, filename="capture.md") == [
+            "raw_capture_multiple_articles"
+        ]
+
+
+@pytest.mark.parametrize("lead", [
+    REPRINT_ARTICLE,
+    "무단 전재한 기사가 여러 매체에 재배포됐다고 법원은 밝혔다.",
+    "법원은 재배포 금지 조항이 해당 기사에 적용되는지 판단했다.",
+])
+def test_reprint_reporting_preserves_the_lead(lead):
+    assert extract_clean_lead(lead) == lead
+    assert capture_review_reasons(body=lead, title="", filename="capture.md") == []
+
+
+def test_photo_caption_with_bracketed_usage_terms_is_not_a_lead():
+    caption = "*자료 사진 [열람 전용. 재배포 금지.]*"
+    assert extract_clean_lead(caption) == ""
 
 
 def test_korean_summary_disclaimer_and_related_photo_caption_are_not_article_body():
@@ -127,6 +164,8 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (False, False, f"**{ARTICLE}{TRAILING_CREDIT}**", []),
         (False, False, f"{ARTICLE}\n\n{CREDITED_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, True, PHOTO_AND_LEAD + f"\n\n# {TITLE}\n\n" + ARTICLE, []),
+        (False, False, f"{ARTICLE}\n\n{REPRINT_FOOTER} /사진=자료실\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+        (False, False, REPRINT_ARTICLE, []),
         (False, False, REPORT, []),
         (False, False, REPORT + "\n\nCopyright Example Press\n\n" + OTHER, ["raw_capture_multiple_articles"]),
     ],

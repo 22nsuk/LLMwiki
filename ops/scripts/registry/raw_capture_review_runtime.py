@@ -9,8 +9,13 @@ SUMMARY_START = re.compile(r"^(?:세\s*줄\s*요약|AI\s*요약|AI[- ]generated 
 SUMMARY_END = re.compile(r"인공지능이 자동으로|기사 본문과 함께|End of (?:AI|auto).*summary|Read the full article", re.I)
 RELATED_START = re.compile(r"^(?:관심기사 예측|관련\s*기사|함께 (?:읽기|보면)|추천\s*기사|.*뉴스를 추천해|Related (?:articles|stories)|Recommended (?:articles|stories))", re.I)
 FOOTER_START = re.compile(r"^[<\[\\\s]*(?:저작권자|Copyright|©)", re.I)
-REPRINT_NOTICE = re.compile(r"무단\s*전재.*재배포", re.I)
-COPYRIGHT_MARK = re.compile(r"©|ⓒ|copyright\b|저작권자|무단\s*전재", re.I)
+# Match the list of prohibited uses through the end of the notice.
+REPRINT_NOTICE = re.compile(
+    r"(?:무단\s*전재|재배포)(?:\s*(?:[·,&/-]|및|수집|재?배포|AI|학습|데이터|활용|이용))*"
+    r"\s*[를을]?\s*금지(?:합니다)?[.。!＞>\]\\)*_\s]*$",
+    re.I,
+)
+COPYRIGHT_MARK = re.compile(r"©|ⓒ|copyright\b|저작권자|무단\s*전재|재배포(?:를)?\s*금지", re.I)
 OPENING_CREDIT = re.compile(r"^(?:©|copyright\s+(?:©\s*)?\d{4}\b)", re.I)
 PHOTO_CREDIT = re.compile(
     r"^(?:(?:photo(?:graph)?|image)(?:\s+credit)?|(?:사진|이미지)(?:\s*제공)?)\s*[:=]"
@@ -52,10 +57,20 @@ def _disjoint_title(title: str, other: str) -> bool:
     return not any(a.startswith(b) or b.startswith(a) for a in left for b in right)
 
 
+def is_reprint_footer(line: str) -> bool:
+    notice = REPRINT_NOTICE.search(line)
+    if notice is None:
+        return False
+    # A publisher signature may precede the notice. Photo descriptions can contain
+    # the same signature after one or more sentences of caption text.
+    prefix = line[:notice.start()].strip(" \t*_<>[]()\\＜")
+    return not prefix or prefix.endswith((" -", " |")) or re.match(r"^[^.!?。！？]*[ⓒ©]", prefix) is not None
+
+
 def _photo_credit_prefix(line: str, credit: re.Match[str]) -> str:
     prefix = line[:credit.start()].rstrip()
     plain = _plain(prefix)
-    if FOOTER_START.match(plain):
+    if FOOTER_START.match(plain) or is_reprint_footer(plain):
         return prefix
     if REPRINT_NOTICE.search(plain):
         return ""
@@ -152,7 +167,7 @@ def _article_parts(body: str) -> tuple[list[str], list[str], bool, bool]:
             continue
         if summary:
             continue
-        if FOOTER_START.match(plain) or REPRINT_NOTICE.search(plain):
+        if FOOTER_START.match(plain) or is_reprint_footer(plain):
             flush()
             if not (footer or saw_summary):
                 if cover_end is None and _on_report_cover(headings, prose):
