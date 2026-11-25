@@ -94,6 +94,10 @@ def classify_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
         primary_bucket = "function_budget"
         refactor_candidate = overage >= 10
         rationale = "python function budget candidate; inspect complexity before changing behavior"
+    elif candidate_type == "raw_snapshot_capture_review":
+        primary_bucket = "documentation_candidate"
+        refactor_candidate = False
+        rationale = "review original source and capture identity; preserve raw instead of refactoring it"
     elif candidate_type in DOCUMENTATION_CANDIDATE_TYPES:
         primary_bucket = "documentation_candidate"
         refactor_candidate = False

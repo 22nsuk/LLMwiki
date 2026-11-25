@@ -137,6 +137,7 @@
         },
         "manual_review_reasons": {
           "type": "array",
+          "description": "Includes read-only lexical capture signals: raw_capture_body_missing, raw_capture_summary_only, raw_capture_multiple_articles, raw_capture_filename_title_mismatch, raw_capture_heading_title_mismatch, raw_capture_title_body_mismatch. These request source review, not automatic rewriting or factual verification. Older reports without these codes do not establish capture completeness.",
           "items": {
             "type": "string"
           }

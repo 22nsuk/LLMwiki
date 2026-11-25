@@ -11,7 +11,10 @@ from ops.scripts.core.schema_constants_runtime import (
 )
 from ops.scripts.core.schema_runtime import load_schema, validate_with_schema
 from ops.scripts.registry.raw_markdown_normalize import build_report
-from ops.scripts.registry.raw_markdown_runtime import normalize_raw_markdown_file
+from ops.scripts.registry.raw_markdown_runtime import (
+    apply_raw_markdown_normalization,
+    normalize_raw_markdown_file,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -213,6 +216,25 @@ bad � text
             schema = load_schema(REPO_ROOT / RAW_MARKDOWN_NORMALIZATION_REPORT_SCHEMA_PATH)
             self.assertEqual(validate_with_schema(report, schema), [])
             self.assertTrue(target.read_text(encoding="utf-8").startswith("---\n"))
+
+    def test_capture_review_survives_normalization_without_rewriting_article(self) -> None:
+        from tests.test_raw_capture_review_runtime import ARTICLE, OTHER, TITLE
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            path = vault / "Orbital telescope surveys distant galaxies.md"
+            body = f"# {TITLE}\n\n{ARTICLE}\n\nCopyright Example Press\n\n# {TITLE}\n\n{OTHER}\n"
+            path.write_text(f'---\ntitle: "{TITLE}"\nsource: "https://example.com/story"\n'
+                            'published: "unknown"\ncreated: "unknown"\n---\n\n' + body)
+            original = path.read_bytes()
+            result = normalize_raw_markdown_file(vault, path)
+            self.assertEqual(result.text, original.decode())
+            self.assertEqual(path.read_bytes(), original)
+            self.assertTrue(result.manual_review_required)
+            self.assertIn("raw_capture_multiple_articles", result.manual_review_reasons)
+            self.assertIn("raw_capture_filename_title_mismatch", result.manual_review_reasons)
+            apply_raw_markdown_normalization(vault, path)
+            self.assertEqual(path.read_bytes(), original)
 
 
 if __name__ == "__main__":

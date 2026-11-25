@@ -81,6 +81,32 @@ def matrix_entry(**overrides: str) -> dict[str, str]:
 
 
 class RawIntakeSourceQualityTests(unittest.TestCase):
+    def test_reviewed_route_does_not_clear_capture_diagnostics(self) -> None:
+        from tests.test_raw_capture_review_runtime import ARTICLE, SUMMARY, TITLE
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            vault = Path(temp_dir)
+            seed_minimal_vault(vault)
+            raw = vault / "raw" / "source.md"
+            raw.write_text(f'---\ntitle: "{TITLE}"\n---\n\n' + SUMMARY)
+            write_source(vault / "wiki" / "source--quality.md", summary=ARTICLE, key_points=[
+                "The library trial measured weekday attendance over six weeks.",
+                "The council approved additional staffing for longer opening hours.",
+                "Weekend schedules remained outside the scope of the trial.",
+                "The announcement did not report long-term operating costs.",
+            ])
+            for action in ("keep_source_only_seed", "refresh_existing_synthesis"):
+                with self.subTest(action=action):
+                    write_matrix(vault / "matrix.json", [matrix_entry(proposed_action=action)])
+                    report = build_report(vault, matrix_path="matrix.json")
+                    self.assertEqual(report["status"], "attention")
+                    finding = report["findings"][0]
+                    self.assertEqual(finding["cleaned_raw_lead"]["status"], "ok")
+                    self.assertEqual(finding["issues"], ["raw_capture_summary_only"])
+                    self.assertEqual(validate_with_schema(report, load_schema(SCHEMA_PATH)), [])
+            raw.write_text(f'---\ntitle: "{TITLE}"\n---\n\n' + SUMMARY + "\n" + ARTICLE)
+            self.assertEqual(build_report(vault, matrix_path="matrix.json")["status"], "pass")
+
     def test_cli_writes_relative_out_under_vault(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir) / "vault"

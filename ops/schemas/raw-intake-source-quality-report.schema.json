@@ -163,6 +163,7 @@
         "quality_status": { "type": "string", "enum": ["pass", "review", "fail"] },
         "issues": {
           "type": "array",
+          "description": "raw_capture_* issues are advisory lexical body/boundary/title diagnostics. A reviewed route cannot clear them: otherwise valid entries remain review/attention. Existing empty/unavailable raw hard failures still apply. No issue means no recognized signal, not verified article completeness or factual accuracy.",
           "items": { "type": "string", "minLength": 1 }
         }
       }
