@@ -22,6 +22,7 @@ EXTENDED_RIGHTS = ENGLISH_RIGHTS + " No material from this publication may be re
 SYMBOL_RIGHTS = EXTENDED_RIGHTS.replace("Copyright 2024", "Copyright © 2024")
 EMPHASIZED_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "**Example Press**")
 EMPHASIZED_RESERVATION = EXTENDED_RIGHTS.replace("All rights reserved.", "*All rights reserved.*")
+HTML_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "<strong>Example Press</strong>")
 KOREAN_RIGHTS = "저작권자 Example Press 무단 전재 및 재배포 금지"
 PUBLICATION_NOTICE = (
     "Permission requests concerning any distribution of this publication must be addressed "
@@ -111,11 +112,15 @@ def test_capture_review_signals(body, title, filename, expected):
     assert capture_review_reasons(body=body, title=title, filename=filename) == expected
 
 
-@pytest.mark.parametrize("notice", [EXTENDED_RIGHTS, EXTENDED_RIGHTS.replace(". ", ".\n"), KOREAN_RIGHTS,
-                                    EXTENDED_RIGHTS.replace("reserved.", r"reserved\."),
-                                    KOREAN_RIGHTS + ". All rights reserved.",
-                                    KOREAN_RIGHTS + ". All rights reserved. No part may be reproduced without permission.",
-                                    "© Example Press All rights reserved.", "All rights reserved."])
+@pytest.mark.parametrize("notice", [
+    EXTENDED_RIGHTS, EXTENDED_RIGHTS.replace(". ", ".\n"), KOREAN_RIGHTS, HTML_HOLDER,
+    EXTENDED_RIGHTS.replace("Press", 'Pr<span title="a > b"\nlang="en">es</span>s'),
+    EXTENDED_RIGHTS.replace("All rights", "All<br>rights"),
+    EXTENDED_RIGHTS.replace("reserved.", r"reserved\."),
+    KOREAN_RIGHTS + ". All rights reserved.",
+    KOREAN_RIGHTS + ". All rights reserved. No part may be reproduced without permission.",
+    "© Example Press All rights reserved.", "All rights reserved.",
+])
 def test_standalone_rights_notice_supplies_no_article_evidence(notice):
     assert extract_clean_lead(notice) == ""
     assert capture_review_reasons(body=notice, title=TITLE, filename="raw.md") == ["raw_capture_body_missing"]
@@ -129,6 +134,8 @@ def test_standalone_rights_notice_supplies_no_article_evidence(notice):
     f"{KOREAN_RIGHTS} {ARTICLE}",
     f"{ARTICLE} {ENGLISH_RIGHTS}",
     f"{EMPHASIZED_HOLDER} The *library* extended its hours.",
+    f"{HTML_HOLDER} The <em>library</em> extended its hours.",
+    HTML_HOLDER.replace("<", "&lt;"),
     SYMBOL_RIGHTS.replace("©", "&copy;") + " The library extended its hours.",
     SYMBOL_RIGHTS.replace("©", r"\&copy;"),
     SYMBOL_RIGHTS.replace("©", "&amp;copy;"),
@@ -369,6 +376,8 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
                      ["raw_capture_body_missing"], id="copyright-entity"),
         pytest.param(False, False, EMPHASIZED_HOLDER, ["raw_capture_body_missing"], id="emphasized-holder"),
         pytest.param(False, False, EMPHASIZED_RESERVATION, ["raw_capture_body_missing"], id="emphasized-reservation"),
+        pytest.param(False, False, HTML_HOLDER, ["raw_capture_body_missing"], id="html-holder"),
+        pytest.param(False, False, HTML_HOLDER + "\n\n" + ARTICLE, [], id="html-holder-before-article"),
         (False, False, KOREAN_RIGHTS, ["raw_capture_body_missing"]),
         (False, False, EXTENDED_RIGHTS + "\n\n" + ARTICLE, []),
         (False, True, SUMMARY, ["raw_capture_summary_only"]),

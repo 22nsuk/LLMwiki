@@ -91,6 +91,7 @@ def markdown_blocks(body: str) -> tuple[list[Token], EnvType]:
 class _Line(NamedTuple):
     text: str
     link_only: bool = False
+    source_lines: int = 1
 
 
 class _InlineText(NamedTuple):
@@ -107,21 +108,29 @@ def _project_inline(children: list[Token], *, markdown_text: bool = True) -> _In
     parts: list[str] = []
     project = False
     in_link = saw_link = False
+    source_lines = 1
     unlinked_text = boundary_prose = False
     for token in children:
         if token.type == "image":
             project = True
             parts.append(" ")
         elif token.type in {"softbreak", "hardbreak"}:
-            lines.append(_Line("".join(parts), not unlinked_text))
+            lines.append(_Line("".join(parts), not unlinked_text, source_lines))
+            source_lines = 1
             parts.clear()
             unlinked_text = False
         elif token.type == "html_inline":
+            source_lines += token.content.count("\n")
             if token.content.startswith("<!--"):
                 project = True
                 parts.append(" ")
-            else:
+            elif not markdown_text:
                 parts.append(token.content)
+            else:
+                # Formatting can split a word. Layout and void elements separate text.
+                tag = re.match(r"</?([a-zA-Z][a-zA-Z0-9-]*)", token.content)
+                if tag and tag[1].lower() not in _HTMLProse.formatting and tag[1].lower() != "a":
+                    parts.append(" ")
         elif token.type in {"link_open", "link_close"}:
             saw_link = True
             in_link = token.type == "link_open"
@@ -139,7 +148,7 @@ def _project_inline(children: list[Token], *, markdown_text: bool = True) -> _In
     # HTMLParser has already decoded literal HTML text, including escaped tags.
     if keep_source_lead and not markdown_text:
         return None
-    lines.append(_Line("".join(parts), not unlinked_text))
+    lines.append(_Line("".join(parts), not unlinked_text, source_lines))
     return _InlineText(lines, boundary_prose or not saw_link, keep_source_lead)
 
 
@@ -172,14 +181,14 @@ def lead_analysis_lines(body: str) -> Iterator[LeadLine]:
             if projected is None:
                 continue
             if projected.keep_source_lead:
-                # A multiline inline HTML tag can occupy several source lines
-                # inside one token. Preserve its excerpt without pairing offsets.
-                if len(projected.lines) != end - start:
+                replacement = []
+                offset = start
+                for line in projected.lines:
+                    stop = offset + line.source_lines
+                    replacement.append(LeadLine("\n".join(lines[offset:stop]), line.text))
+                    offset = stop
+                if offset != end:
                     continue
-                replacement = [
-                    LeadLine(source, line.text)
-                    for source, line in zip(lines[start:end], projected.lines, strict=True)
-                ]
             else:
                 visible = ("" if line.link_only else line.text for line in projected.lines)
                 replacement = [LeadLine(text, text) for text in visible]
