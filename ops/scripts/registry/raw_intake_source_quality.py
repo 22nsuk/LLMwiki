@@ -25,10 +25,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
-    from ops.scripts.registry.raw_capture_review_runtime import (
-        is_reprint_footer,
-        without_photo_credit,
-    )
+    from ops.scripts.registry.raw_capture_review_runtime import without_photo_credit
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -57,10 +54,7 @@ else:
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
-    from ops.scripts.registry.raw_capture_review_runtime import (
-        is_reprint_footer,
-        without_photo_credit,
-    )
+    from ops.scripts.registry.raw_capture_review_runtime import without_photo_credit
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -87,9 +81,7 @@ SOURCE_COMMAND = "python -m ops.scripts.raw_intake_source_quality"
 REVIEWED_ROUTE_STATUSES = {"approved", "reviewed"}
 BOILERPLATE_PATTERNS = (
     re.compile(r"^(skip to|본문 바로가기|메뉴|로그인|회원가입|구독|공유|광고)\b", re.I),
-    re.compile(r"^(copyright|all rights reserved)\b", re.I),
-    re.compile(r"\[[^\]\n]*[.。]\s*재배포\s*금지[.。]"),  # bracketed photo usage terms
-    re.compile(r"^[<\[\s]*저작권(?:자|\s|[:：])"),
+    re.compile(r"^all rights reserved[.]?$", re.I),
 )
 
 
@@ -113,13 +105,13 @@ def _is_boilerplate_line(line: str) -> bool:
     stripped = line.strip()
     if not stripped:
         return True
-    if stripped.startswith(("![", "<!--")):
+    if stripped.startswith("<!--"):
         return True
     if re.fullmatch(r"[-*_`#>\s]+", stripped):
         return True
     if re.fullmatch(r"\[[^\]]+\]\([^\)]+\)", stripped):
         return True
-    return is_reprint_footer(stripped) or any(pattern.search(stripped) for pattern in BOILERPLATE_PATTERNS)
+    return any(pattern.search(stripped) for pattern in BOILERPLATE_PATTERNS)
 
 
 def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) -> str:
@@ -136,7 +128,6 @@ def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) 
                 current = []
             continue
         stripped = re.sub(r"`([^`]+)`", r"\1", stripped)
-        stripped = re.sub(r"!\[[^\]]*\]\([^\)]+\)", "", stripped)
         stripped = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", stripped)
         current.append(stripped)
     if current:

@@ -6,6 +6,7 @@ from ops.scripts.registry.raw_capture_review_runtime import capture_review_reaso
 from ops.scripts.registry.raw_intake_source_quality import extract_clean_lead
 
 TITLE = "Library extends evening opening hours"
+SECOND_TITLE = "Orbital telescope surveys distant galaxies"
 ARTICLE = (
     "The library will extend evening opening hours on weekdays following a six-week trial. "
     "The council allocated funding for additional staff, while weekend hours remain unchanged."
@@ -23,14 +24,11 @@ CREDITED_FOOTER = "Copyright 2024 Example Press /사진=자료실"
 REPRINT_FOOTER = "무단 전재 및 재배포 금지"
 PAREN_CREDIT = "(ⓒ Example Archive 제공)"
 COLON_FOOTER = "매일경제: " + REPRINT_FOOTER
-KOREAN_PUBLISHER_FOOTER = "매일경제 " + REPRINT_FOOTER
 QUOTED_NOTICE_ARTICLE = (
     "법원은 지역 신문의 사진 이용을 제한한 조항을 심리했고, 원문 사용을 허가받지 않은 포털 운영자의 책임을 인정했다. "
     "재판부가 인용한 공지의 마지막 문장은 다음과 같다: 재배포를 금지합니다."
 )
 EXTENDED_REPRINT_FOOTER = REPRINT_FOOTER + ". AI 학습 및 활용 금지."
-PUBLISHER_REPRINT_FOOTER = "Example Press " + REPRINT_FOOTER
-SIGNED_REPRINT_FOOTER = "Example Inc. ⓒ Example Archive, " + REPRINT_FOOTER
 REPRINT_ARTICLE = (
     "법원은 지역 신문 기사를 무단 전재한 포털 운영자에게 손해배상 책임이 있다고 판결했다. "
     "재판부는 원문을 허가 없이 복제한 행위가 시장 경쟁을 해쳤다고 설명했으며, "
@@ -57,20 +55,20 @@ REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\
         ("입력: 2024-03-05\n\n© Example Archive\n\n" + ARTICLE, TITLE, "capture.md", []),
         (PHOTO_CREDIT + "\n\n" + ARTICLE, TITLE, "capture.md", []),
         (ARTICLE + "\n\n" + PHOTO_AND_LEAD, TITLE, "capture.md", []),
-        (PHOTO_CREDIT, TITLE, "capture.md", ["raw_capture_body_missing"]),
+        (PHOTO_CREDIT, TITLE, "capture.md", []),
+        (PAREN_CREDIT, TITLE, "capture.md", ["raw_capture_body_missing"]),
         ("The library facade. Copyright 2024. 무단 전재 및 재배포 금지. /사진=자료실\n\n" + ARTICLE,
          TITLE, "capture.md", []),
         ("# " + TITLE + "\n\n저작권자 Example Press 무단전재 및 재배포 금지\n\n" + OTHER,
-         TITLE, "capture.md", ["raw_capture_body_missing", "raw_capture_multiple_articles"]),
-        (SUMMARY + "\n" + PHOTO_CREDIT, TITLE, "capture.md", ["raw_capture_summary_only"]),
+         TITLE, "capture.md", []),
+        (SUMMARY + "\n" + PAREN_CREDIT, TITLE, "capture.md", ["raw_capture_summary_only"]),
         (PHOTO_AND_LEAD, TITLE, "capture.md", []),
         ("*The library facade. Copyright © Example Press. 무단 전재 및 재배포 금지. /사진=자료실* " + ARTICLE,
          TITLE, "capture.md", []),
         ("*Photo credit: © Example Archive* " + OTHER, TITLE, "capture.md", ["raw_capture_title_body_mismatch"]),
-        ("Warehouses by the harbor (ⓒ Example 제공, 무단 전재 및 재배포 금지)", TITLE, "capture.md",
-         ["raw_capture_body_missing"]),
+        ("Warehouses by the harbor (ⓒ Example 제공, 무단 전재 및 재배포 금지)", TITLE, "capture.md", []),
         (f"{ARTICLE}\n\n{PHOTO_CREDIT}\n\nCopyright Example Press\n\n{OTHER}",
-         TITLE, "capture.md", ["raw_capture_multiple_articles"]),
+         TITLE, "capture.md", []),
         ("**Photo: © Example Archive**" + OTHER, TITLE, "capture.md", ["raw_capture_title_body_mismatch"]),
         ("Research Report 27\n\n© 2024 Example Council\n\n" + ARTICLE, TITLE, "capture.md", []),
         (REPORT_COVER, TITLE, "capture.md", ["raw_capture_body_missing"]),
@@ -78,14 +76,15 @@ REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\
         (REPORT, TITLE, "capture.md", []),
         (REPORT + "\n\n# Orbital telescope surveys distant galaxies\n\n" + OTHER,
          TITLE, "capture.md", ["raw_capture_multiple_articles"]),
-        (REPORT + "\n\nCopyright Example Press\n\n" + OTHER, TITLE, "capture.md", ["raw_capture_multiple_articles"]),
+        (REPORT + "\n\nCopyright Example Press\n\n" + OTHER, TITLE, "capture.md", []),
         ("# Annual Report\n\nBrief update.\n\nCopyright 2024 Example Press\n\n" + OTHER,
-         TITLE, "capture.md", ["raw_capture_multiple_articles"]),
-        (ARTICLE + "\n\nCopyright Example Press\n\n" + OTHER, TITLE, "capture.md", ["raw_capture_multiple_articles"]),
+         TITLE, "capture.md", ["raw_capture_title_body_mismatch"]),
+        (ARTICLE + "\n\nCopyright Example Press\n\n" + OTHER, TITLE, "capture.md", []),
         (ARTICLE + "\n\nCopyright Example Press\n\n## Related articles\n\n" + OTHER, TITLE, "capture.md", []),
         ("# " + TITLE + "\n\n" + ARTICLE + "\n\n# Orbital telescope surveys distant galaxies\n\n" + OTHER, TITLE, "capture.md", ["raw_capture_multiple_articles"]),
         (ARTICLE, "도서관 야간 운영 시간 연장", "capture.md", []),
         ("<!-- " + OTHER + " -->\n\n" + ARTICLE, TITLE, "capture.md", []),
+        (f"<div>\n{ARTICLE}\n</div>", TITLE, "capture.md", []),
         (ARTICLE, "Brief", "capture.md", []),
     ],
 )
@@ -93,31 +92,8 @@ def test_capture_review_signals(body, title, filename, expected):
     assert capture_review_reasons(body=body, title=title, filename=filename) == expected
 
 
-@pytest.mark.parametrize(("lead", "credit"), [
-    (ARTICLE, TRAILING_CREDIT),
-    (QUOTED_NOTICE_ARTICLE, " /사진=자료실"),
-    (QUOTED_NOTICE_ARTICLE.replace("같다:", "같다."), " /사진=자료실"),
-    ("법원은 공지를 인용했다. 재배포를 금지합니다.", " /사진=자료실"),
-    (QUOTED_NOTICE_ARTICLE, " (ⓒ Example Archive 제공, 무단 전재 및 재배포 금지)"),
-    ("법원은 재배포 금지 조항이 해당 기사에 적용되는지 판단했다.", TRAILING_CREDIT),
-    (ARTICLE, " (ⓒ Example Archive 제공, 무단 전재 및 재배포 금지)"),
-    ("도서관은 저작권자와 협의해 다음 달부터 희귀 자료를 공개한다고 발표했다.", " /사진=자료실"),
-])
-def test_trailing_photo_credit_preserves_article_lead(lead, credit):
-    line = lead + credit
-    assert extract_clean_lead(line) == lead
-    assert capture_review_reasons(body=line, title="", filename="capture.md") == []
-
-
-@pytest.mark.parametrize("marker", ["*", "**", "_", "__"])
-def test_emphasized_lead_and_photo_credit(marker):
-    line = f"{marker}{ARTICLE}{TRAILING_CREDIT}{marker}"
-    assert extract_clean_lead(line) == ARTICLE
-    assert capture_review_reasons(body=line, title=TITLE, filename="capture.md") == []
-
-
 @pytest.mark.parametrize("layout", [
-    "{body} {credit}", "*{body}* {credit}", "{body} *{credit}*", "*{body} {credit}*",
+    "{credit} {body}", "{body} {credit}", "*{body}* {credit}", "{body} *{credit}*", "*{body} {credit}*",
     "**[{body}](https://example.com/article)** *{credit}*",
 ])
 @pytest.mark.parametrize("body", [ARTICLE, ARTICLE.rstrip(".")])
@@ -130,8 +106,15 @@ def test_credit_span_is_independent_of_emphasis(layout, body):
 @pytest.mark.parametrize(("line", "lead"), [
     (f"{ARTICLE} {PAREN_CREDIT} {OTHER}", ARTICLE + " " + OTHER),
     (f"{ARTICLE} {PAREN_CREDIT} {OTHER} {PAREN_CREDIT}", ARTICLE + " " + OTHER),
-    (f"{ARTICLE} *사진: 자료실* {OTHER}", ARTICLE + " " + OTHER),
-    (f"{ARTICLE} /사진=자료실", ARTICLE),
+    (f"{ARTICLE} *사진: 자료실* {OTHER}", f"{ARTICLE} *사진: 자료실* {OTHER}"),
+    (f"{ARTICLE} /사진=자료실", f"{ARTICLE} /사진=자료실"),
+    (f"Photo credit: © Example Archive. {ARTICLE}", f"Photo credit: © Example Archive. {ARTICLE}"),
+    (f"![cover](image.jpg){ARTICLE}", ARTICLE),
+    ("before![cover](image.jpg)after", "before after"),
+    (f"(© 2024 Example Archive) {ARTICLE}", f"(© 2024 Example Archive) {ARTICLE}"),
+    (f"{ARTICLE} (ⓒ Example Archive 제공, 무단 전재 금지)", ARTICLE),
+    (PHOTO_CREDIT, PHOTO_CREDIT),
+    (PAREN_CREDIT, ""),
     ("자료 화면 /사진=자료실에서 받은 뒤 편집부가 내용을 확인했다.", "자료 화면 /사진=자료실에서 받은 뒤 편집부가 내용을 확인했다."),
     (f"![사진: 자료실](image.jpg) {ARTICLE}", ARTICLE),
     (f"`{PAREN_CREDIT}` {ARTICLE}", PAREN_CREDIT + " " + ARTICLE),
@@ -140,36 +123,19 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     assert extract_clean_lead(line) == lead
 
 
-@pytest.mark.parametrize(("body", "expected"), [
-    (f"{ARTICLE}\n\n{COLON_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
-    (f"{COLON_FOOTER}\n\n{OTHER}", []),
-    (f"{ARTICLE}\n\n{COLON_FOOTER}", []),
-    (f"{ARTICLE}\n\n{COLON_FOOTER}\n\nEvening edition\n\n{OTHER}", ["raw_capture_multiple_articles"]),
-    (f"{ARTICLE}\n\n{COLON_FOOTER}\n\n## Related articles\n\n{OTHER}", []),
-    (f"{ARTICLE}\n\n공지: 재배포를 금지합니다.\n\n{ARTICLE}", []),
-    (f"{ARTICLE}\n\n공지: {REPRINT_FOOTER}\n\n{OTHER}", []),
-    (f"{ARTICLE}\n{COLON_FOOTER}\n{ARTICLE}", []),
-    (f"{ARTICLE}\n\n{COLON_FOOTER}\n\n```\n{OTHER}\n```", []),
-    (f"# {TITLE}\n\n{ARTICLE}\n\n{COLON_FOOTER}\n\n# Orbital telescope surveys distant galaxies\n\nA new telescope launched.", ["raw_capture_multiple_articles"]),
+@pytest.mark.parametrize("notice", [CREDITED_FOOTER, COLON_FOOTER, EXTENDED_REPRINT_FOOTER, "> " + REPRINT_FOOTER])
+@pytest.mark.parametrize(("following", "mixed"), [
+    ("", False), (OTHER, False), (f"- {OTHER}", False),
+    (f"## Related articles\n\n# {SECOND_TITLE}\n\n{OTHER}", False),
+    (f"# {SECOND_TITLE}", False), (f"# {SECOND_TITLE}\n\n- {OTHER}", False),
+    (f"# {SECOND_TITLE}\n\n> {OTHER}", False), (f"# {SECOND_TITLE}\n\n```\n{OTHER}\n```", False),
+    (f"# {SECOND_TITLE}\n\n{OTHER}", True),
 ])
-def test_notice_boundary_uses_surrounding_blocks(body, expected):
-    assert capture_review_reasons(body=body, title="", filename="capture.md") == expected
-
-
-@pytest.mark.parametrize("notice", [
-    REPRINT_FOOTER, "무단전재·재배포 금지", "재배포를 금지합니다.", "재배포 금지", "무단 전재 및 재배포를 금지합니다.",
-    "Example Press ⓒ Example Archive, 무단전재 및 재배포 금지",
-    EXTENDED_REPRINT_FOOTER, PUBLISHER_REPRINT_FOOTER, SIGNED_REPRINT_FOOTER, KOREAN_PUBLISHER_FOOTER,
-    "다온24 " + REPRINT_FOOTER, "예시신문: " + REPRINT_FOOTER,
-    "Example Press Co., " + EXTENDED_REPRINT_FOOTER,
-])
-def test_reprint_notice_is_a_boundary_with_or_without_a_photo_credit(notice):
-    for suffix in ("", " /사진=자료실"):
-        footer = notice + suffix
-        assert extract_clean_lead(footer) == ""
-        assert capture_review_reasons(body=f"{ARTICLE}\n\n{footer}\n\n{OTHER}", title=TITLE, filename="capture.md") == [
-            "raw_capture_multiple_articles"
-        ]
+def test_second_story_needs_a_heading_and_article_prose(notice, following, mixed):
+    body = f"# {TITLE}\n\n{ARTICLE}\n\n{notice}\n\n{following}"
+    assert capture_review_reasons(body=body, title=TITLE, filename="capture.md") == (
+        ["raw_capture_multiple_articles"] if mixed else []
+    )
 
 
 @pytest.mark.parametrize("lead", [
@@ -188,22 +154,9 @@ def test_reprint_reporting_preserves_the_lead(lead):
     assert capture_review_reasons(body=lead, title="", filename="capture.md") == []
 
 
-@pytest.mark.parametrize("marker", ["", "*"])
-def test_standalone_photo_caption_with_detached_notice(marker):
-    caption = f"{marker}도서관 외관. {REPRINT_FOOTER}. /사진=자료실{marker}"
-    assert extract_clean_lead(caption) == ""
-    assert capture_review_reasons(body=caption, title=TITLE, filename="capture.md") == ["raw_capture_body_missing"]
-
-
-def test_caption_with_a_signed_extended_notice_preserves_following_article():
-    caption = f"*The library facade. {SIGNED_REPRINT_FOOTER}. AI 학습 및 활용 금지. /사진=자료실*"
-    assert extract_clean_lead(f"{caption} {ARTICLE}") == ARTICLE
-    assert capture_review_reasons(body=f"{ARTICLE}\n\n{caption} {ARTICLE}", title=TITLE, filename="capture.md") == []
-
-
-def test_photo_caption_with_bracketed_usage_terms_is_not_a_lead():
-    caption = "*자료 사진 [열람 전용. 재배포 금지.]*"
-    assert extract_clean_lead(caption) == ""
+def test_bracketed_usage_terms_preserve_the_paragraph():
+    line = f"자료 사진 [열람 전용. 재배포 금지.] {ARTICLE}"
+    assert extract_clean_lead(line) == line
 
 
 def test_korean_summary_disclaimer_and_related_photo_caption_are_not_article_body():
@@ -238,21 +191,19 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (True, False, PHOTO_AND_LEAD, []),
         (False, False, ARTICLE + TRAILING_CREDIT, []),
         (False, False, f"**{ARTICLE}{TRAILING_CREDIT}**", []),
-        (False, False, f"{ARTICLE}\n\n{CREDITED_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
-        (False, True, PHOTO_AND_LEAD + f"\n\n# {TITLE}\n\n" + ARTICLE, []),
-        (False, False, f"{ARTICLE}\n\n{REPRINT_FOOTER} /사진=자료실\n\n{OTHER}", ["raw_capture_multiple_articles"]),
-        (False, False, f"{ARTICLE}\n\n{EXTENDED_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
-        (False, False, f"{ARTICLE}\n\n{PUBLISHER_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
-        (False, False, f"{ARTICLE}\n\n{SIGNED_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
-        (False, False, f"{ARTICLE}\n\n{KOREAN_PUBLISHER_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+        (False, False, f"Photo credit: © Example Archive. {ARTICLE}", []),
+        (False, True, ARTICLE + f" Unique introduction.\n\n# {TITLE}\n\n" + ARTICLE, []),
+        (False, False, f"{ARTICLE}\n\n{COLON_FOOTER}\n\n{OTHER}", []),
+        (False, False, f"{ARTICLE}\n\n{CREDITED_FOOTER}\n\n- {OTHER}", []),
+        (False, False, f"{ARTICLE}\n\n{COLON_FOOTER}\n\n# {SECOND_TITLE}\n\n{OTHER}",
+         ["raw_capture_multiple_articles"]),
         (False, False, QUOTED_NOTICE_ARTICLE + " /사진=자료실", []),
-        (False, False, f"{ARTICLE}\n\n{COLON_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, False, f"*{ARTICLE}* {PAREN_CREDIT}", []),
         (False, False, f"{ARTICLE} *{PAREN_CREDIT}*", []),
         (False, False, f"{ARTICLE} /사진=자료실\n\n# {TITLE}\n\n{ARTICLE}", []),
         (False, False, REPRINT_ARTICLE, []),
         (False, False, REPORT, []),
-        (False, False, REPORT + "\n\nCopyright Example Press\n\n" + OTHER, ["raw_capture_multiple_articles"]),
+        (False, False, REPORT + "\n\nCopyright Example Press\n\n" + OTHER, []),
     ],
 )
 def test_capture_reports_agree_before_and_after_normalization(tmp_path, transport, cookie, article, expected):

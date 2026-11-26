@@ -325,35 +325,28 @@ reviewed intake remains `review` / `attention` while a signal is present; route
 approval does not clear it. Existing empty/unavailable raw hard failures remain.
 
 The shared, read-only detector recognizes missing body text, explicit automatic
-summary blocks without article prose, article-like text after a copyright
-boundary or a second distinct top-level title, and disjoint title vocabulary.
-Photo credits are removed from analysis by their inline Markdown extent.
-A parenthesized attribution ends at its closing parenthesis. An attribution
-inside emphasis or a link can end with that span, preserving prose on either
-side. Plain slash credits with a compact source can follow unpunctuated prose.
-An ambiguous unmarked attribution followed by running text stays available
-for review. Short licensed captions can be excluded as a unit.
+summary blocks without article prose, a second article heading with prose, and
+disjoint title vocabulary. Lead selection and capture review exclude Markdown
+images and closed photo attributions such as `(ⓒ Example Archive 제공)` from
+analysis. A plain credit can share a line with article text, so its text stays
+in the paragraph, including inside emphasis or a link. A standalone plain
+caption can therefore qualify as a lead if it meets the length threshold.
 
-A standalone publisher notice becomes a candidate boundary when article prose
-precedes it. A new H1 followed by prose, or a subsequent substantial paragraph
-(80 characters), supports a second article. For a sentence-form prohibition
-such as `재배포를 금지합니다`, the detector also looks for a change in vocabulary
-if there is no new H1. A colon after a compact Korean masthead is allowed in
-this contextual check. An ambiguous colon label alone remains eligible for
-lead selection. End-of-document notices and related-link lists supply no
-following article. Explicit copyright footers retain their boundary handling,
-including when they precede a photo credit. Opening credits and report covers
-can precede the first article.
-A labeled report cover can precede chapter titles formatted as H1. In that
-layout, a disjoint H1 triggers review when its section also contains substantial
-prose unrelated in wording to the first H1.
+A second article requires a substantial preceding paragraph (at least 80
+characters), a top-level heading with vocabulary distinct from the original
+title, and prose under that heading. Quotes, lists, and fenced code under a
+heading do not establish a new article. Publisher names and rights notices
+may occur between articles or within a single article. Stories joined without
+a distinct heading can escape detection. For a labeled report cover, the
+section under a new H1 must also contain substantial prose with vocabulary
+distinct from the original title.
+
 The detector compares declared titles with the first H1, article prose and human-readable
 filenames. All three report paths resolve titles in the same order: frontmatter,
 transport `Title:`, first H1, then the humanized filename. They combine signals
 from the original body and an analysis copy with the normalizer's recognized
-transport/cookie/blob noise removed, preserving prefaces during analysis. Thus
-removable noise cannot hide a summary-only body on the first normalization pass,
-and original boundary signals still prevent duplicate-preface removal.
+transport/cookie/blob noise removed so that removable noise cannot hide a
+summary-only body on the first normalization pass.
 Slugs/IDs without spaces, short titles and cross-script translations
 are excluded from the corresponding title comparisons. Recognized navigation,
 recommendations, comments and code fences are excluded from analysis. Binary
@@ -363,9 +356,8 @@ These are lexical review signals, not semantic contradiction detection, URL
 verification or proof of a complete article. Paraphrases, shared vocabulary,
 unrecognized captions/UI, multilingual text and unexpected page layouts can
 produce false positives or missed cases. The detector never edits raw or
-repairs titles. The normalizer retains the prefix before a repeated title when
-capture review flags the document or the prefix contains a copyright marker
-or a recognized photo attribution.
+repairs titles. The normalizer preserves repeated titles and the content
+between them, including when all checks pass.
 Review the original source, preserve historical captures
 and register recovered bodies separately. A clear result means no recognized
 signal. Old report shapes remain readable; regenerate reports before relying on

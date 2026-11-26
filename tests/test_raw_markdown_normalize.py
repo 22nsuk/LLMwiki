@@ -223,7 +223,7 @@ bad � text
         with tempfile.TemporaryDirectory() as temp_dir:
             vault = Path(temp_dir)
             path = vault / "Orbital telescope surveys distant galaxies.md"
-            body = f"# {TITLE}\n\n{ARTICLE}\n\nCopyright Example Press\n\n# {TITLE}\n\n{OTHER}\n"
+            body = f"# {TITLE}\n\n{ARTICLE}\n\nCopyright Example Press\n\n# Orbital telescope surveys distant galaxies\n\n{OTHER}\n"
             path.write_text(f'---\ntitle: "{TITLE}"\nsource: "https://example.com/story"\n'
                             'published: "unknown"\ncreated: "unknown"\n---\n\n' + body)
             original = path.read_bytes()
