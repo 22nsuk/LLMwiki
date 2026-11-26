@@ -21,6 +21,9 @@ PHOTO_AND_LEAD = "*도서관 외관. 무단 전재 및 재배포 금지. /사진
 TRAILING_CREDIT = " /사진=자료실 © Example Archive"
 CREDITED_FOOTER = "Copyright 2024 Example Press /사진=자료실"
 REPRINT_FOOTER = "무단 전재 및 재배포 금지"
+EXTENDED_REPRINT_FOOTER = REPRINT_FOOTER + ". AI 학습 및 활용 금지."
+PUBLISHER_REPRINT_FOOTER = "Example Press " + REPRINT_FOOTER
+SIGNED_REPRINT_FOOTER = "Example Inc. ⓒ Example Archive, " + REPRINT_FOOTER
 REPRINT_ARTICLE = (
     "법원은 지역 신문 기사를 무단 전재한 포털 운영자에게 손해배상 책임이 있다고 판결했다. "
     "재판부는 원문을 허가 없이 복제한 행위가 시장 경쟁을 해쳤다고 설명했으며, "
@@ -105,6 +108,8 @@ def test_emphasized_lead_and_photo_credit(marker):
 @pytest.mark.parametrize("notice", [
     REPRINT_FOOTER, "무단전재·재배포 금지", "재배포를 금지합니다.", "재배포 금지", "무단 전재 및 재배포를 금지합니다.",
     "Example Press ⓒ Example Archive, 무단전재 및 재배포 금지",
+    EXTENDED_REPRINT_FOOTER, PUBLISHER_REPRINT_FOOTER, SIGNED_REPRINT_FOOTER,
+    "Example Press Co., " + EXTENDED_REPRINT_FOOTER,
 ])
 def test_reprint_notice_is_a_boundary_with_or_without_a_photo_credit(notice):
     for suffix in ("", " /사진=자료실"):
@@ -117,12 +122,21 @@ def test_reprint_notice_is_a_boundary_with_or_without_a_photo_credit(notice):
 
 @pytest.mark.parametrize("lead", [
     REPRINT_ARTICLE,
+    REPRINT_FOOTER + ". AI 학습에 대한 법원의 판단은 달랐다.",
+    "기사에 실린 조항의 제목은 " + EXTENDED_REPRINT_FOOTER,
+    "The article quotes Example Press " + REPRINT_FOOTER,
     "무단 전재한 기사가 여러 매체에 재배포됐다고 법원은 밝혔다.",
     "법원은 재배포 금지 조항이 해당 기사에 적용되는지 판단했다.",
 ])
 def test_reprint_reporting_preserves_the_lead(lead):
     assert extract_clean_lead(lead) == lead
     assert capture_review_reasons(body=lead, title="", filename="capture.md") == []
+
+
+def test_caption_with_a_signed_extended_notice_preserves_following_article():
+    caption = f"*The library facade. {SIGNED_REPRINT_FOOTER}. AI 학습 및 활용 금지. /사진=자료실*"
+    assert extract_clean_lead(f"{caption} {ARTICLE}") == ARTICLE
+    assert capture_review_reasons(body=f"{ARTICLE}\n\n{caption} {ARTICLE}", title=TITLE, filename="capture.md") == []
 
 
 def test_photo_caption_with_bracketed_usage_terms_is_not_a_lead():
@@ -165,6 +179,9 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (False, False, f"{ARTICLE}\n\n{CREDITED_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, True, PHOTO_AND_LEAD + f"\n\n# {TITLE}\n\n" + ARTICLE, []),
         (False, False, f"{ARTICLE}\n\n{REPRINT_FOOTER} /사진=자료실\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+        (False, False, f"{ARTICLE}\n\n{EXTENDED_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+        (False, False, f"{ARTICLE}\n\n{PUBLISHER_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+        (False, False, f"{ARTICLE}\n\n{SIGNED_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, False, REPRINT_ARTICLE, []),
         (False, False, REPORT, []),
         (False, False, REPORT + "\n\nCopyright Example Press\n\n" + OTHER, ["raw_capture_multiple_articles"]),

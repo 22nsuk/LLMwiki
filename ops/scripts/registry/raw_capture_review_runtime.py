@@ -9,11 +9,17 @@ SUMMARY_START = re.compile(r"^(?:세\s*줄\s*요약|AI\s*요약|AI[- ]generated 
 SUMMARY_END = re.compile(r"인공지능이 자동으로|기사 본문과 함께|End of (?:AI|auto).*summary|Read the full article", re.I)
 RELATED_START = re.compile(r"^(?:관심기사 예측|관련\s*기사|함께 (?:읽기|보면)|추천\s*기사|.*뉴스를 추천해|Related (?:articles|stories)|Recommended (?:articles|stories))", re.I)
 FOOTER_START = re.compile(r"^[<\[\\\s]*(?:저작권자|Copyright|©)", re.I)
-# Match the list of prohibited uses through the end of the notice.
+# Each rights clause must end in a prohibition, including clauses after a period.
+RESTRICTED_USE = r"(?:무단\s*전재|수집|재?배포|AI|학습|데이터|활용|이용)"
+PROHIBITION = rf"(?:\s*(?:[·,&/-]|및|{RESTRICTED_USE}))*\s*[를을]?\s*금지(?:합니다)?"
 REPRINT_NOTICE = re.compile(
-    r"(?:무단\s*전재|재배포)(?:\s*(?:[·,&/-]|및|수집|재?배포|AI|학습|데이터|활용|이용))*"
-    r"\s*[를을]?\s*금지(?:합니다)?[.。!＞>\]\\)*_\s]*$",
+    rf"(?:무단\s*전재|재배포){PROHIBITION}(?:\s*[.。!,;]\s*{RESTRICTED_USE}{PROHIBITION})*"
+    r"[.。!＞>\]\\)*_\s]*$",
     re.I,
+)
+PUBLISHER_LABEL = re.compile(
+    r"(?:[A-Z][\w'’-]*\s+|(?:of|the|and|&)\s+)*(?i:press|news|media|publishing|inc|ltd|co|corp)"
+    r"|[\w·-]*(?:신문|일보|뉴스|통신사)"
 )
 COPYRIGHT_MARK = re.compile(r"©|ⓒ|copyright\b|저작권자|무단\s*전재|재배포(?:를)?\s*금지", re.I)
 OPENING_CREDIT = re.compile(r"^(?:©|copyright\s+(?:©\s*)?\d{4}\b)", re.I)
@@ -61,10 +67,16 @@ def is_reprint_footer(line: str) -> bool:
     notice = REPRINT_NOTICE.search(line)
     if notice is None:
         return False
-    # A publisher signature may precede the notice. Photo descriptions can contain
-    # the same signature after one or more sentences of caption text.
     prefix = line[:notice.start()].strip(" \t*_<>[]()\\＜")
-    return not prefix or prefix.endswith((" -", " |")) or re.match(r"^[^.!?。！？]*[ⓒ©]", prefix) is not None
+    if not prefix or prefix.endswith((" -", " |")):
+        return True
+    # A company abbreviation can end in a period even in a single publisher label.
+    # A complete caption sentence before the attribution still excludes that label.
+    signature = re.split(r"[ⓒ©]", prefix, maxsplit=1)
+    publisher = re.sub(r"\b(Inc|Ltd|Co|Corp)\.", r"\1", signature[0], flags=re.I).strip().rstrip(" ,:：")
+    if re.search(r"[.!?。！？]", publisher):
+        return False
+    return len(signature) == 2 or PUBLISHER_LABEL.fullmatch(publisher) is not None
 
 
 def _photo_credit_prefix(line: str, credit: re.Match[str]) -> str:

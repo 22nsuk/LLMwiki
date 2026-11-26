@@ -333,7 +333,8 @@ selection use the text after its closing emphasis. When a photo attribution
 follows article prose on the same line, both checks retain the preceding text,
 including when the prose and attribution share Markdown emphasis. An explicit
 copyright footer keeps its boundary even when a photo attribution follows it.
-This includes a Korean rights notice such as `무단 전재 및 재배포 금지`.
+Korean reprint footers can include a publisher signature and a second rights
+clause, as in `무단 전재 및 재배포 금지. AI 학습 및 활용 금지.`.
 An article sentence describing unauthorized republication remains eligible
 for lead selection.
 A labeled report cover can precede chapter titles formatted as H1. In that
