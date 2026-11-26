@@ -19,6 +19,8 @@ SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article 
 
 ENGLISH_RIGHTS = "Copyright 2024 Example Press. All rights reserved."
 EXTENDED_RIGHTS = ENGLISH_RIGHTS + " No material from this publication may be reproduced without prior written permission."
+EMPHASIZED_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "**Example Press**")
+EMPHASIZED_RESERVATION = EXTENDED_RIGHTS.replace("All rights reserved.", "*All rights reserved.*")
 KOREAN_RIGHTS = "저작권자 Example Press 무단 전재 및 재배포 금지"
 PUBLICATION_NOTICE = (
     "Permission requests concerning any distribution of this publication must be addressed "
@@ -124,6 +126,9 @@ def test_standalone_rights_notice_supplies_no_article_evidence(notice):
     f"{ENGLISH_RIGHTS} {ARTICLE}",
     f"{KOREAN_RIGHTS} {ARTICLE}",
     f"{ARTICLE} {ENGLISH_RIGHTS}",
+    f"{EMPHASIZED_HOLDER} The *library* extended its hours.",
+    EXTENDED_RIGHTS.replace("Example Press", r"\*\*Example Press\*\*"),
+    EXTENDED_RIGHTS.replace("All rights reserved.", "All rights reserved.*"),
     "Copyright law changed today. All rights reserved.",
     "Copyright 2024 marked a turning point. All rights reserved.",
     "Copyright 2024 River Flood Delays Many Train Services. All rights reserved.",
@@ -140,6 +145,14 @@ def test_standalone_rights_notice_supplies_no_article_evidence(notice):
 def test_mixed_or_ambiguous_rights_text_keeps_the_paragraph(paragraph):
     assert extract_clean_lead(paragraph) == paragraph
     assert capture_review_reasons(body=paragraph, title="", filename="raw.md") == []
+
+
+def test_formatted_notice_with_softbreaks_uses_visible_text_for_selection():
+    notice = EXTENDED_RIGHTS.replace("Example Press", "__Example\nPress__")
+    lead = "The *library* extended its hours."
+    body = "광고\n" + notice
+    assert capture_review_reasons(body=body, title=TITLE, filename="raw.md") == ["raw_capture_body_missing"]
+    assert extract_clean_lead(body + "\n\n" + lead) == lead
 
 
 @pytest.mark.parametrize(("outside", "expected"), [
@@ -238,6 +251,8 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     (f"`[label](address)` {ARTICLE}", f"[label](address) {ARTICLE}"),
     (f"# [{TITLE}](/news)\n{ARTICLE}", ARTICLE),
     (f"<!-- source note\nends here --> {ARTICLE}", ARTICLE),
+    (f'*Archive* <span title="old\nbuilding">library</span> {ARTICLE}',
+     f'*Archive* <span title="old building">library</span> {ARTICLE}'),
     (f"{ARTICLE}\n# {TITLE}\n{OTHER}", ARTICLE),
 ])
 def test_lead_uses_original_markdown_structure(source, expected):
@@ -344,6 +359,8 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
     ("transport", "cookie", "article", "expected"),
     [
         (False, False, EXTENDED_RIGHTS, ["raw_capture_body_missing"]),
+        pytest.param(False, False, EMPHASIZED_HOLDER, ["raw_capture_body_missing"], id="emphasized-holder"),
+        pytest.param(False, False, EMPHASIZED_RESERVATION, ["raw_capture_body_missing"], id="emphasized-reservation"),
         (False, False, KOREAN_RIGHTS, ["raw_capture_body_missing"]),
         (False, False, EXTENDED_RIGHTS + "\n\n" + ARTICLE, []),
         (False, True, SUMMARY, ["raw_capture_summary_only"]),

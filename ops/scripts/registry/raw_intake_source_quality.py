@@ -7,6 +7,7 @@ import re
 import sys
 from collections import Counter
 from collections.abc import Iterator
+from itertools import groupby
 from pathlib import Path
 from typing import Any
 
@@ -115,23 +116,19 @@ def _is_boilerplate_line(line: str) -> bool:
 
 
 def _lead_paragraphs(body: str) -> Iterator[str]:
-    current: list[str] = []
-    for line in lead_analysis_lines(body):
-        if _is_boilerplate_line(line):
-            if current:
-                yield " ".join(current)
-                current.clear()
-        else:
-            current.append(line.strip())
-    if current:
-        yield " ".join(current)
+    for noise, group in groupby(lead_analysis_lines(body), key=lambda line: _is_boilerplate_line(line.excerpt)):
+        if noise:
+            continue
+        paragraph = list(group)
+        if not is_rights_notice(" ".join(line.visible for line in paragraph)):
+            yield " ".join(line.excerpt for line in paragraph)
 
 
 def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) -> str:
     fallback = ""
     for paragraph in _lead_paragraphs(_strip_frontmatter(text)):
         normalized = re.sub(r"\s+", " ", paragraph).strip()
-        if not normalized or is_rights_notice(normalized):
+        if not normalized:
             continue
         if not fallback:
             fallback = normalized
