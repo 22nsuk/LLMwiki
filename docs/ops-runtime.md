@@ -339,7 +339,9 @@ characters), a top-level heading with vocabulary distinct from the original
 title, and prose under that heading. In Markdown captures, HTML paragraphs and
 text in ordinary layout containers such as `<div>` can supply prose on either
 side of the heading. Quotations, lists, standalone links and code blocks do not
-establish a new article in either representation. Publisher names and rights notices
+establish a new article in either representation. This includes a linked headline
+written as an inline HTML anchor or a Markdown reference link. Text outside a
+link in the same paragraph can still supply prose. Publisher names and rights notices
 may occur between articles or within a single article. Stories joined without
 a distinct heading can escape detection. For a labeled report cover, the
 section under a new H1 must also contain substantial prose with vocabulary

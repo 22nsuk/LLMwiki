@@ -26,10 +26,11 @@ MIN_BODY_COMPARISON_CHARS = 160
 MIN_BOUNDARY_PROSE_CHARS = 80
 
 
-def _plain(line: str) -> str:
+def _plain(line: str, *, strip_tags: bool = True) -> str:
     line = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", line)
     line = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", line)
-    line = re.sub(r"<[^>]*>", "", line)
+    if strip_tags:
+        line = re.sub(r"<[^>]*>", "", line)
     return line.strip(" #*`_>\t\\")
 
 
@@ -134,30 +135,29 @@ class _HTMLProse(HTMLParser):
     void = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
             "param", "source", "track", "wbr"}
 
-    def __init__(self) -> None:
+    def __init__(self, excluded: list[str]) -> None:
         super().__init__()
-        self.excluded: list[str] = []
-        self.in_link = False
-        self.has_unlinked_text = False
+        self.excluded = excluded
+        self.has_prose = False
         self.text: list[str] = []
         self.paragraphs: list[tuple[str, str]] = []
 
     def flush(self) -> None:
         content = "".join(self.text).strip()
         if content:
-            kind = "body" if self.has_unlinked_text and not self.excluded else "other"
+            kind = "body" if self.has_prose else "other"
             self.paragraphs.append((kind, content))
         self.text.clear()
-        self.has_unlinked_text = False
+        self.has_prose = False
 
     def handle_data(self, data: str) -> None:
         self.text.append(data)
-        if not self.in_link and data.strip():
-            self.has_unlinked_text = True
+        if not self.excluded and PAREN_ATTRIBUTION.sub(_strip_attribution, data).strip():
+            self.has_prose = True
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag == "a":
-            self.in_link = True
+            self.excluded.append(tag)
         elif tag in self.void:
             self.text.append(" ")
         elif tag not in self.formatting:
@@ -166,12 +166,10 @@ class _HTMLProse(HTMLParser):
                 self.excluded.append(tag)
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "a":
-            self.in_link = False
-            return
         if tag in self.formatting or tag in self.void:
             return
-        self.flush()
+        if tag != "a":
+            self.flush()
         if self.excluded and tag == self.excluded[-1]:
             self.excluded.pop()
         elif tag in self.excluded:
@@ -180,31 +178,82 @@ class _HTMLProse(HTMLParser):
                 pass
 
 
-def _capture_blocks(blocks: list[Token]) -> Iterator[tuple[str, str]]:
-    html = _HTMLProse()
+def _html_paragraphs(markup: str, excluded: list[str]) -> list[tuple[str, str]]:
+    # Each CommonMark fragment is complete input. Only open element scopes
+    # carry across fragments, never undecoded input or an unfinished paragraph.
+    html = _HTMLProse(excluded)
+    try:
+        html.feed(markup)
+        html.close()
+    except (AssertionError, ValueError):
+        # HTMLParser can reject malformed declarations and character references.
+        excluded.clear()
+        return [("other", markup)]
+    html.flush()
+    return html.paragraphs
+
+
+_CaptureBlock = tuple[str, Iterator[tuple[str, str]]]
+
+
+def _markdown_lines(content: str, env: EnvType, *, strip_tags: bool = True) -> Iterator[tuple[str, str]]:
+    for line in _without_photo_credit(content, env).splitlines():
+        yield line, _plain(line, strip_tags=strip_tags)
+
+
+def _visible_lines(content: str) -> Iterator[tuple[str, str]]:
+    # Inline markup and entities have been decoded. There is no Markdown
+    # source line here for the standalone-link filter.
+    for line in content.splitlines():
+        yield "", line.strip()
+
+
+def _inline_paragraph(content: str, env: EnvType, excluded: list[str]) -> Iterator[_CaptureBlock]:
+    kind = "other" if excluded else "body"
+    if "<" not in content and "[" not in content:
+        yield kind, _markdown_lines(content, env)
+        return
+
+    inline = MARKDOWN.parseInline(content, env)
+    children = inline[0].children or []
+    has_html = any(token.type == "html_inline" for token in children)
+    if not has_html and not any(token.type == "link_open" for token in children):
+        yield kind, _markdown_lines(content, env)
+        return
+
+    # Let CommonMark resolve links and escape literal markup before the HTML
+    # parser determines where the paragraph has prose outside a link.
+    for token in children:
+        if token.type == "text":
+            token.content = PAREN_ATTRIBUTION.sub(_strip_attribution, token.content)
+    markup = MARKDOWN.renderer.render(inline, MARKDOWN.options, env)
+    paragraphs = _html_paragraphs(markup, excluded)
+    if has_html:
+        for role, text in paragraphs:
+            yield role, _visible_lines(text)
+    else:
+        # Preserve the source spelling for Markdown-only navigation and credit filters.
+        kind = "body" if any(role == "body" for role, _ in paragraphs) else "other"
+        yield kind, _markdown_lines(content, env)
+
+
+def _capture_blocks(blocks: list[Token], env: EnvType) -> Iterator[_CaptureBlock]:
+    excluded: list[str] = []
     for i, block in enumerate(blocks):
         if block.type == "html_block" and block.level == 0:
-            # CommonMark can split a single HTML container across blank lines.
-            try:
-                html.feed(block.content)
-            except (AssertionError, ValueError):
-                # Malformed declarations or character references can be rejected.
-                html = _HTMLProse()
-                yield "other", block.content
-                continue
-            html.flush()
-            yield from html.paragraphs
-            html.paragraphs.clear()
+            for kind, content in _html_paragraphs(block.content, excluded):
+                yield kind, _markdown_lines(content, env, strip_tags=False)
         elif block.type == "inline":
             parent = blocks[i - 1]
-            top_level = parent.level == 0 and not html.excluded and not html.in_link
-            if parent.type == "heading_open":
-                kind = "h1" if top_level and parent.tag == "h1" else "heading"
+            if parent.type == "paragraph_open" and parent.level == 0:
+                yield from _inline_paragraph(block.content, env, excluded)
+            elif parent.type == "heading_open":
+                is_h1 = parent.level == 0 and not excluded and parent.tag == "h1"
+                yield "h1" if is_h1 else "heading", _markdown_lines(block.content, env)
             else:
-                kind = "body" if top_level and parent.type == "paragraph_open" else "other"
-            yield kind, block.content
+                yield "other", _markdown_lines(block.content, env)
         elif block.type == "html_block":
-            yield "other", block.content
+            yield "other", _markdown_lines(block.content, env)
 
 
 def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, bool]:
@@ -217,11 +266,10 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
     body_paragraphs: set[int] = set()
     cover_end: int | None = None
     summary = saw_summary = False
-    for kind, content in _capture_blocks(blocks):
+    for kind, paragraph_lines in _capture_blocks(blocks, env):
         lines: list[str] = []
         related = False
-        for line in _without_photo_credit(content, env).splitlines():
-            plain = _plain(line)
+        for line, plain in paragraph_lines:
             if RELATED_START.search(plain):
                 related = True
                 break
@@ -290,7 +338,7 @@ def capture_review_reasons(*, body: str, title: str, filename: str) -> list[str]
     """
     prose, headings, saw_summary, extra_article = _article_parts(body, title)
     title = title or (headings[0] if headings else "")
-    prose = [paragraph for paragraph in prose if _plain(paragraph) != _plain(title)]
+    prose = [paragraph for paragraph in prose if paragraph != _plain(title)]
     reasons: list[str] = []
     if not prose:
         reasons.append("raw_capture_summary_only" if saw_summary else "raw_capture_body_missing")
