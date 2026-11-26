@@ -109,6 +109,8 @@ def test_capture_review_signals(body, title, filename, expected):
 
 
 @pytest.mark.parametrize("notice", [EXTENDED_RIGHTS, EXTENDED_RIGHTS.replace(". ", ".\n"), KOREAN_RIGHTS,
+                                    KOREAN_RIGHTS + ". All rights reserved.",
+                                    KOREAN_RIGHTS + ". All rights reserved. No part may be reproduced without permission.",
                                     "© Example Press All rights reserved.", "All rights reserved."])
 def test_standalone_rights_notice_supplies_no_article_evidence(notice):
     assert extract_clean_lead(notice) == ""
@@ -123,6 +125,15 @@ def test_standalone_rights_notice_supplies_no_article_evidence(notice):
     f"{KOREAN_RIGHTS} {ARTICLE}",
     f"{ARTICLE} {ENGLISH_RIGHTS}",
     "Copyright law changed today. All rights reserved.",
+    "Copyright 2024 marked a turning point. All rights reserved.",
+    "Copyright 2024 River Flood Delays Many Train Services. All rights reserved.",
+    "© Example Press. Staff won a prize. All rights reserved.",
+    f"{KOREAN_RIGHTS}. {ARTICLE} All rights reserved.",
+    "© Library archive illustration of a piano part that was reproduced without permission.",
+    ENGLISH_RIGHTS + " No material entered the building without permission.",
+    ENGLISH_RIGHTS + " No material was removed from the historical archive during the hearings and the court "
+    "today released a detailed transcript explaining why the disputed newspaper interview was reproduced "
+    "without the author’s permission.",
     "No material entered the building without permission.",
     "저작권자 권리를 다룬 판결이다. 무단 전재 및 재배포 금지",
 ])

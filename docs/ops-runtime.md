@@ -340,7 +340,8 @@ caption can therefore qualify as a lead if it meets the length threshold.
 A standalone rights declaration supplies no body or lead text. The check
 recognizes a labeled holder followed by a complete English reservation or
 Korean reprint restriction, as well as “All rights reserved.” on its own.
-It checks the whole paragraph so a following article sentence stays eligible.
+Each sentence after the holder must be a recognized rights clause. A paragraph
+that also contains an article sentence stays eligible in full.
 Analysis continues with the next paragraph. Unrecognized notices may still
 qualify as prose. Stored Markdown retains the original wording.
 
