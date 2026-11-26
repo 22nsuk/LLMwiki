@@ -22,6 +22,8 @@ COVER_COPYRIGHT = re.compile(r"^(?:©|Copyright\b|저작권자)", re.I)
 REPORT_LABEL = re.compile(r"\breport\s+(?:no\.?\s*)?\d+\b|\b(?:annual|research|technical) report\b|보고서", re.I)
 UI_LINE = re.compile(r"^(?:(?:송고|입력|수정)(?:\s|:)|Published:|Updated:|Title:|URL Source:|Published Time:|Markdown Content:|본문 바로가기|메뉴 바로가기|광고$|닫기$|ESC 닫기$|공유$|구독$|로그인$)", re.I)
 STOP_WORDS = {"the", "and", "for", "with", "from", "this", "that", "after", "before", "news", "report", "기사", "관련", "대한"}
+MIN_SUMMARY_SHARED_TERMS = 2
+MIN_SUMMARY_OVERLAP = 0.25
 MIN_TITLE_TOKENS = 3
 MIN_BODY_COMPARISON_CHARS = 160
 MIN_BOUNDARY_PROSE_CHARS = 80
@@ -274,8 +276,28 @@ def _capture_blocks(blocks: list[Token], env: EnvType) -> Iterator[_CaptureBlock
             yield _markdown_block("other", block.content, _inline_tokens(block.content, env))
 
 
+def _has_summary_body(terms: set[str], title: str, paragraphs: Iterable[str]) -> bool:
+    """Seek independent prose about the story outside the marked summary."""
+    title_terms = _tokens(title)
+    if len(terms) < MIN_SUMMARY_SHARED_TERMS:
+        terms = terms | title_terms
+    if len(terms) < MIN_SUMMARY_SHARED_TERMS:
+        return any(len(p) >= MIN_BOUNDARY_PROSE_CHARS for p in paragraphs)
+    for paragraph in paragraphs:
+        words = _tokens(paragraph)
+        shared = words & terms
+        if len(shared) < MIN_SUMMARY_SHARED_TERMS:
+            continue
+        # Two incidental words in a long notice are weak evidence. Look for
+        # the headline topic or substantial overlap with the shorter text.
+        if (len(shared & title_terms) >= MIN_SUMMARY_SHARED_TERMS
+                or len(shared) >= MIN_SUMMARY_OVERLAP * min(len(words), len(terms))):
+            return True
+    return False
+
+
 def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, bool]:
-    """Only a distinct top-level heading with article prose can start a second story."""
+    """Find the primary article and check its prose against any marked summary."""
     blocks, env = markdown_blocks(re.sub(r"<!--.*?-->", "", body, flags=re.S))
     headings: list[tuple[str, int]] = []
     prose: list[str] = []
@@ -283,7 +305,9 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
     # that a heading introduces a new article.
     body_paragraphs: set[int] = set()
     cover_end: int | None = None
-    summary = saw_summary = False
+    # Index by position so a summary in a second story cannot qualify the first.
+    summaries: dict[int, set[str]] = {}
+    active_summary: set[str] | None = None
     for kind, paragraph_lines in _capture_blocks(blocks, env):
         lines: list[str] = []
         related = False
@@ -293,12 +317,16 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
                 related = True
                 break
             if SUMMARY_START.fullmatch(plain):
-                summary = saw_summary = True
+                active_summary = summaries.setdefault(len(prose), set())
                 continue
             if SUMMARY_END.search(plain):
-                summary = False
+                active_summary = None
                 continue
-            if summary or not plain:
+            if active_summary is not None:
+                if not line.link_only:
+                    active_summary.update(_tokens(plain))
+                continue
+            if not plain:
                 continue
             if kind in {"h1", "heading"}:
                 if kind == "h1":
@@ -313,7 +341,7 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
             lines.append(plain)
         paragraph = " ".join(lines)
         if paragraph:
-            if (cover_end is None and not saw_summary and COVER_COPYRIGHT.match(paragraph)
+            if (cover_end is None and not summaries and COVER_COPYRIGHT.match(paragraph)
                     and len(paragraph) < MIN_BOUNDARY_PROSE_CHARS and _on_report_cover(headings, prose)):
                 cover_end = len(prose)
             else:
@@ -324,7 +352,19 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
             break
 
     end = _second_article_start(title, headings, prose, body_paragraphs, cover_end)
-    return prose[cover_end or 0:end], [h for h, _ in headings], saw_summary, end < len(prose)
+    start = cover_end or 0
+    extra_article = end < len(prose)
+    if extra_article:
+        summaries = {i: words for i, words in summaries.items() if i < end}
+    titles = [h for h, _ in headings]
+    resolved_title = title or (titles[0] if titles else "")
+    plain_title = _plain(resolved_title)
+    article = [p for p in prose[start:end] if p != plain_title]
+    if summaries:
+        candidates = (prose[i] for i in body_paragraphs if start <= i < end and prose[i] != plain_title)
+        if not _has_summary_body(set().union(*summaries.values()), resolved_title, candidates):
+            article = []
+    return article, titles, bool(summaries), extra_article
 
 
 def _second_article_start(
@@ -357,7 +397,6 @@ def capture_review_reasons(*, body: str, title: str, filename: str) -> list[str]
     """
     prose, headings, saw_summary, extra_article = _article_parts(body, title)
     title = title or (headings[0] if headings else "")
-    prose = [paragraph for paragraph in prose if paragraph != _plain(title)]
     reasons: list[str] = []
     if not prose:
         reasons.append("raw_capture_summary_only" if saw_summary else "raw_capture_body_missing")

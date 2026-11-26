@@ -17,6 +17,13 @@ OTHER = (
 )
 SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article for context.\n"
 
+ENGLISH_RIGHTS = "Copyright 2024 Example Press. All rights reserved."
+KOREAN_RIGHTS = "저작권자 Example Press 무단 전재 및 재배포 금지"
+PUBLICATION_NOTICE = (
+    "Permission requests concerning any distribution of this publication must be addressed "
+    "in writing to its publisher. Each application is considered individually."
+)
+
 PHOTO_ALT = "Archive photograph of the old council building and surrounding streets before reconstruction"
 REFERENCE_IMAGE = f"![{PHOTO_ALT}][Photo]"
 PHOTO_DEFINITION = '[photo]: https://example.com/image.jpg\n  "An archive photograph"'
@@ -98,6 +105,58 @@ REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\
 )
 def test_capture_review_signals(body, title, filename, expected):
     assert capture_review_reasons(body=body, title=title, filename=filename) == expected
+
+
+@pytest.mark.parametrize(("outside", "expected"), [
+    (PUBLICATION_NOTICE, ["raw_capture_summary_only"]),
+    ("Permission to reuse material on this site will be granted only with the prior written "
+     "consent of the publisher.", ["raw_capture_summary_only"]),
+    (TITLE + "\n\n" + ENGLISH_RIGHTS, ["raw_capture_summary_only"]),
+    ("Library network.\n\nOpening credits.", ["raw_capture_summary_only"]),
+    (f"<footer>{ARTICLE}</footer>", ["raw_capture_summary_only"]),
+    (f"[{ARTICLE}](/story)", ["raw_capture_summary_only"]),
+    ("The library extended its opening hours.", []),
+    (f"{ENGLISH_RIGHTS}\n\n{ARTICLE}", []),
+    (f"{ARTICLE} {KOREAN_RIGHTS}", []),
+    ("<p>The council allocated funding for the trial.</p>", []),
+])
+def test_summary_needs_article_prose_outside_the_summary(outside, expected):
+    assert capture_review_reasons(body=SUMMARY + "\n" + outside, title=TITLE, filename="raw.md") == expected
+
+
+def test_publisher_named_in_title_is_not_evidence_of_article_text():
+    reasons = capture_review_reasons(
+        body=SUMMARY + "\n" + ENGLISH_RIGHTS, title=f"{TITLE} | Example Press", filename="raw.md",
+    )
+    assert reasons == ["raw_capture_summary_only"]
+
+
+def test_summary_preserves_title_mismatch_for_corroborated_body():
+    body = SUMMARY.replace(ARTICLE, OTHER) + "\n" + OTHER
+    assert capture_review_reasons(body=body, title=TITLE, filename="raw.md") == ["raw_capture_title_body_mismatch"]
+
+
+def test_summary_in_next_story_does_not_requalify_first_story():
+    second_summary = SUMMARY.replace(ARTICLE, OTHER)
+    body = f"# {TITLE}\n\n{ARTICLE}\n\n# {SECOND_TITLE}\n\n{second_summary}\n{OTHER}"
+    assert capture_review_reasons(body=body, title=TITLE, filename="raw.md") == ["raw_capture_multiple_articles"]
+
+
+@pytest.mark.parametrize(("title", "outside", "expected"), [
+    (TITLE, "Evening library hours have changed.", []),
+    (TITLE, KOREAN_RIGHTS, ["raw_capture_summary_only"]),
+    ("", ARTICLE, []),
+    ("", ENGLISH_RIGHTS, ["raw_capture_summary_only"]),
+])
+def test_summary_without_topic_words(title, outside, expected):
+    body = f"AI-generated summary\n\n1.\n\nRead the full article.\n\n{outside}"
+    assert capture_review_reasons(body=body, title=title, filename="raw.md") == expected
+
+
+def test_short_korean_article_and_credit_after_summary():
+    body = ("세 줄 요약\n\n도서관 야간 개방을 시범 운영한다.\n\n기사 본문과 함께 읽어 주세요.\n\n"
+            "시립 도서관 야간 운영이 확정됐다. /사진=자료실")
+    assert capture_review_reasons(body=body, title="시립 도서관 야간 운영", filename="raw.md") == []
 
 
 @pytest.mark.parametrize("layout", [
@@ -251,6 +310,9 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
     [
         (False, True, SUMMARY, ["raw_capture_summary_only"]),
         (True, True, SUMMARY, ["raw_capture_summary_only"]),
+        (False, False, SUMMARY + "\n" + ENGLISH_RIGHTS, ["raw_capture_summary_only"]),
+        (True, True, SUMMARY + "\n" + KOREAN_RIGHTS, ["raw_capture_summary_only"]),
+        (False, False, SUMMARY + "\n" + ARTICLE + TRAILING_CREDIT, []),
         (False, True, SUMMARY + f"\n# {TITLE}\n\n" + SUMMARY, ["raw_capture_summary_only"]),
         (True, False, "# Orbital telescope surveys distant galaxies\n\n" + OTHER,
          ["raw_capture_heading_title_mismatch", "raw_capture_title_body_mismatch"]),

@@ -337,6 +337,21 @@ the definition follows the article. A plain credit can share a line with article
 in the paragraph, including inside emphasis or a link. A standalone plain
 caption can therefore qualify as a lead if it meets the length threshold.
 
+For an explicitly marked automatic summary, the detector looks for a top-level
+prose paragraph outside the summary in the same article. It excludes repeated
+headlines and uses the same structural prose classification as the article
+boundary check. One paragraph must share at least two distinct normalized words
+with the summary. Either two shared words also appear in the title, or the
+shared words cover at least a quarter of the smaller vocabulary. Separate
+paragraphs cannot pool matches. If the summary supplies fewer than two usable
+words, the title supplements it. If both together still supply fewer than two,
+a prose paragraph of at least 80 characters is the fallback.
+
+This check keeps a capture with only an unrelated publisher notice in review
+and preserves the notice in the stored source. A paraphrase or translation with
+little shared wording can still require review. Topically similar boilerplate
+can look like article prose.
+
 A second article requires a substantial preceding paragraph (at least 80
 characters), a top-level heading with vocabulary distinct from the original
 title, and prose under that heading. In Markdown captures, HTML paragraphs and
