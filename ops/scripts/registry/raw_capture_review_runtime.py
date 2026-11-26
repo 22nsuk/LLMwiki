@@ -16,7 +16,6 @@ SUMMARY_START = re.compile(r"^(?:세\s*줄\s*요약|AI\s*요약|AI[- ]generated 
 SUMMARY_END = re.compile(r"인공지능이 자동으로|기사 본문과 함께|End of (?:AI|auto).*summary|Read the full article", re.I)
 RELATED_START = re.compile(r"^(?:관심기사 예측|관련\s*기사|함께 (?:읽기|보면)|추천\s*기사|.*뉴스를 추천해|Related (?:articles|stories)|Recommended (?:articles|stories))", re.I)
 MARKDOWN = MarkdownIt("commonmark", {"inline_definitions": True})
-INLINE_MARKERS = ("*", "_", "[", "<", "`", "(©", "(ⓒ")
 PAREN_ATTRIBUTION = re.compile(r"\([©ⓒ][^()]*\)")
 COVER_COPYRIGHT = re.compile(r"^(?:©|Copyright\b|저작권자)", re.I)
 # A symbol can label a free-form publisher, including a domain. A bare
@@ -145,8 +144,6 @@ def _project_inline(children: list[Token], *, markdown_text: bool = True) -> _In
 
 
 def _inline_tokens(content: str, env: EnvType) -> list[Token]:
-    if not any(marker in content for marker in INLINE_MARKERS):
-        return []
     return MARKDOWN.parseInline(content, env)[0].children or []
 
 

@@ -19,6 +19,7 @@ SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article 
 
 ENGLISH_RIGHTS = "Copyright 2024 Example Press. All rights reserved."
 EXTENDED_RIGHTS = ENGLISH_RIGHTS + " No material from this publication may be reproduced without prior written permission."
+SYMBOL_RIGHTS = EXTENDED_RIGHTS.replace("Copyright 2024", "Copyright © 2024")
 EMPHASIZED_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "**Example Press**")
 EMPHASIZED_RESERVATION = EXTENDED_RIGHTS.replace("All rights reserved.", "*All rights reserved.*")
 KOREAN_RIGHTS = "저작권자 Example Press 무단 전재 및 재배포 금지"
@@ -111,6 +112,7 @@ def test_capture_review_signals(body, title, filename, expected):
 
 
 @pytest.mark.parametrize("notice", [EXTENDED_RIGHTS, EXTENDED_RIGHTS.replace(". ", ".\n"), KOREAN_RIGHTS,
+                                    EXTENDED_RIGHTS.replace("reserved.", r"reserved\."),
                                     KOREAN_RIGHTS + ". All rights reserved.",
                                     KOREAN_RIGHTS + ". All rights reserved. No part may be reproduced without permission.",
                                     "© Example Press All rights reserved.", "All rights reserved."])
@@ -127,6 +129,9 @@ def test_standalone_rights_notice_supplies_no_article_evidence(notice):
     f"{KOREAN_RIGHTS} {ARTICLE}",
     f"{ARTICLE} {ENGLISH_RIGHTS}",
     f"{EMPHASIZED_HOLDER} The *library* extended its hours.",
+    SYMBOL_RIGHTS.replace("©", "&copy;") + " The library extended its hours.",
+    SYMBOL_RIGHTS.replace("©", r"\&copy;"),
+    SYMBOL_RIGHTS.replace("©", "&amp;copy;"),
     EXTENDED_RIGHTS.replace("Example Press", r"\*\*Example Press\*\*"),
     EXTENDED_RIGHTS.replace("All rights reserved.", "All rights reserved.*"),
     "Copyright law changed today. All rights reserved.",
@@ -359,6 +364,9 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
     ("transport", "cookie", "article", "expected"),
     [
         (False, False, EXTENDED_RIGHTS, ["raw_capture_body_missing"]),
+        pytest.param(False, False, SYMBOL_RIGHTS, ["raw_capture_body_missing"], id="copyright-symbol"),
+        pytest.param(False, False, SYMBOL_RIGHTS.replace("©", "&copy;"),
+                     ["raw_capture_body_missing"], id="copyright-entity"),
         pytest.param(False, False, EMPHASIZED_HOLDER, ["raw_capture_body_missing"], id="emphasized-holder"),
         pytest.param(False, False, EMPHASIZED_RESERVATION, ["raw_capture_body_missing"], id="emphasized-reservation"),
         (False, False, KOREAN_RIGHTS, ["raw_capture_body_missing"]),
