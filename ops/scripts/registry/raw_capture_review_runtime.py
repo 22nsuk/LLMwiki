@@ -3,15 +3,18 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Iterator
 from pathlib import Path
 
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
+from markdown_it.utils import EnvType
 
 SUMMARY_START = re.compile(r"^(?:세\s*줄\s*요약|AI\s*요약|AI[- ]generated summary|Auto(?:matic)? summary)$", re.I)
 SUMMARY_END = re.compile(r"인공지능이 자동으로|기사 본문과 함께|End of (?:AI|auto).*summary|Read the full article", re.I)
 RELATED_START = re.compile(r"^(?:관심기사 예측|관련\s*기사|함께 (?:읽기|보면)|추천\s*기사|.*뉴스를 추천해|Related (?:articles|stories)|Recommended (?:articles|stories))", re.I)
-MARKDOWN = MarkdownIt("commonmark")
+MARKDOWN = MarkdownIt("commonmark", {"inline_definitions": True})
+PHOTO_MARKERS = ("![", "(©", "(ⓒ")
 PAREN_ATTRIBUTION = re.compile(r"\([©ⓒ][^()]*\)")
 COVER_COPYRIGHT = re.compile(r"^(?:©|Copyright\b|저작권자)", re.I)
 REPORT_LABEL = re.compile(r"\breport\s+(?:no\.?\s*)?\d+\b|\b(?:annual|research|technical) report\b|보고서", re.I)
@@ -55,24 +58,64 @@ def _strip_attribution(match: re.Match[str]) -> str:
     return " " if source.endswith("제공") else match[0]
 
 
-def without_photo_credit(line: str) -> str:
+def markdown_blocks(body: str) -> tuple[list[Token], EnvType]:
+    """Collect definition spans and their document-scoped inline reference table."""
+    blocks: list[Token] = []
+    env: EnvType = {}
+    MARKDOWN.block.parse(body, MARKDOWN, env, blocks)
+    return blocks, env
+
+
+def _without_photo_credit(content: str, env: EnvType) -> str:
     """Project images and closed attributions out of analysis. Bare labels are prose."""
-    if "![" not in line and "(©" not in line and "(ⓒ" not in line:
-        return line
-    tokens = MARKDOWN.parseInline(line)[0].children or []
+    if not any(marker in content for marker in PHOTO_MARKERS):
+        return content
+    tokens = MARKDOWN.parseInline(content, env)[0].children or []
     parts: list[str] = []
     removed = False
     for token in tokens:
         if token.type == "image":
             removed = True
             parts.append(" ")
+        elif token.type in {"softbreak", "hardbreak"}:
+            parts.append("\n")
         elif token.type == "text":
             text = PAREN_ATTRIBUTION.sub(_strip_attribution, token.content)
             parts.append(text)
             removed |= text != token.content
         else:
             parts.append(token.content)
-    return "".join(parts).strip() if removed else line
+    return "".join(parts) if removed else content
+
+
+def lead_analysis_lines(body: str) -> Iterator[str]:
+    """Keep source lines for lead selection, replacing only images, credits and definitions."""
+    if not any(marker in body for marker in (*PHOTO_MARKERS, "]:")):
+        yield from body.splitlines()
+        return
+    # Block maps use CommonMark line endings; keep their offsets into the source.
+    body = body.replace("\r\n", "\n").replace("\r", "\n")
+    lines = body.split("\n")
+    blocks, env = markdown_blocks(body)
+    cursor = 0
+    for i, block in enumerate(blocks):
+        if block.map is None:
+            continue
+        if block.type == "definition":
+            replacement = ""
+        elif block.type in {"inline", "html_block"}:
+            replacement = _without_photo_credit(block.content, env)
+            if replacement == block.content:
+                continue
+            if block.type == "inline" and blocks[i - 1].type == "heading_open":
+                replacement = ""
+        else:
+            continue
+        start, end = block.map
+        yield from lines[cursor:start]
+        yield from replacement.split("\n")
+        cursor = end
+    yield from lines[cursor:]
 
 
 def _on_report_cover(headings: list[tuple[str, int]], prose: list[str]) -> bool:
@@ -84,8 +127,7 @@ def _on_report_cover(headings: list[tuple[str, int]], prose: list[str]) -> bool:
 
 def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, bool]:
     """Only a distinct top-level heading with article prose can start a second story."""
-    blocks: list[Token] = []
-    MARKDOWN.block.parse(re.sub(r"<!--.*?-->", "", body, flags=re.S), MARKDOWN, {}, blocks)
+    blocks, env = markdown_blocks(re.sub(r"<!--.*?-->", "", body, flags=re.S))
     headings: list[tuple[str, int]] = []
     prose: list[str] = []
     # Quoted text and list items can belong to an article. Neither establishes
@@ -102,8 +144,8 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
             continue
         lines: list[str] = []
         related = False
-        for line in block.content.splitlines():
-            plain = _plain(without_photo_credit(line))
+        for line in _without_photo_credit(block.content, env).splitlines():
+            plain = _plain(line)
             if RELATED_START.search(plain):
                 related = True
                 break

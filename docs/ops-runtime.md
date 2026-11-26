@@ -328,7 +328,9 @@ The shared, read-only detector recognizes missing body text, explicit automatic
 summary blocks without article prose, a second article heading with prose, and
 disjoint title vocabulary. Lead selection and capture review exclude Markdown
 images and closed photo attributions such as `(ⓒ Example Archive 제공)` from
-analysis. A plain credit can share a line with article text, so its text stays
+analysis. Reference-style images resolve against definitions from the same
+document. Their alt text and the definition lines are excluded even when
+the definition follows the article. A plain credit can share a line with article text, so its text stays
 in the paragraph, including inside emphasis or a link. A standalone plain
 caption can therefore qualify as a lead if it meets the length threshold.
 
@@ -358,7 +360,8 @@ unrecognized captions/UI, multilingual text and unexpected page layouts can
 produce false positives or missed cases. The detector never edits raw or
 repairs titles. The normalizer preserves repeated titles and the content
 between them, including when all checks pass. A standalone localhost blob URL
-or image can be removed as noise. A line that also contains prose is retained.
+or image can be removed as noise. Lines containing prose and URLs inside
+Markdown reference definitions are retained.
 Review the original source, preserve historical captures
 and register recovered bodies separately. A clear result means no recognized
 signal. Old report shapes remain readable; regenerate reports before relying on

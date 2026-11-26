@@ -25,7 +25,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
-    from ops.scripts.registry.raw_capture_review_runtime import without_photo_credit
+    from ops.scripts.registry.raw_capture_review_runtime import lead_analysis_lines
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -54,7 +54,7 @@ else:
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
-    from ops.scripts.registry.raw_capture_review_runtime import without_photo_credit
+    from ops.scripts.registry.raw_capture_review_runtime import lead_analysis_lines
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -118,8 +118,8 @@ def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) 
     body = _strip_frontmatter(text)
     paragraphs: list[str] = []
     current: list[str] = []
-    for raw_line in body.splitlines():
-        stripped = without_photo_credit(raw_line.strip())
+    for raw_line in lead_analysis_lines(body):
+        stripped = raw_line.strip()
         if stripped.startswith("#"):
             continue
         if _is_boilerplate_line(stripped):

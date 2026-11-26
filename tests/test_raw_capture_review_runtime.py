@@ -17,6 +17,9 @@ OTHER = (
 )
 SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article for context.\n"
 
+PHOTO_ALT = "Archive photograph of the old council building and surrounding streets before reconstruction"
+REFERENCE_IMAGE = f"![{PHOTO_ALT}][Photo]"
+PHOTO_DEFINITION = '[photo]: https://example.com/image.jpg\n  "An archive photograph"'
 PHOTO_CREDIT = "Photo credit: Example Archive. Copyright 2024."
 PHOTO_AND_LEAD = "*도서관 외관. 무단 전재 및 재배포 금지. /사진=자료실* " + ARTICLE
 TRAILING_CREDIT = " /사진=자료실 © Example Archive"
@@ -123,6 +126,20 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     assert extract_clean_lead(line) == lead
 
 
+@pytest.mark.parametrize(("body", "lead"), [
+    (f"{REFERENCE_IMAGE}\n\n{PHOTO_DEFINITION}", ""),
+    (f"{REFERENCE_IMAGE}\n\n{ARTICLE}\n\n{PHOTO_DEFINITION}", ARTICLE),
+    (f"{PHOTO_DEFINITION}\n\nBefore ![Archive\nphotograph][PHOTO] after", "Before after"),
+    (f"{PHOTO_DEFINITION}\n\n![photo][] ![photo] {ARTICLE}", ARTICLE),
+    (f"{REFERENCE_IMAGE}\n\n```\n{PHOTO_DEFINITION}\n```", REFERENCE_IMAGE),
+])
+def test_reference_images_use_document_definitions(body, lead):
+    assert extract_clean_lead(body) == lead
+    assert capture_review_reasons(body=body, title="", filename="capture.md") == (
+        [] if lead else ["raw_capture_body_missing"]
+    )
+
+
 @pytest.mark.parametrize("notice", [CREDITED_FOOTER, COLON_FOOTER, EXTENDED_REPRINT_FOOTER, "> " + REPRINT_FOOTER])
 @pytest.mark.parametrize(("following", "mixed"), [
     ("", False), (OTHER, False), (f"- {OTHER}", False),
@@ -192,6 +209,9 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (False, False, ARTICLE + TRAILING_CREDIT, []),
         (False, False, f"**{ARTICLE}{TRAILING_CREDIT}**", []),
         (False, False, f"Photo credit: © Example Archive. {ARTICLE}", []),
+        (False, False, f"{REFERENCE_IMAGE}\n\n{PHOTO_DEFINITION}", ["raw_capture_body_missing"]),
+        (False, False, f"{REFERENCE_IMAGE}\n\n[photo]:\nblob:http://localhost/123", ["raw_capture_body_missing"]),
+        (False, False, f"{REFERENCE_IMAGE}\n\n{PHOTO_DEFINITION}\n\n{ARTICLE}", []),
         (False, False, f"![Photo](blob:http://localhost/123) {ARTICLE}", []),
         (False, True, ARTICLE + f" Unique introduction.\n\n# {TITLE}\n\n" + ARTICLE, []),
         (False, False, f"{ARTICLE}\n\n{COLON_FOOTER}\n\n{OTHER}", []),
@@ -250,8 +270,15 @@ def test_capture_reports_agree_before_and_after_normalization(tmp_path, transpor
                       if item["type"] == "raw_snapshot_capture_review"]
         assert [item["detail"]["reasons"] for item in candidates] == ([expected] if expected else []), phase
         report = build_report(tmp_path, matrix_path="matrix.json")
-        assert report["findings"][0]["issues"] == expected, phase
-        assert report["status"] == ("attention" if expected else "pass"), phase
+        if "raw_capture_body_missing" in expected:
+            assert report["findings"][0]["cleaned_raw_lead"]["status"] == "empty", phase
+            assert set(report["findings"][0]["issues"]) == {
+                "raw_body_empty", "cleaned_raw_lead_below_min_chars", *expected,
+            }, phase
+            assert report["status"] == "fail", phase
+        else:
+            assert report["findings"][0]["issues"] == expected, phase
+            assert report["status"] == ("attention" if expected else "pass"), phase
         assert path.read_text(encoding="utf-8") == before
         result = apply_raw_markdown_normalization(tmp_path, path)
         assert result.manual_review_reasons == expected, phase

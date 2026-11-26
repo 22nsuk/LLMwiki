@@ -11,7 +11,7 @@ from typing import Any
 
 from ops.scripts.core.policy_runtime import report_path
 from ops.scripts.core.yaml_runtime import parse_simple_yaml
-from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons
+from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons, markdown_blocks
 
 FRONTMATTER_FIELD_ORDER = [
     "title",
@@ -385,8 +385,18 @@ def _strip_cookie_block(body: str) -> tuple[str, bool]:
 
 
 def _strip_blob_localhost(body: str) -> tuple[str, bool]:
-    updated, count = BLOB_LOCALHOST_RE.subn("", body)
-    return updated, count > 0
+    if not BLOB_LOCALHOST_RE.search(body):
+        return body, False
+    # A URL on its own line can be the destination in a multiline reference.
+    blocks, _ = markdown_blocks(body)
+    definition_lines = {
+        i for block in blocks if block.type == "definition" and block.map
+        for i in range(*block.map)
+    }
+    lines = body.split("\n")
+    updated = "\n".join(line for i, line in enumerate(lines)
+                        if i in definition_lines or not BLOB_LOCALHOST_RE.fullmatch(line))
+    return updated, updated != body
 
 
 def _cleanup_body(body: str) -> tuple[str, list[str]]:
@@ -473,7 +483,7 @@ def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityRe
         marker in body
         for marker in COOKIE_NOISE_MARKERS
     ) or any(COOKIE_OPTION_RE.match(line.strip()) for line in body.splitlines())
-    blob_noise_present = bool(BLOB_LOCALHOST_RE.search(body))
+    _, blob_noise_present = _strip_blob_localhost(body)
     replacement_char_present = REPLACEMENT_CHAR in body
     manual_review_reasons: list[str] = []
     if replacement_char_present:
