@@ -192,6 +192,7 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (False, False, ARTICLE + TRAILING_CREDIT, []),
         (False, False, f"**{ARTICLE}{TRAILING_CREDIT}**", []),
         (False, False, f"Photo credit: © Example Archive. {ARTICLE}", []),
+        (False, False, f"![Photo](blob:http://localhost/123) {ARTICLE}", []),
         (False, True, ARTICLE + f" Unique introduction.\n\n# {TITLE}\n\n" + ARTICLE, []),
         (False, False, f"{ARTICLE}\n\n{COLON_FOOTER}\n\n{OTHER}", []),
         (False, False, f"{ARTICLE}\n\n{CREDITED_FOOTER}\n\n- {OTHER}", []),

@@ -67,7 +67,10 @@ PUBLISHED_TIME_RE = re.compile(r"^Published Time:\s*(.+?)\s*$", re.MULTILINE)
 LAST_UPDATED_RE = re.compile(r"^\*\*Last Updated:\*\*\s*(.+?)(?:\s*\|.*)?\s*$", re.MULTILINE)
 CAPTURE_DATE_RE = re.compile(r"^- Capture date:\s*(.+?)\s*$", re.MULTILINE)
 URL_DATE_RE = re.compile(r"/(20\d{2})[-_/](\d{2})[-_/](\d{2})(?:[/?#]|$)")
-BLOB_LOCALHOST_RE = re.compile(r"^.*blob:http://localhost[^\n]*\n?", re.MULTILINE)
+LOCAL_BLOB_URL = r"blob:http://localhost(?::[0-9]+)?/[^()\s]+"
+BLOB_LOCALHOST_RE = re.compile(
+    rf"^[ \t]*(?:{LOCAL_BLOB_URL}|!\[[^\]\n]*\]\({LOCAL_BLOB_URL}\))[ \t]*$\n?", re.MULTILINE,
+)
 REPLACEMENT_CHAR = "\ufffd"
 
 
@@ -470,7 +473,7 @@ def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityRe
         marker in body
         for marker in COOKIE_NOISE_MARKERS
     ) or any(COOKIE_OPTION_RE.match(line.strip()) for line in body.splitlines())
-    blob_noise_present = "blob:http://localhost" in body
+    blob_noise_present = bool(BLOB_LOCALHOST_RE.search(body))
     replacement_char_present = REPLACEMENT_CHAR in body
     manual_review_reasons: list[str] = []
     if replacement_char_present:

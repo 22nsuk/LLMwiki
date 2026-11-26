@@ -357,7 +357,8 @@ verification or proof of a complete article. Paraphrases, shared vocabulary,
 unrecognized captions/UI, multilingual text and unexpected page layouts can
 produce false positives or missed cases. The detector never edits raw or
 repairs titles. The normalizer preserves repeated titles and the content
-between them, including when all checks pass.
+between them, including when all checks pass. A standalone localhost blob URL
+or image can be removed as noise. A line that also contains prose is retained.
 Review the original source, preserve historical captures
 and register recovered bodies separately. A clear result means no recognized
 signal. Old report shapes remain readable; regenerate reports before relying on
