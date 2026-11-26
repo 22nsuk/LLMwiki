@@ -336,8 +336,10 @@ caption can therefore qualify as a lead if it meets the length threshold.
 
 A second article requires a substantial preceding paragraph (at least 80
 characters), a top-level heading with vocabulary distinct from the original
-title, and prose under that heading. Quotes, lists, and fenced code under a
-heading do not establish a new article. Publisher names and rights notices
+title, and prose under that heading. In Markdown captures, HTML paragraphs and
+text in ordinary layout containers such as `<div>` can supply prose on either
+side of the heading. Quotations, lists, standalone links and code blocks do not
+establish a new article in either representation. Publisher names and rights notices
 may occur between articles or within a single article. Stories joined without
 a distinct heading can escape detection. For a labeled report cover, the
 section under a new H1 must also contain substantial prose with vocabulary

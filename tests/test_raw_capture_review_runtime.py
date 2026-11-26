@@ -155,6 +155,26 @@ def test_second_story_needs_a_heading_and_article_prose(notice, following, mixed
     )
 
 
+@pytest.mark.parametrize(("first", "second", "mixed"), [
+    (f"<div>{ARTICLE}</div>", OTHER, True),
+    (f'<p>The announcement said <a href="/">{ARTICLE}</a> in full.</p>', OTHER, True),
+    (ARTICLE, f'<div><a href="/story">{OTHER}</a></div>', False),
+    (ARTICLE, f"<article><p>{OTHER}</p></article>", True),
+    (ARTICLE, f"<div><blockquote><p>{OTHER}</p></blockquote></div>", False),
+    (f"<ul>\n\n<li><p>{ARTICLE}</p></li>\n\n</ul>", OTHER, False),
+    (ARTICLE, f"<div><ol><li>{OTHER}</li></ol><pre><code>{OTHER}</code></pre></div>", False),
+    (ARTICLE, f"> <div>{OTHER}</div>", False),
+    (f"<div>Intro.<blockquote>{ARTICLE}</blockquote></div>", OTHER, False),
+    ("<div>" + "<p>Brief library update.</p>" * 5 + "</div>", OTHER, False),
+    (ARTICLE, f"<div><blockquote>Archived quote.</blockquote><p>{OTHER}</p></div>", True),
+])
+def test_html_prose_at_article_boundaries(first, second, mixed):
+    body = f"# {TITLE}\n\n{first}\n\n# {SECOND_TITLE}\n\n{second}"
+    assert capture_review_reasons(body=body, title=TITLE, filename="capture.md") == (
+        ["raw_capture_multiple_articles"] if mixed else []
+    )
+
+
 @pytest.mark.parametrize("lead", [
     REPRINT_ARTICLE,
     REPRINT_FOOTER + ". AI 학습에 대한 법원의 판단은 달랐다.",
@@ -218,6 +238,11 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (False, False, f"{ARTICLE}\n\n{CREDITED_FOOTER}\n\n- {OTHER}", []),
         (False, False, f"{ARTICLE}\n\n{COLON_FOOTER}\n\n# {SECOND_TITLE}\n\n{OTHER}",
          ["raw_capture_multiple_articles"]),
+        (False, False, f"<div>{ARTICLE}</div>\n\n# {SECOND_TITLE}\n\n{OTHER}",
+         ["raw_capture_multiple_articles"]),
+        (False, False, f"{ARTICLE}\n\n# {SECOND_TITLE}\n\n<div>{OTHER}</div>",
+         ["raw_capture_multiple_articles"]),
+        (False, False, f"{ARTICLE}\n\n# {SECOND_TITLE}\n\n<div><blockquote>{OTHER}</blockquote></div>", []),
         (False, False, QUOTED_NOTICE_ARTICLE + " /사진=자료실", []),
         (False, False, f"*{ARTICLE}* {PAREN_CREDIT}", []),
         (False, False, f"{ARTICLE} *{PAREN_CREDIT}*", []),

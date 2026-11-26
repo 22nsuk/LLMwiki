@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections.abc import Iterator
+from html.parser import HTMLParser
 from pathlib import Path
 
 from markdown_it import MarkdownIt
@@ -125,6 +126,87 @@ def _on_report_cover(headings: list[tuple[str, int]], prose: list[str]) -> bool:
     return any(REPORT_LABEL.search(title) for title, _ in headings) or any(REPORT_LABEL.search(p) for p in prose)
 
 
+class _HTMLProse(HTMLParser):
+    """Separate prose paragraphs from other HTML text, including nested containers."""
+
+    containers = {"article", "body", "div", "html", "main", "p", "section"}
+    formatting = {"b", "em", "i", "mark", "s", "small", "span", "strong", "sub", "sup", "u"}
+    void = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+            "param", "source", "track", "wbr"}
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.excluded: list[str] = []
+        self.in_link = False
+        self.has_unlinked_text = False
+        self.text: list[str] = []
+        self.paragraphs: list[tuple[str, str]] = []
+
+    def flush(self) -> None:
+        content = "".join(self.text).strip()
+        if content:
+            kind = "body" if self.has_unlinked_text and not self.excluded else "other"
+            self.paragraphs.append((kind, content))
+        self.text.clear()
+        self.has_unlinked_text = False
+
+    def handle_data(self, data: str) -> None:
+        self.text.append(data)
+        if not self.in_link and data.strip():
+            self.has_unlinked_text = True
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "a":
+            self.in_link = True
+        elif tag in self.void:
+            self.text.append(" ")
+        elif tag not in self.formatting:
+            self.flush()
+            if tag not in self.containers:
+                self.excluded.append(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "a":
+            self.in_link = False
+            return
+        if tag in self.formatting or tag in self.void:
+            return
+        self.flush()
+        if self.excluded and tag == self.excluded[-1]:
+            self.excluded.pop()
+        elif tag in self.excluded:
+            # HTML permits omitted closing tags, for example </li> before </ul>.
+            while self.excluded.pop() != tag:
+                pass
+
+
+def _capture_blocks(blocks: list[Token]) -> Iterator[tuple[str, str]]:
+    html = _HTMLProse()
+    for i, block in enumerate(blocks):
+        if block.type == "html_block" and block.level == 0:
+            # CommonMark can split a single HTML container across blank lines.
+            try:
+                html.feed(block.content)
+            except (AssertionError, ValueError):
+                # Malformed declarations or character references can be rejected.
+                html = _HTMLProse()
+                yield "other", block.content
+                continue
+            html.flush()
+            yield from html.paragraphs
+            html.paragraphs.clear()
+        elif block.type == "inline":
+            parent = blocks[i - 1]
+            top_level = parent.level == 0 and not html.excluded and not html.in_link
+            if parent.type == "heading_open":
+                kind = "h1" if top_level and parent.tag == "h1" else "heading"
+            else:
+                kind = "body" if top_level and parent.type == "paragraph_open" else "other"
+            yield kind, block.content
+        elif block.type == "html_block":
+            yield "other", block.content
+
+
 def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, bool]:
     """Only a distinct top-level heading with article prose can start a second story."""
     blocks, env = markdown_blocks(re.sub(r"<!--.*?-->", "", body, flags=re.S))
@@ -135,16 +217,10 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
     body_paragraphs: set[int] = set()
     cover_end: int | None = None
     summary = saw_summary = False
-    for i, block in enumerate(blocks):
-        if block.type == "inline":
-            parent = blocks[i - 1]
-        elif block.type == "html_block":
-            parent = block
-        else:
-            continue
+    for kind, content in _capture_blocks(blocks):
         lines: list[str] = []
         related = False
-        for line in _without_photo_credit(block.content, env).splitlines():
+        for line in _without_photo_credit(content, env).splitlines():
             plain = _plain(line)
             if RELATED_START.search(plain):
                 related = True
@@ -157,8 +233,8 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
                 continue
             if summary or not plain:
                 continue
-            if parent.type == "heading_open":
-                if parent.tag == "h1" and parent.level == 0:
+            if kind in {"h1", "heading"}:
+                if kind == "h1":
                     headings.append((plain, len(prose)))
                 continue
             if UI_LINE.search(plain) or re.fullmatch(r"[\W\d_]+", plain):
@@ -174,7 +250,7 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
                     and len(paragraph) < MIN_BOUNDARY_PROSE_CHARS and _on_report_cover(headings, prose)):
                 cover_end = len(prose)
             else:
-                if parent.type == "paragraph_open" and parent.level == 0:
+                if kind == "body":
                     body_paragraphs.add(len(prose))
                 prose.append(paragraph)
         if related:
