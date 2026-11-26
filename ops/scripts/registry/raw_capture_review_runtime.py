@@ -17,10 +17,8 @@ REPRINT_NOTICE = re.compile(
     r"[.。!＞>\]\\)*_\s]*$",
     re.I,
 )
-PUBLISHER_LABEL = re.compile(
-    r"(?:[A-Z][\w'’-]*\s+|(?:of|the|and|&)\s+)*(?i:press|news|media|publishing|inc|ltd|co|corp)"
-    r"|[\w·-]*(?:신문|일보|뉴스|통신사)"
-)
+PUBLISHER_WORD = re.compile(r"[A-Z][\w'’-]*|of|the|and|&")
+PUBLISHER_LABEL = re.compile(r"(?i:press|news|media|publishing|inc|ltd|co|corp)|[\w·-]*(?:신문|일보|뉴스|통신사)")
 COPYRIGHT_MARK = re.compile(r"©|ⓒ|copyright\b|저작권자|무단\s*전재|재배포(?:를)?\s*금지", re.I)
 OPENING_CREDIT = re.compile(r"^(?:©|copyright\s+(?:©\s*)?\d{4}\b)", re.I)
 PHOTO_CREDIT = re.compile(
@@ -76,7 +74,12 @@ def is_reprint_footer(line: str) -> bool:
     publisher = re.sub(r"\b(Inc|Ltd|Co|Corp)\.", r"\1", signature[0], flags=re.I).strip().rstrip(" ,:：")
     if re.search(r"[.!?。！？]", publisher):
         return False
-    return len(signature) == 2 or PUBLISHER_LABEL.fullmatch(publisher) is not None
+    if len(signature) == 2:
+        return True
+    words = publisher.split()
+    if not words or not PUBLISHER_LABEL.fullmatch(words[-1]):
+        return False
+    return all(PUBLISHER_WORD.fullmatch(word) for word in words[:-1])
 
 
 def _photo_credit_prefix(line: str, credit: re.Match[str]) -> str:
