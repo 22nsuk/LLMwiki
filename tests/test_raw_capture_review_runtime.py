@@ -131,6 +131,25 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     assert extract_clean_lead(line) == lead
 
 
+@pytest.mark.parametrize(("source", "expected"), [
+    (f"**#MeToo** {ARTICLE} {PAREN_CREDIT}", f"#MeToo {ARTICLE}"),
+    (f"![photo](cover.png) **#MeToo** {ARTICLE}", f"#MeToo {ARTICLE}"),
+    (f"\\# A literal hash {ARTICLE} {PAREN_CREDIT}", f"# A literal hash {ARTICLE}"),
+    (f"`[label](address)` {ARTICLE} {PAREN_CREDIT}", f"[label](address) {ARTICLE}"),
+    (f"# {ARTICLE} {PAREN_CREDIT}\n\n{OTHER}", OTHER),
+    (f"{ARTICLE} {PAREN_CREDIT}\n===\n\n{OTHER}", OTHER),
+    (f"{ARTICLE}\n===\n\n{OTHER}", OTHER),
+    (f"![photo](cover.png)\n[{ARTICLE}](/news)", ""),
+    (f"[{ARTICLE}][story]\n\n[story]: /news", ""),
+    (f"`[label](address)` {ARTICLE}", f"[label](address) {ARTICLE}"),
+    (f"# [{TITLE}](/news)\n{ARTICLE}", ARTICLE),
+    (f"<!-- source note\nends here --> {ARTICLE}", ARTICLE),
+    (f"{ARTICLE}\n# {TITLE}\n{OTHER}", ARTICLE),
+])
+def test_lead_uses_original_markdown_structure(source, expected):
+    assert extract_clean_lead(source) == expected
+
+
 @pytest.mark.parametrize(("body", "lead"), [
     (f"{REFERENCE_IMAGE}\n\n{PHOTO_DEFINITION}", ""),
     (f"{REFERENCE_IMAGE}\n\n{ARTICLE}\n\n{PHOTO_DEFINITION}", ARTICLE),
@@ -238,6 +257,8 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (True, False, ARTICLE, []),
         (False, True, ARTICLE, []),
         (True, False, PHOTO_AND_LEAD, []),
+        (False, False, f"**#MeToo** {ARTICLE} {PAREN_CREDIT}", []),
+        (False, False, f"![photo](cover.png)\n[{ARTICLE}](/news)", ["raw_capture_body_missing"]),
         (False, False, ARTICLE + TRAILING_CREDIT, []),
         (False, False, f"**{ARTICLE}{TRAILING_CREDIT}**", []),
         (False, False, f"Photo credit: © Example Archive. {ARTICLE}", []),

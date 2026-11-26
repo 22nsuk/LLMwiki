@@ -328,8 +328,11 @@ The shared, read-only detector recognizes missing body text, explicit automatic
 summary blocks without article prose, a second article heading with prose, and
 disjoint title vocabulary. Lead selection and capture review exclude Markdown
 images and closed photo attributions such as `(ⓒ Example Archive 제공)` from
-analysis. Reference-style images resolve against definitions from the same
-document. Their alt text and the definition lines are excluded even when
+analysis. Lead selection uses the original Markdown heading blocks, including
+Setext headings. A paragraph beginning with a hashtag remains eligible when
+its formatting or photo credit is removed. A standalone Markdown link remains
+navigation even when an adjacent line contains an image. Reference-style images
+resolve against definitions from the same document. Their alt text and the definition lines are excluded even when
 the definition follows the article. A plain credit can share a line with article text, so its text stays
 in the paragraph, including inside emphasis or a link. A standalone plain
 caption can therefore qualify as a lead if it meets the length threshold.

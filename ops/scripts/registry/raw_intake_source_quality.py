@@ -6,6 +6,7 @@ import hashlib
 import re
 import sys
 from collections import Counter
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -105,35 +106,27 @@ def _is_boilerplate_line(line: str) -> bool:
     stripped = line.strip()
     if not stripped:
         return True
-    if stripped.startswith("<!--"):
-        return True
     if re.fullmatch(r"[-*_`#>\s]+", stripped):
-        return True
-    if re.fullmatch(r"\[[^\]]+\]\([^\)]+\)", stripped):
         return True
     return any(pattern.search(stripped) for pattern in BOILERPLATE_PATTERNS)
 
 
-def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) -> str:
-    body = _strip_frontmatter(text)
-    paragraphs: list[str] = []
+def _lead_paragraphs(body: str) -> Iterator[str]:
     current: list[str] = []
-    for raw_line in lead_analysis_lines(body):
-        stripped = raw_line.strip()
-        if stripped.startswith("#"):
-            continue
-        if _is_boilerplate_line(stripped):
+    for line in lead_analysis_lines(body):
+        if _is_boilerplate_line(line):
             if current:
-                paragraphs.append(" ".join(current))
-                current = []
-            continue
-        stripped = re.sub(r"`([^`]+)`", r"\1", stripped)
-        stripped = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", stripped)
-        current.append(stripped)
+                yield " ".join(current)
+                current.clear()
+        else:
+            current.append(line.strip())
     if current:
-        paragraphs.append(" ".join(current))
+        yield " ".join(current)
+
+
+def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) -> str:
     fallback = ""
-    for paragraph in paragraphs:
+    for paragraph in _lead_paragraphs(_strip_frontmatter(text)):
         normalized = re.sub(r"\s+", " ", paragraph).strip()
         if not normalized:
             continue
