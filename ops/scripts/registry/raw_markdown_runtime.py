@@ -14,6 +14,7 @@ from ops.scripts.core.yaml_runtime import parse_simple_yaml
 from ops.scripts.registry.raw_capture_review_runtime import (
     COPYRIGHT_MARK,
     capture_review_reasons,
+    without_photo_credit,
 )
 
 FRONTMATTER_FIELD_ORDER = [
@@ -414,7 +415,11 @@ def _strip_duplicate_preface(body: str, title: str | None) -> str:
     start = title_matches[-1].start()
     # A cover or photo credit may be valid content even after its review
     # warning clears. Keep the credited prefix in the stored snapshot.
-    return body if COPYRIGHT_MARK.search(body, 0, start) else body[start:]
+    if COPYRIGHT_MARK.search(body, 0, start):
+        return body
+    if any(without_photo_credit(line) != line for line in body[:start].splitlines()):
+        return body
+    return body[start:]
 
 
 def _cleanup_body(body: str, *, title: str | None, preserve_preface: bool = False) -> tuple[str, list[str]]:

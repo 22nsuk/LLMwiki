@@ -327,17 +327,23 @@ approval does not clear it. Existing empty/unavailable raw hard failures remain.
 The shared, read-only detector recognizes missing body text, explicit automatic
 summary blocks without article prose, article-like text after a copyright
 boundary or a second distinct top-level title, and disjoint title vocabulary.
-Photo credits with explicit attribution and opening rights notices can precede
-the article. If a Markdown caption ends mid-line, review and intake lead
-selection use the text after its closing emphasis. When a photo attribution
-follows article prose on the same line, both checks retain the preceding text,
-including when the prose and attribution share Markdown emphasis. An explicit
-copyright footer keeps its boundary even when a photo attribution follows it.
-Korean reprint footers can include a publisher signature and a second rights
-clause, as in `무단 전재 및 재배포 금지. AI 학습 및 활용 금지.`.
-A compact Korean publisher name can introduce the notice. Article prose
-describing unauthorized republication remains eligible for lead selection,
-including a quoted prohibition followed by a photo credit.
+Photo credits are removed from analysis by their inline Markdown extent.
+A parenthesized attribution ends at its closing parenthesis. An attribution
+inside emphasis or a link can end with that span, preserving prose on either
+side. Plain slash credits with a compact source can follow unpunctuated prose.
+An ambiguous unmarked attribution followed by running text stays available
+for review. Short licensed captions can be excluded as a unit.
+
+A standalone publisher notice becomes a candidate boundary when article prose
+precedes it. A new H1 followed by prose, or a subsequent substantial paragraph
+(80 characters), supports a second article. For a sentence-form prohibition
+such as `재배포를 금지합니다`, the detector also looks for a change in vocabulary
+if there is no new H1. A colon after a compact Korean masthead is allowed in
+this contextual check. An ambiguous colon label alone remains eligible for
+lead selection. End-of-document notices and related-link lists supply no
+following article. Explicit copyright footers retain their boundary handling,
+including when they precede a photo credit. Opening credits and report covers
+can precede the first article.
 A labeled report cover can precede chapter titles formatted as H1. In that
 layout, a disjoint H1 triggers review when its section also contains substantial
 prose unrelated in wording to the first H1.
@@ -358,7 +364,8 @@ verification or proof of a complete article. Paraphrases, shared vocabulary,
 unrecognized captions/UI, multilingual text and unexpected page layouts can
 produce false positives or missed cases. The detector never edits raw or
 repairs titles. The normalizer retains the prefix before a repeated title when
-capture review flags the document or the prefix contains a copyright marker.
+capture review flags the document or the prefix contains a copyright marker
+or a recognized photo attribution.
 Review the original source, preserve historical captures
 and register recovered bodies separately. A clear result means no recognized
 signal. Old report shapes remain readable; regenerate reports before relying on

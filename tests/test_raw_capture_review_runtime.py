@@ -21,6 +21,8 @@ PHOTO_AND_LEAD = "*도서관 외관. 무단 전재 및 재배포 금지. /사진
 TRAILING_CREDIT = " /사진=자료실 © Example Archive"
 CREDITED_FOOTER = "Copyright 2024 Example Press /사진=자료실"
 REPRINT_FOOTER = "무단 전재 및 재배포 금지"
+PAREN_CREDIT = "(ⓒ Example Archive 제공)"
+COLON_FOOTER = "매일경제: " + REPRINT_FOOTER
 KOREAN_PUBLISHER_FOOTER = "매일경제 " + REPRINT_FOOTER
 QUOTED_NOTICE_ARTICLE = (
     "법원은 지역 신문의 사진 이용을 제한한 조항을 심리했고, 원문 사용을 허가받지 않은 포털 운영자의 책임을 인정했다. "
@@ -114,6 +116,46 @@ def test_emphasized_lead_and_photo_credit(marker):
     assert capture_review_reasons(body=line, title=TITLE, filename="capture.md") == []
 
 
+@pytest.mark.parametrize("layout", [
+    "{body} {credit}", "*{body}* {credit}", "{body} *{credit}*", "*{body} {credit}*",
+    "**[{body}](https://example.com/article)** *{credit}*",
+])
+@pytest.mark.parametrize("body", [ARTICLE, ARTICLE.rstrip(".")])
+def test_credit_span_is_independent_of_emphasis(layout, body):
+    line = layout.format(body=body, credit=PAREN_CREDIT)
+    assert extract_clean_lead(line) == body
+    assert capture_review_reasons(body=line, title=TITLE, filename="capture.md") == []
+
+
+@pytest.mark.parametrize(("line", "lead"), [
+    (f"{ARTICLE} {PAREN_CREDIT} {OTHER}", ARTICLE + " " + OTHER),
+    (f"{ARTICLE} {PAREN_CREDIT} {OTHER} {PAREN_CREDIT}", ARTICLE + " " + OTHER),
+    (f"{ARTICLE} *사진: 자료실* {OTHER}", ARTICLE + " " + OTHER),
+    (f"{ARTICLE} /사진=자료실", ARTICLE),
+    ("자료 화면 /사진=자료실에서 받은 뒤 편집부가 내용을 확인했다.", "자료 화면 /사진=자료실에서 받은 뒤 편집부가 내용을 확인했다."),
+    (f"![사진: 자료실](image.jpg) {ARTICLE}", ARTICLE),
+    (f"`{PAREN_CREDIT}` {ARTICLE}", PAREN_CREDIT + " " + ARTICLE),
+])
+def test_credit_spans_keep_surrounding_text(line, lead):
+    assert extract_clean_lead(line) == lead
+
+
+@pytest.mark.parametrize(("body", "expected"), [
+    (f"{ARTICLE}\n\n{COLON_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+    (f"{COLON_FOOTER}\n\n{OTHER}", []),
+    (f"{ARTICLE}\n\n{COLON_FOOTER}", []),
+    (f"{ARTICLE}\n\n{COLON_FOOTER}\n\nEvening edition\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+    (f"{ARTICLE}\n\n{COLON_FOOTER}\n\n## Related articles\n\n{OTHER}", []),
+    (f"{ARTICLE}\n\n공지: 재배포를 금지합니다.\n\n{ARTICLE}", []),
+    (f"{ARTICLE}\n\n공지: {REPRINT_FOOTER}\n\n{OTHER}", []),
+    (f"{ARTICLE}\n{COLON_FOOTER}\n{ARTICLE}", []),
+    (f"{ARTICLE}\n\n{COLON_FOOTER}\n\n```\n{OTHER}\n```", []),
+    (f"# {TITLE}\n\n{ARTICLE}\n\n{COLON_FOOTER}\n\n# Orbital telescope surveys distant galaxies\n\nA new telescope launched.", ["raw_capture_multiple_articles"]),
+])
+def test_notice_boundary_uses_surrounding_blocks(body, expected):
+    assert capture_review_reasons(body=body, title="", filename="capture.md") == expected
+
+
 @pytest.mark.parametrize("notice", [
     REPRINT_FOOTER, "무단전재·재배포 금지", "재배포를 금지합니다.", "재배포 금지", "무단 전재 및 재배포를 금지합니다.",
     "Example Press ⓒ Example Archive, 무단전재 및 재배포 금지",
@@ -204,6 +246,10 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (False, False, f"{ARTICLE}\n\n{SIGNED_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, False, f"{ARTICLE}\n\n{KOREAN_PUBLISHER_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, False, QUOTED_NOTICE_ARTICLE + " /사진=자료실", []),
+        (False, False, f"{ARTICLE}\n\n{COLON_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+        (False, False, f"*{ARTICLE}* {PAREN_CREDIT}", []),
+        (False, False, f"{ARTICLE} *{PAREN_CREDIT}*", []),
+        (False, False, f"{ARTICLE} /사진=자료실\n\n# {TITLE}\n\n{ARTICLE}", []),
         (False, False, REPRINT_ARTICLE, []),
         (False, False, REPORT, []),
         (False, False, REPORT + "\n\nCopyright Example Press\n\n" + OTHER, ["raw_capture_multiple_articles"]),
