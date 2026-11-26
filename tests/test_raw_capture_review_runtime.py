@@ -18,6 +18,7 @@ OTHER = (
 SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article for context.\n"
 
 ENGLISH_RIGHTS = "Copyright 2024 Example Press. All rights reserved."
+EXTENDED_RIGHTS = ENGLISH_RIGHTS + " No material from this publication may be reproduced without prior written permission."
 KOREAN_RIGHTS = "저작권자 Example Press 무단 전재 및 재배포 금지"
 PUBLICATION_NOTICE = (
     "Permission requests concerning any distribution of this publication must be addressed "
@@ -70,7 +71,7 @@ REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\
         ("The library facade. Copyright 2024. 무단 전재 및 재배포 금지. /사진=자료실\n\n" + ARTICLE,
          TITLE, "capture.md", []),
         ("# " + TITLE + "\n\n저작권자 Example Press 무단전재 및 재배포 금지\n\n" + OTHER,
-         TITLE, "capture.md", []),
+         TITLE, "capture.md", ["raw_capture_title_body_mismatch"]),
         (SUMMARY + "\n" + PAREN_CREDIT, TITLE, "capture.md", ["raw_capture_summary_only"]),
         (PHOTO_AND_LEAD, TITLE, "capture.md", []),
         ("*The library facade. Copyright © Example Press. 무단 전재 및 재배포 금지. /사진=자료실* " + ARTICLE,
@@ -105,6 +106,29 @@ REPORT = REPORT_COVER + "\n\n" + ARTICLE + "\n\n# Staffing and Budget Forecasts\
 )
 def test_capture_review_signals(body, title, filename, expected):
     assert capture_review_reasons(body=body, title=title, filename=filename) == expected
+
+
+@pytest.mark.parametrize("notice", [EXTENDED_RIGHTS, EXTENDED_RIGHTS.replace(". ", ".\n"), KOREAN_RIGHTS,
+                                    "© Example Press All rights reserved.", "All rights reserved."])
+def test_standalone_rights_notice_supplies_no_article_evidence(notice):
+    assert extract_clean_lead(notice) == ""
+    assert capture_review_reasons(body=notice, title=TITLE, filename="raw.md") == ["raw_capture_body_missing"]
+    assert extract_clean_lead(f"{notice}\n\n{ARTICLE}") == ARTICLE
+    body = f"# {TITLE}\n\n{ARTICLE}\n\n# {SECOND_TITLE}\n\n{notice}"
+    assert capture_review_reasons(body=body, title=TITLE, filename="raw.md") == []
+
+
+@pytest.mark.parametrize("paragraph", [
+    f"{ENGLISH_RIGHTS} {ARTICLE}",
+    f"{KOREAN_RIGHTS} {ARTICLE}",
+    f"{ARTICLE} {ENGLISH_RIGHTS}",
+    "Copyright law changed today. All rights reserved.",
+    "No material entered the building without permission.",
+    "저작권자 권리를 다룬 판결이다. 무단 전재 및 재배포 금지",
+])
+def test_mixed_or_ambiguous_rights_text_keeps_the_paragraph(paragraph):
+    assert extract_clean_lead(paragraph) == paragraph
+    assert capture_review_reasons(body=paragraph, title="", filename="raw.md") == []
 
 
 @pytest.mark.parametrize(("outside", "expected"), [
@@ -308,6 +332,9 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
 @pytest.mark.parametrize(
     ("transport", "cookie", "article", "expected"),
     [
+        (False, False, EXTENDED_RIGHTS, ["raw_capture_body_missing"]),
+        (False, False, KOREAN_RIGHTS, ["raw_capture_body_missing"]),
+        (False, False, EXTENDED_RIGHTS + "\n\n" + ARTICLE, []),
         (False, True, SUMMARY, ["raw_capture_summary_only"]),
         (True, True, SUMMARY, ["raw_capture_summary_only"]),
         (False, False, SUMMARY + "\n" + ENGLISH_RIGHTS, ["raw_capture_summary_only"]),

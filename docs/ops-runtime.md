@@ -337,6 +337,13 @@ the definition follows the article. A plain credit can share a line with article
 in the paragraph, including inside emphasis or a link. A standalone plain
 caption can therefore qualify as a lead if it meets the length threshold.
 
+A standalone rights declaration supplies no body or lead text. The check
+recognizes a labeled holder followed by a complete English reservation or
+Korean reprint restriction, as well as “All rights reserved.” on its own.
+It checks the whole paragraph so a following article sentence stays eligible.
+Analysis continues with the next paragraph. Unrecognized notices may still
+qualify as prose. Stored Markdown retains the original wording.
+
 For an explicitly marked automatic summary, the detector looks for a top-level
 prose paragraph outside the summary in the same article. It excludes repeated
 headlines and uses the same structural prose classification as the article

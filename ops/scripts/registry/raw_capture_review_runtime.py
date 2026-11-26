@@ -19,6 +19,17 @@ MARKDOWN = MarkdownIt("commonmark", {"inline_definitions": True})
 INLINE_MARKERS = ("[", "<", "`", "(©", "(ⓒ")
 PAREN_ATTRIBUTION = re.compile(r"\([©ⓒ][^()]*\)")
 COVER_COPYRIGHT = re.compile(r"^(?:©|Copyright\b|저작권자)", re.I)
+# Match a short, labeled rights holder and a complete reservation. A dot
+# inside a publisher's domain is part of its name, not a sentence boundary.
+_MARKED_HOLDER = r"(?:(?:copyright|저작권자)\s*)?[©ⓒ](?:[^.!?\n]|\.(?=\S)){1,64}?"
+# Without a symbol, accept a compact name. Free prose about copyright
+# commonly begins with the same word as the holder label.
+_NAME = r"(?-i:[A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,4}|[가-힣]+)"
+_RIGHTS_HOLDER = rf"(?:{_MARKED_HOLDER}|(?:copyright\s+\d{{4}}|저작권자)\s+{_NAME})"
+_REPRINT_NOTICE = r"무단\s*전재[^.!?\n]{0,64}금지"
+_PERMISSION_NOTICE = r"no (?:part|material|content)\b[^.!?\n]{0,120}\breproduced without\b[^.!?\n]{0,64}\bpermission"
+_RESERVATION = rf"all rights reserved\b(?:\.\s+(?:{_PERMISSION_NOTICE}|{_REPRINT_NOTICE}))?"
+RIGHTS_NOTICE = re.compile(rf"{_RIGHTS_HOLDER}\.?\s*(?:{_RESERVATION}|{_REPRINT_NOTICE})\.?", re.I)
 REPORT_LABEL = re.compile(r"\breport\s+(?:no\.?\s*)?\d+\b|\b(?:annual|research|technical) report\b|보고서", re.I)
 UI_LINE = re.compile(r"^(?:(?:송고|입력|수정)(?:\s|:)|Published:|Updated:|Title:|URL Source:|Published Time:|Markdown Content:|본문 바로가기|메뉴 바로가기|광고$|닫기$|ESC 닫기$|공유$|구독$|로그인$)", re.I)
 STOP_WORDS = {"the", "and", "for", "with", "from", "this", "that", "after", "before", "news", "report", "기사", "관련", "대한"}
@@ -35,6 +46,12 @@ def _plain(line: str, *, strip_tags: bool = True) -> str:
     if strip_tags:
         line = re.sub(r"<[^>]*>", "", line)
     return line.strip(" #*`_>\t\\")
+
+
+def is_rights_notice(paragraph: str) -> bool:
+    """A whole notice is ineligible as article evidence, wherever it occurs."""
+    text = paragraph.strip().strip("*_")
+    return text.casefold().removesuffix(".") == "all rights reserved" or RIGHTS_NOTICE.fullmatch(text) is not None
 
 
 def _tokens(text: str) -> set[str]:
@@ -344,7 +361,7 @@ def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, b
             if (cover_end is None and not summaries and COVER_COPYRIGHT.match(paragraph)
                     and len(paragraph) < MIN_BOUNDARY_PROSE_CHARS and _on_report_cover(headings, prose)):
                 cover_end = len(prose)
-            else:
+            elif not is_rights_notice(paragraph):
                 if kind == "body":
                     body_paragraphs.add(len(prose))
                 prose.append(paragraph)
