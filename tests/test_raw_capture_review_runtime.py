@@ -21,6 +21,11 @@ PHOTO_AND_LEAD = "*도서관 외관. 무단 전재 및 재배포 금지. /사진
 TRAILING_CREDIT = " /사진=자료실 © Example Archive"
 CREDITED_FOOTER = "Copyright 2024 Example Press /사진=자료실"
 REPRINT_FOOTER = "무단 전재 및 재배포 금지"
+KOREAN_PUBLISHER_FOOTER = "매일경제 " + REPRINT_FOOTER
+QUOTED_NOTICE_ARTICLE = (
+    "법원은 지역 신문의 사진 이용을 제한한 조항을 심리했고, 원문 사용을 허가받지 않은 포털 운영자의 책임을 인정했다. "
+    "재판부가 인용한 공지의 마지막 문장은 다음과 같다: 재배포를 금지합니다."
+)
 EXTENDED_REPRINT_FOOTER = REPRINT_FOOTER + ". AI 학습 및 활용 금지."
 PUBLISHER_REPRINT_FOOTER = "Example Press " + REPRINT_FOOTER
 SIGNED_REPRINT_FOOTER = "Example Inc. ⓒ Example Archive, " + REPRINT_FOOTER
@@ -88,6 +93,10 @@ def test_capture_review_signals(body, title, filename, expected):
 
 @pytest.mark.parametrize(("lead", "credit"), [
     (ARTICLE, TRAILING_CREDIT),
+    (QUOTED_NOTICE_ARTICLE, " /사진=자료실"),
+    (QUOTED_NOTICE_ARTICLE.replace("같다:", "같다."), " /사진=자료실"),
+    ("법원은 공지를 인용했다. 재배포를 금지합니다.", " /사진=자료실"),
+    (QUOTED_NOTICE_ARTICLE, " (ⓒ Example Archive 제공, 무단 전재 및 재배포 금지)"),
     ("법원은 재배포 금지 조항이 해당 기사에 적용되는지 판단했다.", TRAILING_CREDIT),
     (ARTICLE, " (ⓒ Example Archive 제공, 무단 전재 및 재배포 금지)"),
     ("도서관은 저작권자와 협의해 다음 달부터 희귀 자료를 공개한다고 발표했다.", " /사진=자료실"),
@@ -108,7 +117,8 @@ def test_emphasized_lead_and_photo_credit(marker):
 @pytest.mark.parametrize("notice", [
     REPRINT_FOOTER, "무단전재·재배포 금지", "재배포를 금지합니다.", "재배포 금지", "무단 전재 및 재배포를 금지합니다.",
     "Example Press ⓒ Example Archive, 무단전재 및 재배포 금지",
-    EXTENDED_REPRINT_FOOTER, PUBLISHER_REPRINT_FOOTER, SIGNED_REPRINT_FOOTER,
+    EXTENDED_REPRINT_FOOTER, PUBLISHER_REPRINT_FOOTER, SIGNED_REPRINT_FOOTER, KOREAN_PUBLISHER_FOOTER,
+    "다온24 " + REPRINT_FOOTER, "예시신문: " + REPRINT_FOOTER,
     "Example Press Co., " + EXTENDED_REPRINT_FOOTER,
 ])
 def test_reprint_notice_is_a_boundary_with_or_without_a_photo_credit(notice):
@@ -125,12 +135,22 @@ def test_reprint_notice_is_a_boundary_with_or_without_a_photo_credit(notice):
     REPRINT_FOOTER + ". AI 학습에 대한 법원의 판단은 달랐다.",
     "기사에 실린 조항의 제목은 " + EXTENDED_REPRINT_FOOTER,
     "The article quotes Example Press " + REPRINT_FOOTER,
+    "법원은 무단 전재 및 재배포를 금지합니다.",
+    "법원이 재배포를 금지합니다.",
+    "공지: 재배포를 금지합니다.",
     "무단 전재한 기사가 여러 매체에 재배포됐다고 법원은 밝혔다.",
     "법원은 재배포 금지 조항이 해당 기사에 적용되는지 판단했다.",
 ])
 def test_reprint_reporting_preserves_the_lead(lead):
     assert extract_clean_lead(lead) == lead
     assert capture_review_reasons(body=lead, title="", filename="capture.md") == []
+
+
+@pytest.mark.parametrize("marker", ["", "*"])
+def test_standalone_photo_caption_with_detached_notice(marker):
+    caption = f"{marker}도서관 외관. {REPRINT_FOOTER}. /사진=자료실{marker}"
+    assert extract_clean_lead(caption) == ""
+    assert capture_review_reasons(body=caption, title=TITLE, filename="capture.md") == ["raw_capture_body_missing"]
 
 
 def test_caption_with_a_signed_extended_notice_preserves_following_article():
@@ -182,6 +202,8 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
         (False, False, f"{ARTICLE}\n\n{EXTENDED_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, False, f"{ARTICLE}\n\n{PUBLISHER_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
         (False, False, f"{ARTICLE}\n\n{SIGNED_REPRINT_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+        (False, False, f"{ARTICLE}\n\n{KOREAN_PUBLISHER_FOOTER}\n\n{OTHER}", ["raw_capture_multiple_articles"]),
+        (False, False, QUOTED_NOTICE_ARTICLE + " /사진=자료실", []),
         (False, False, REPRINT_ARTICLE, []),
         (False, False, REPORT, []),
         (False, False, REPORT + "\n\nCopyright Example Press\n\n" + OTHER, ["raw_capture_multiple_articles"]),

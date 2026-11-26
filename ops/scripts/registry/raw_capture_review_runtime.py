@@ -19,6 +19,7 @@ REPRINT_NOTICE = re.compile(
 )
 PUBLISHER_WORD = re.compile(r"[A-Z][\w'’-]*|of|the|and|&")
 PUBLISHER_LABEL = re.compile(r"(?i:press|news|media|publishing|inc|ltd|co|corp)|[\w·-]*(?:신문|일보|뉴스|통신사)")
+SENTENCE_END = (".", "!", "?", "。", "！", "？")
 COPYRIGHT_MARK = re.compile(r"©|ⓒ|copyright\b|저작권자|무단\s*전재|재배포(?:를)?\s*금지", re.I)
 OPENING_CREDIT = re.compile(r"^(?:©|copyright\s+(?:©\s*)?\d{4}\b)", re.I)
 PHOTO_CREDIT = re.compile(
@@ -61,10 +62,7 @@ def _disjoint_title(title: str, other: str) -> bool:
     return not any(a.startswith(b) or b.startswith(a) for a in left for b in right)
 
 
-def is_reprint_footer(line: str) -> bool:
-    notice = REPRINT_NOTICE.search(line)
-    if notice is None:
-        return False
+def _is_reprint_boundary(line: str, notice: re.Match[str]) -> bool:
     prefix = line[:notice.start()].strip(" \t*_<>[]()\\＜")
     if not prefix or prefix.endswith((" -", " |")):
         return True
@@ -77,19 +75,54 @@ def is_reprint_footer(line: str) -> bool:
     if len(signature) == 2:
         return True
     words = publisher.split()
-    if not words or not PUBLISHER_LABEL.fullmatch(words[-1]):
+    if not words or not all(PUBLISHER_WORD.fullmatch(word) for word in words[:-1]):
         return False
-    return all(PUBLISHER_WORD.fullmatch(word) for word in words[:-1])
+    label = words[-1]
+    if PUBLISHER_LABEL.fullmatch(label):
+        return True
+    # An unmarked Hangul masthead can be a single name. Exclude grammatical
+    # subjects introducing a predicate and phrases introducing a quotation.
+    return (
+        re.search(r"[가-힣]", label) is not None
+        and re.fullmatch(r"[\w·-]+", label) is not None
+        and not label.endswith(("은", "는", "에서"))
+        and not (label.endswith(("이", "가")) and "금지합니다" in notice[0])
+        and not prefix.endswith((":", "："))
+    )
+
+
+def is_reprint_footer(line: str) -> bool:
+    notice = REPRINT_NOTICE.search(line)
+    return notice is not None and _is_reprint_boundary(line, notice)
 
 
 def _photo_credit_prefix(line: str, credit: re.Match[str]) -> str:
     prefix = line[:credit.start()].rstrip()
     plain = _plain(prefix)
-    if FOOTER_START.match(plain) or is_reprint_footer(plain):
+    if FOOTER_START.match(plain):
         return prefix
-    if REPRINT_NOTICE.search(plain):
-        return ""
-    if credit[0].startswith("/") or prefix.endswith((".", "!", "?", "。", "！", "？")):
+    notice = REPRINT_NOTICE.search(plain)
+    if notice:
+        if _is_reprint_boundary(plain, notice):
+            return prefix
+        description = plain[:notice.start()].rstrip()
+        # A short caption may end in a separate, nominal rights label. A full
+        # prohibition sentence can itself be the quotation an article reports.
+        if (
+            description.endswith(SENTENCE_END)
+            and len(description) < MIN_BOUNDARY_PROSE_CHARS
+            and "금지합니다" not in notice[0]
+        ):
+            return ""
+        last_clause = re.split(r"[.!?。！？]", description.rstrip(" .!?。！？"))[-1].strip()
+        if (
+            FOOTER_START.match(last_clause)
+            or last_clause.startswith("ⓒ")
+            or last_clause.casefold() == "all rights reserved"
+        ):
+            return ""
+        return prefix
+    if credit[0].startswith("/") or prefix.endswith(SENTENCE_END):
         return prefix
     return ""
 
