@@ -11,7 +11,10 @@ from typing import Any
 
 from ops.scripts.core.policy_runtime import report_path
 from ops.scripts.core.yaml_runtime import parse_simple_yaml
-from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons, markdown_blocks
+from ops.scripts.registry.raw_capture_review_runtime import (
+    capture_review_reasons,
+    markdown_blocks,
+)
 
 FRONTMATTER_FIELD_ORDER = [
     "title",
