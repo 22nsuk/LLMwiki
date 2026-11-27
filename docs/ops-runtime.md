@@ -345,7 +345,10 @@ The check uses visible CommonMark text, including publisher names and clauses em
 A literal `©` and the character reference `&copy;` in the same notice give the same result.
 Each sentence after the holder must be a recognized rights clause. A paragraph
 that also contains an article sentence stays eligible in full.
-Analysis continues with the next paragraph. Unrecognized notices may still
+In an HTML block, both checks use the displayed text of each paragraph, so an
+article paragraph following a notice can supply the lead. Lead selection skips
+the same leading transport headers as normalization.
+Unrecognized notices may still
 qualify as prose. Stored Markdown retains the original wording.
 
 For an explicitly marked automatic summary, the detector looks for a top-level

@@ -43,6 +43,7 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         RawMarkdownDocument,
         raw_markdown_capture_review_reasons,
         split_frontmatter,
+        strip_transport_headers,
     )
 else:
     from ops.scripts.core.artifact_freshness_runtime import (
@@ -75,6 +76,7 @@ else:
         RawMarkdownDocument,
         raw_markdown_capture_review_reasons,
         split_frontmatter,
+        strip_transport_headers,
     )
 
 
@@ -126,7 +128,8 @@ def _lead_paragraphs(body: str) -> Iterator[str]:
 
 def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) -> str:
     fallback = ""
-    for paragraph in _lead_paragraphs(_strip_frontmatter(text)):
+    body, _ = strip_transport_headers(_strip_frontmatter(text))
+    for paragraph in _lead_paragraphs(body):
         normalized = re.sub(r"\s+", " ", paragraph).strip()
         if not normalized:
             continue

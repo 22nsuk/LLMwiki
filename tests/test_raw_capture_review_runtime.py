@@ -23,6 +23,7 @@ UNDATED_RIGHTS = EXTENDED_RIGHTS.replace(" 2024", "")
 SYMBOL_RIGHTS = EXTENDED_RIGHTS.replace("Copyright 2024", "Copyright © 2024")
 EMPHASIZED_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "**Example Press**")
 EMPHASIZED_RESERVATION = EXTENDED_RIGHTS.replace("All rights reserved.", "*All rights reserved.*")
+HTML_BLOCK_NOTICE = f"<div>{EXTENDED_RIGHTS}</div>"
 HTML_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "<strong>Example Press</strong>")
 KOREAN_RIGHTS = "저작권자 Example Press 무단 전재 및 재배포 금지"
 PUBLICATION_NOTICE = (
@@ -266,6 +267,11 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     (f"`[label](address)` {ARTICLE}", f"[label](address) {ARTICLE}"),
     (f"# [{TITLE}](/news)\n{ARTICLE}", ARTICLE),
     (f"<!-- source note\nends here --> {ARTICLE}", ARTICLE),
+    (f"{HTML_BLOCK_NOTICE}<p>{ARTICLE}</p>", ARTICLE),
+    (f"<div><p>{EXTENDED_RIGHTS} {ARTICLE}</p></div>", f"{EXTENDED_RIGHTS} {ARTICLE}"),
+    ("<p>&lt;!-- &amp;copy; --&gt;</p>", "<!-- &copy; -->"),
+    (f"Title: {TITLE}\nMarkdown Content:\n{ARTICLE}", ARTICLE),
+    (f"{ARTICLE}\nTitle: new weekday schedule", f"{ARTICLE} Title: new weekday schedule"),
     (f'*Archive* <span title="old\nbuilding">library</span> {ARTICLE}',
      f'*Archive* <span title="old building">library</span> {ARTICLE}'),
     (f"{ARTICLE}\n# {TITLE}\n{OTHER}", ARTICLE),
@@ -374,6 +380,12 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
     ("transport", "cookie", "article", "expected"),
     [
         (False, False, EXTENDED_RIGHTS, ["raw_capture_body_missing"]),
+        pytest.param(False, False, HTML_BLOCK_NOTICE, ["raw_capture_body_missing"], id="html-block-notice"),
+        pytest.param(False, False, f"> {HTML_BLOCK_NOTICE}{HTML_BLOCK_NOTICE}", ["raw_capture_body_missing"],
+                     id="quoted-html-notices"),
+        pytest.param(True, False, "", ["raw_capture_body_missing"], id="transport-only"),
+        pytest.param(True, False, HTML_BLOCK_NOTICE, ["raw_capture_body_missing"], id="transport-and-html-notice"),
+        pytest.param(True, False, f"{HTML_BLOCK_NOTICE}<p>{ARTICLE}</p>", [], id="article-after-html-notice"),
         pytest.param(False, False, UNDATED_RIGHTS, ["raw_capture_body_missing"], id="undated-notice"),
         pytest.param(False, False, UNDATED_RIGHTS + " " + ARTICLE, [], id="undated-notice-with-prose"),
         pytest.param(False, False, SYMBOL_RIGHTS, ["raw_capture_body_missing"], id="copyright-symbol"),
@@ -450,8 +462,8 @@ def test_capture_reports_agree_before_and_after_normalization(tmp_path, transpor
     )
     banner = "This website uses cookies\n\nAllow all Customize Allow selection Deny\n\n" if cookie else ""
     text = header + f"# {TITLE}\n\n" + banner + article
-    # A swapped capture has only the wrong article heading, not the declared one.
-    if article.startswith("#"):
+    # Empty captures and captures supplying their own heading have no synthetic H1.
+    if not article or article.startswith("#"):
         text = header + article
     path.write_text(text, encoding="utf-8")
     write_source(tmp_path / "wiki" / "source--quality.md", summary=ARTICLE, key_points=[

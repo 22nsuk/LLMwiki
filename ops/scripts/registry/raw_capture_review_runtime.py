@@ -16,6 +16,9 @@ SUMMARY_START = re.compile(r"^(?:세\s*줄\s*요약|AI\s*요약|AI[- ]generated 
 SUMMARY_END = re.compile(r"인공지능이 자동으로|기사 본문과 함께|End of (?:AI|auto).*summary|Read the full article", re.I)
 RELATED_START = re.compile(r"^(?:관심기사 예측|관련\s*기사|함께 (?:읽기|보면)|추천\s*기사|.*뉴스를 추천해|Related (?:articles|stories)|Recommended (?:articles|stories))", re.I)
 MARKDOWN = MarkdownIt("commonmark", {"inline_definitions": True})
+# HTMLParser has already resolved tags and entities in these paragraphs.
+# Keep embedded Markdown links, images and emphasis without decoding HTML twice.
+HTML_TEXT_MARKDOWN = MarkdownIt("commonmark").disable(["html_inline", "autolink", "entity"])
 PAREN_ATTRIBUTION = re.compile(r"\([©ⓒ][^()]*\)")
 COVER_COPYRIGHT = re.compile(r"^(?:©|Copyright\b|저작권자)", re.I)
 # A symbol can label a free-form publisher, including a domain. A bare
@@ -40,11 +43,10 @@ MIN_BODY_COMPARISON_CHARS = 160
 MIN_BOUNDARY_PROSE_CHARS = 80
 
 
-def _plain(line: str, *, strip_tags: bool = True) -> str:
+def _plain(line: str) -> str:
     line = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", line)
     line = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", line)
-    if strip_tags:
-        line = re.sub(r"<[^>]*>", "", line)
+    line = re.sub(r"<[^>]*>", "", line)
     return line.strip(" #*`_>\t\\")
 
 
@@ -100,7 +102,7 @@ class _InlineText(NamedTuple):
     keep_source_lead: bool
 
 
-def _project_inline(children: list[Token], *, markdown_text: bool = True) -> _InlineText | None:
+def _project_inline(children: list[Token]) -> _InlineText | None:
     """Project visible inline text and retain link scope for each line."""
     if not children:
         return None
@@ -124,8 +126,6 @@ def _project_inline(children: list[Token], *, markdown_text: bool = True) -> _In
             if token.content.startswith("<!--"):
                 project = True
                 parts.append(" ")
-            elif not markdown_text:
-                parts.append(token.content)
             else:
                 # Formatting can split a word. Layout and void elements separate text.
                 tag = re.match(r"</?([a-zA-Z][a-zA-Z0-9-]*)", token.content)
@@ -145,20 +145,23 @@ def _project_inline(children: list[Token], *, markdown_text: bool = True) -> _In
             unlinked_text |= (not in_link and bool(token.content.strip())) or text != token.content
             parts.append(text)
     keep_source_lead = not (project or saw_link)
-    # HTMLParser has already decoded literal HTML text, including escaped tags.
-    if keep_source_lead and not markdown_text:
-        return None
     lines.append(_Line("".join(parts), not unlinked_text, source_lines))
     return _InlineText(lines, boundary_prose or not saw_link, keep_source_lead)
 
 
-def _inline_tokens(content: str, env: EnvType) -> list[Token]:
-    return MARKDOWN.parseInline(content, env)[0].children or []
+def _inline_tokens(content: str, env: EnvType, parser: MarkdownIt = MARKDOWN) -> list[Token]:
+    return parser.parseInline(content, env)[0].children or []
 
 
 class LeadLine(NamedTuple):
     excerpt: str
     visible: str
+
+
+def _visible_lead_lines(lines: Iterable[_Line]) -> Iterator[LeadLine]:
+    for line in lines:
+        text = "" if line.link_only else line.text
+        yield LeadLine(text, text)
 
 
 def lead_analysis_lines(body: str) -> Iterator[LeadLine]:
@@ -176,8 +179,13 @@ def lead_analysis_lines(body: str) -> Iterator[LeadLine]:
             block.type == "html_block" and block.content.lstrip().startswith("<!--") and "-->" not in block.content
         ):
             replacement = [LeadLine("", "")]
-        elif block.type in {"inline", "html_block"}:
-            projected = _project_inline(_inline_tokens(block.content, env), markdown_text=block.type == "inline")
+        elif block.type == "html_block":
+            replacement = [LeadLine("", "")]
+            for _, paragraph_lines in _html_blocks(block.content, env, []):
+                replacement.extend(_visible_lead_lines(paragraph_lines))
+                replacement.append(LeadLine("", ""))
+        elif block.type == "inline":
+            projected = _project_inline(_inline_tokens(block.content, env))
             if projected is None:
                 continue
             if projected.keep_source_lead:
@@ -190,8 +198,7 @@ def lead_analysis_lines(body: str) -> Iterator[LeadLine]:
                 if offset != end:
                     continue
             else:
-                visible = ("" if line.link_only else line.text for line in projected.lines)
-                replacement = [LeadLine(text, text) for text in visible]
+                replacement = list(_visible_lead_lines(projected.lines))
         else:
             continue
         yield from (LeadLine(line, line) for line in lines[cursor:start])
@@ -276,13 +283,18 @@ def _html_paragraphs(markup: str, excluded: list[str]) -> list[tuple[str, str]]:
 _CaptureBlock = tuple[str, Iterable[_Line]]
 
 
-def _markdown_block(kind: str, content: str, children: list[Token], *, markdown_text: bool = True) -> _CaptureBlock:
-    projected = _project_inline(children, markdown_text=markdown_text)
+def _markdown_block(kind: str, content: str, children: list[Token]) -> _CaptureBlock:
+    projected = _project_inline(children)
     if projected is not None:
         if kind == "body" and not projected.boundary_prose:
             kind = "other"
         return kind, projected.lines
-    return kind, (_Line(_plain(line, strip_tags=markdown_text)) for line in content.splitlines())
+    return kind, (_Line(_plain(line)) for line in content.splitlines())
+
+
+def _html_blocks(markup: str, env: EnvType, excluded: list[str]) -> Iterator[_CaptureBlock]:
+    for kind, content in _html_paragraphs(markup, excluded):
+        yield _markdown_block(kind, content, _inline_tokens(content, env, HTML_TEXT_MARKDOWN))
 
 
 def _inline_paragraph(content: str, env: EnvType, excluded: list[str]) -> Iterator[_CaptureBlock]:
@@ -304,9 +316,9 @@ def _inline_paragraph(content: str, env: EnvType, excluded: list[str]) -> Iterat
 def _capture_blocks(blocks: list[Token], env: EnvType) -> Iterator[_CaptureBlock]:
     excluded: list[str] = []
     for i, block in enumerate(blocks):
-        if block.type == "html_block" and block.level == 0:
-            for kind, content in _html_paragraphs(block.content, excluded):
-                yield _markdown_block(kind, content, _inline_tokens(content, env), markdown_text=False)
+        if block.type == "html_block":
+            for kind, lines in _html_blocks(block.content, env, excluded if block.level == 0 else []):
+                yield (kind if block.level == 0 else "other"), lines
         elif block.type == "inline":
             parent = blocks[i - 1]
             if parent.type == "paragraph_open" and parent.level == 0:
@@ -317,8 +329,6 @@ def _capture_blocks(blocks: list[Token], env: EnvType) -> Iterator[_CaptureBlock
                 is_h1 = parent.level == 0 and not excluded and parent.tag == "h1"
                 kind = "h1" if is_h1 else "heading"
             yield _markdown_block(kind, block.content, _inline_tokens(block.content, env))
-        elif block.type == "html_block":
-            yield _markdown_block("other", block.content, _inline_tokens(block.content, env))
 
 
 def _has_summary_body(terms: set[str], title: str, paragraphs: Iterable[str]) -> bool:

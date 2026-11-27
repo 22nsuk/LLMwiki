@@ -338,28 +338,21 @@ def _build_normalized_metadata(document: RawMarkdownDocument) -> dict[str, Any]:
     return metadata
 
 
-def _leading_transport_header_range(lines: list[str]) -> tuple[int, list[str]]:
+def strip_transport_headers(body: str) -> tuple[str, bool]:
+    """Remove the leading capture metadata shared by normalization and lead selection."""
+    lines = body.splitlines()
     index = 0
-    removed: list[str] = []
+    removed = False
     while index < len(lines):
         stripped = lines[index].strip()
-        if not stripped:
-            index += 1
-            continue
-        if any(stripped.startswith(prefix) for prefix in TRANSPORT_HEADER_PREFIXES):
-            removed.append(stripped)
-            index += 1
-            continue
-        break
-    return index, removed
-
-
-def _strip_transport_headers(body: str) -> tuple[str, bool]:
-    lines = body.splitlines()
-    index, removed = _leading_transport_header_range(lines)
-    if not removed:
-        return body, False
-    return "\n".join(lines[index:]), True
+        if stripped.startswith(TRANSPORT_HEADER_PREFIXES):
+            removed = True
+        elif stripped:
+            break
+        index += 1
+    if removed:
+        return "\n".join(lines[index:]), True
+    return body, False
 
 
 def _strip_cookie_block(body: str) -> tuple[str, bool]:
@@ -406,7 +399,7 @@ def _cleanup_body(body: str) -> tuple[str, list[str]]:
     removed_noise_classes: list[str] = []
     updated = body
 
-    updated, removed_transport = _strip_transport_headers(updated)
+    updated, removed_transport = strip_transport_headers(updated)
     if removed_transport:
         removed_noise_classes.append("transport_header")
 
