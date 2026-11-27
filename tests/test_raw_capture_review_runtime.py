@@ -23,6 +23,7 @@ UNDATED_RIGHTS = EXTENDED_RIGHTS.replace(" 2024", "")
 SYMBOL_RIGHTS = EXTENDED_RIGHTS.replace("Copyright 2024", "Copyright © 2024")
 EMPHASIZED_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "**Example Press**")
 EMPHASIZED_RESERVATION = EXTENDED_RIGHTS.replace("All rights reserved.", "*All rights reserved.*")
+HTML_BLOCK_NOTICE = f"<div>{EXTENDED_RIGHTS}</div>"
 HTML_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "<strong>Example Press</strong>")
 KOREAN_RIGHTS = "저작권자 Example Press 무단 전재 및 재배포 금지"
 PUBLICATION_NOTICE = (
@@ -266,12 +267,123 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     (f"`[label](address)` {ARTICLE}", f"[label](address) {ARTICLE}"),
     (f"# [{TITLE}](/news)\n{ARTICLE}", ARTICLE),
     (f"<!-- source note\nends here --> {ARTICLE}", ARTICLE),
+    (f"{HTML_BLOCK_NOTICE}<p>{ARTICLE}</p>", ARTICLE),
+    (f"<div><p>{EXTENDED_RIGHTS} {ARTICLE}</p></div>", f"{EXTENDED_RIGHTS} {ARTICLE}"),
+    ("<p>&lt;!-- &amp;copy; --&gt;</p>", "<!-- &copy; -->"),
+    ("<p>&am<span>p;</span> &unknown &copy</p>", "&amp; &unknown ©"),
+    (f"A literal `<script>` tag.\n\n{ARTICLE}", ARTICLE),
+    ("Literal `<script>x</script>` tag.", "Literal <script>x</script> tag."),
+    ("<p title='<script>'>libr<script data-end='</script>'>hidden</script>ary</p>", "library"),
+    ("<p>&am<!--hidden-->p;</p>", "&amp;"),
+    ('> <div><script type=module\n>\n> defer="</script>">hidden</script>visible</div>', "visible"),
+    ("> <div><script>\n>\n> hidden\n> </script\n> >visible</div>", "visible"),
+    ("<div title='\n\n<script>'>visible</div>", "visible"),
+    ("<div><!unknown><script>hidden</script>visible</div>", "visible"),
+    ("Literal `<!--` and `<script>` in code.", "Literal <!-- and <script> in code."),
+    ("\u00a0\nLibrary <script>hidden</script>hours", "Library hours"),
+    (f"# Heading <script>\n\n```js\n\n</script>\n\n<style>{OTHER}</style>{ARTICLE}", ARTICLE),
+    (f"<div><script>\n\n{OTHER}\n\n</script><p>{ARTICLE}</p></div>", ARTICLE),
+    (f"Title: {TITLE}\nMarkdown Content:\n{ARTICLE}", ARTICLE),
+    (f"{ARTICLE}\nTitle: new weekday schedule", f"{ARTICLE} Title: new weekday schedule"),
     (f'*Archive* <span title="old\nbuilding">library</span> {ARTICLE}',
      f'*Archive* <span title="old building">library</span> {ARTICLE}'),
     (f"{ARTICLE}\n# {TITLE}\n{OTHER}", ARTICLE),
 ])
 def test_lead_uses_original_markdown_structure(source, expected):
     assert extract_clean_lead(source) == expected
+
+
+def _write_library_source(tmp_path):
+    from tests.test_raw_intake_source_quality import write_source
+
+    write_source(tmp_path / "wiki" / "source--quality.md", summary=ARTICLE, key_points=[
+        "The library trial measured weekday attendance over six weeks.",
+        "The council approved additional staffing for longer opening hours.",
+        "Weekend schedules remained outside the scope of the trial.",
+        "The announcement did not report long-term operating costs.",
+    ])
+
+
+@pytest.mark.parametrize("suffix", ["md", "html"])
+@pytest.mark.parametrize(("markup", "expected"), [
+    pytest.param(
+        "<p>The library will extend its hours on <time>December 1</time> "
+        "to give evening visitors more time to use the reading rooms.</p>",
+        "The library will extend its hours on December 1 to give evening visitors more time to use the reading rooms.",
+        id="date",
+    ),
+    pytest.param("<p>" + EXTENDED_RIGHTS.replace("2024", "<time>2024</time>") + "</p>", "", id="notice-year"),
+    pytest.param(f"<script><!--{ARTICLE}--></script>", "", id="script-only"),
+    pytest.param(f"<div><script>\n\n{ARTICLE}\n\n</script></div>", "", id="multiblock-script"),
+    pytest.param(f"The library <style>\n\n{OTHER}\n\n</style>reports that {ARTICLE}", f"The library reports that {ARTICLE}", id="multiblock-style"),
+    pytest.param(f"<p>The library <style>{OTHER}</style>announced its decision. {ARTICLE}</p>",
+                 f"The library announced its decision. {ARTICLE}", id="inline-style"),
+    pytest.param(f"The library <script>{OTHER}</script>reports that {ARTICLE}", f"The library reports that {ARTICLE}", id="inline-script"),
+    pytest.param(f"<p>&#91;{ARTICLE}&#93;(/story)</p>", f"[{ARTICLE}](/story)", id="literal-brackets"),
+    pytest.param(f"<p>[{ARTICLE}](/story)</p>", "", id="markdown-link"),
+    pytest.param(f"<p>![{ARTICLE}][R & D]</p>\n\n[R & D]: /image.jpg", "", id="reference-image-ampersand"),
+    pytest.param(f"<p>[{ARTICLE}][R & D]</p>\n\n[R & D]: /story", "", id="reference-link-ampersand"),
+    pytest.param(f"<div><style>\n\n{OTHER}\n\n</style\n><p>{ARTICLE}</p></div>", ARTICLE, id="split-close"),
+    pytest.param("<p>" + ARTICLE.replace("library", "<code>library</code>") + "</p>", ARTICLE, id="inline-code"),
+    pytest.param("<p>" + EXTENDED_RIGHTS.replace("Press", "<ins>Press</ins>") + "</p>", "", id="inline-ins"),
+    pytest.param(f"<div><script>const marker = '<!--';</script><p>{ARTICLE}</p><!-- footer --></div>",
+                 ARTICLE, id="comment-marker-in-script"),
+    pytest.param(f"<div><!--\n\n{ARTICLE}\n\n--></div>", "", id="multiblock-comment"),
+    pytest.param(f"<div><!-- advertising\n\n<script>code\n-->\n<p>{ARTICLE}</p></div>", ARTICLE,
+                 id="script-spelling-inside-comment"),
+    pytest.param(f"<div><script type=module\n\n defer>{ARTICLE}</script></div>", "",
+                 id="multiblock-opening-tag"),
+    pytest.param(f"<div><style media='screen > print'\n\n >{OTHER}</style><p>{ARTICLE}</p></div>", ARTICLE,
+                 id="article-after-multiblock-opener"),
+    pytest.param(f"# <script>\n\n{OTHER}\n\n</script>", "", id="script-in-heading"),
+    pytest.param(f"# Title <script>\n\n{OTHER}\n\n</script>{ARTICLE}", ARTICLE, id="article-after-heading-script"),
+])
+def test_html_capture_intake_report(tmp_path, suffix, markup, expected):
+    from ops.scripts.registry.raw_intake_source_quality import build_report
+    from tests.minimal_vault_runtime import seed_minimal_vault
+    from tests.test_raw_intake_source_quality import (
+        matrix_entry,
+        write_matrix,
+    )
+
+    seed_minimal_vault(tmp_path)
+    raw_path = f"raw/capture.{suffix}"
+    (tmp_path / raw_path).write_text(markup, encoding="utf-8")
+    _write_library_source(tmp_path)
+    write_matrix(tmp_path / "matrix.json", [matrix_entry(raw_path=raw_path)])
+    report = build_report(tmp_path, matrix_path="matrix.json")
+    assert extract_clean_lead(markup) == expected
+    finding = report["findings"][0]
+    assert finding["cleaned_raw_lead"]["char_count"] == len(expected)
+    assert ("raw_capture_body_missing" in finding["issues"]) == (not expected and suffix == "md")
+    assert report["status"] == ("pass" if expected else "fail")
+
+
+@pytest.mark.parametrize("item", [
+    "- item <script>start\n\n  hidden\n\n  </script> end\n\n",
+    "> item <script>start\n>\n> hidden\n>\n> </script> end\n>\n",
+])
+def test_nested_raw_text_scanning_grows_with_input(item, monkeypatch):
+    from markdown_it.rules_block import StateBlock
+
+    # Count real block-parser work; a clock threshold would depend on CI load.
+    push = StateBlock.push
+    count = 0
+
+    def counted_push(state, *args):
+        nonlocal count
+        count += 1
+        return push(state, *args)
+
+    monkeypatch.setattr(StateBlock, "push", counted_push)
+    counts = []
+    for size in (16, 64):
+        count = 0
+        source = item * size + "\n" + ARTICLE
+        assert extract_clean_lead(source) == ARTICLE
+        assert capture_review_reasons(body=source, title=TITLE, filename="capture.md") == []
+        counts.append(count)
+    assert 0 < counts[1] <= 5 * counts[0]
 
 
 @pytest.mark.parametrize(("body", "lead"), [
@@ -314,6 +426,8 @@ def test_second_story_needs_a_heading_and_article_prose(notice, following, mixed
     (ARTICLE, f'<a href="/story">Read more</a> {OTHER}', True),
     (ARTICLE, f'<a href="/story">\n\n{OTHER}\n\n</a> {OTHER}', True),
     (ARTICLE, f'<q>{OTHER}</q>', False),
+    (ARTICLE, "<button>Subscribe now</button>", False),
+    (ARTICLE, f"<button>Listen</button> {OTHER}", True),
     (ARTICLE, f"<article><p>{OTHER}</p></article>", True),
     (ARTICLE, f"<div><blockquote><p>{OTHER}</p></blockquote></div>", False),
     (f"<ul>\n\n<li><p>{ARTICLE}</p></li>\n\n</ul>", OTHER, False),
@@ -374,6 +488,14 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
     ("transport", "cookie", "article", "expected"),
     [
         (False, False, EXTENDED_RIGHTS, ["raw_capture_body_missing"]),
+        pytest.param(False, False, ARTICLE + "\n\n# Sign up for updates\n\n<button>Subscribe now</button>",
+                     [], id="subscription-button-after-article"),
+        pytest.param(False, False, HTML_BLOCK_NOTICE, ["raw_capture_body_missing"], id="html-block-notice"),
+        pytest.param(False, False, f"> {HTML_BLOCK_NOTICE}{HTML_BLOCK_NOTICE}", ["raw_capture_body_missing"],
+                     id="quoted-html-notices"),
+        pytest.param(True, False, "", ["raw_capture_body_missing"], id="transport-only"),
+        pytest.param(True, False, HTML_BLOCK_NOTICE, ["raw_capture_body_missing"], id="transport-and-html-notice"),
+        pytest.param(True, False, f"{HTML_BLOCK_NOTICE}<p>{ARTICLE}</p>", [], id="article-after-html-notice"),
         pytest.param(False, False, UNDATED_RIGHTS, ["raw_capture_body_missing"], id="undated-notice"),
         pytest.param(False, False, UNDATED_RIGHTS + " " + ARTICLE, [], id="undated-notice-with-prose"),
         pytest.param(False, False, SYMBOL_RIGHTS, ["raw_capture_body_missing"], id="copyright-symbol"),
@@ -437,7 +559,6 @@ def test_capture_reports_agree_before_and_after_normalization(tmp_path, transpor
     from tests.test_raw_intake_source_quality import (
         matrix_entry,
         write_matrix,
-        write_source,
     )
 
     seed_minimal_vault(tmp_path)
@@ -450,16 +571,11 @@ def test_capture_reports_agree_before_and_after_normalization(tmp_path, transpor
     )
     banner = "This website uses cookies\n\nAllow all Customize Allow selection Deny\n\n" if cookie else ""
     text = header + f"# {TITLE}\n\n" + banner + article
-    # A swapped capture has only the wrong article heading, not the declared one.
-    if article.startswith("#"):
+    # Empty captures and captures supplying their own heading have no synthetic H1.
+    if not article or article.startswith("#"):
         text = header + article
     path.write_text(text, encoding="utf-8")
-    write_source(tmp_path / "wiki" / "source--quality.md", summary=ARTICLE, key_points=[
-        "The library trial measured weekday attendance over six weeks.",
-        "The council approved additional staffing for longer opening hours.",
-        "Weekend schedules remained outside the scope of the trial.",
-        "The announcement did not report long-term operating costs.",
-    ])
+    _write_library_source(tmp_path)
     write_matrix(tmp_path / "matrix.json", [matrix_entry()])
 
     for phase in ("original", "normalized"):

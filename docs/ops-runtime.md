@@ -345,7 +345,16 @@ The check uses visible CommonMark text, including publisher names and clauses em
 A literal `©` and the character reference `&copy;` in the same notice give the same result.
 Each sentence after the holder must be a recognized rights clause. A paragraph
 that also contains an article sentence stays eligible in full.
-Analysis continues with the next paragraph. Unrecognized notices may still
+In an HTML block, both checks use the displayed text of each paragraph, so an
+article paragraph following a notice can supply the lead. Inline elements such
+as `<time>`, `<code>` and `<ins>` preserve the surrounding paragraph. Both
+diagnostics exclude HTML comments and script/style content through their closing
+delimiter. A blank line inside a comment, a start tag, or the element body
+preserves that scope across Markdown blocks. Markdown code examples
+retain literal tags. Embedded Markdown references resolve using the label spelling
+in the capture. HTML character references supply display text after link recognition.
+Lead selection skips the same leading transport headers as normalization.
+Unrecognized notices may still
 qualify as prose. Stored Markdown retains the original wording.
 
 For an explicitly marked automatic summary, the detector looks for a top-level
@@ -370,7 +379,8 @@ text in ordinary layout containers such as `<div>` can supply prose on either
 side of the heading. Quotations, lists, standalone links and code blocks do not
 establish a new article in either representation. This includes a linked headline
 written as an inline HTML anchor or a Markdown reference link. Text outside a
-link in the same paragraph can still supply prose. Publisher names and rights notices
+link in the same paragraph can still supply prose. A standalone form control
+such as a subscription button supplies no evidence of another article. Publisher names and rights notices
 may occur between articles or within a single article. Stories joined without
 a distinct heading can escape detection. For a labeled report cover, the
 section under a new H1 must also contain substantial prose with vocabulary
