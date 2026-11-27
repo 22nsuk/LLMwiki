@@ -340,6 +340,7 @@ caption can therefore qualify as a lead if it meets the length threshold.
 A standalone rights declaration supplies no body or lead text. The check
 recognizes a labeled holder followed by a complete English reservation or
 Korean reprint restriction, as well as “All rights reserved.” on its own.
+The year is optional in a notice such as “Copyright Example Press. All rights reserved.”
 The check uses visible CommonMark text, including publisher names and clauses emphasized with Markdown or inline HTML.
 A literal `©` and the character reference `&copy;` in the same notice give the same result.
 Each sentence after the holder must be a recognized rights clause. A paragraph

@@ -22,7 +22,7 @@ COVER_COPYRIGHT = re.compile(r"^(?:©|Copyright\b|저작권자)", re.I)
 # label needs a name because an article about copyright can start the same way.
 _RIGHTS_HOLDER = (
     r"(?:(?:(?:copyright|저작권자)\s*)?[©ⓒ](?:[^.!?\n]|\.(?=\S)){1,64}?"
-    r"|(?:copyright\s+\d{4}|저작권자)\s+(?-i:[A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,4}|[가-힣]+))"
+    r"|(?:copyright(?:\s+\d{4})?|저작권자)\s+(?-i:[A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,4}|[가-힣]+))"
 )
 _RESERVATION = r"(?:all rights reserved|무단\s*전재[^.!?\n]{0,64}금지)"
 _RIGHTS_CLAUSE = (

@@ -19,6 +19,7 @@ SUMMARY = "**AI-generated summary**\n\n" + ARTICLE + "\n\nRead the full article 
 
 ENGLISH_RIGHTS = "Copyright 2024 Example Press. All rights reserved."
 EXTENDED_RIGHTS = ENGLISH_RIGHTS + " No material from this publication may be reproduced without prior written permission."
+UNDATED_RIGHTS = EXTENDED_RIGHTS.replace(" 2024", "")
 SYMBOL_RIGHTS = EXTENDED_RIGHTS.replace("Copyright 2024", "Copyright © 2024")
 EMPHASIZED_HOLDER = EXTENDED_RIGHTS.replace("Example Press", "**Example Press**")
 EMPHASIZED_RESERVATION = EXTENDED_RIGHTS.replace("All rights reserved.", "*All rights reserved.*")
@@ -113,7 +114,7 @@ def test_capture_review_signals(body, title, filename, expected):
 
 
 @pytest.mark.parametrize("notice", [
-    EXTENDED_RIGHTS, EXTENDED_RIGHTS.replace(". ", ".\n"), KOREAN_RIGHTS, HTML_HOLDER,
+    EXTENDED_RIGHTS, UNDATED_RIGHTS, EXTENDED_RIGHTS.replace(". ", ".\n"), KOREAN_RIGHTS, HTML_HOLDER,
     EXTENDED_RIGHTS.replace("Press", 'Pr<span title="a > b"\nlang="en">es</span>s'),
     EXTENDED_RIGHTS.replace("All rights", "All<br>rights"),
     EXTENDED_RIGHTS.replace("reserved.", r"reserved\."),
@@ -131,6 +132,8 @@ def test_standalone_rights_notice_supplies_no_article_evidence(notice):
 
 @pytest.mark.parametrize("paragraph", [
     f"{ENGLISH_RIGHTS} {ARTICLE}",
+    f"{UNDATED_RIGHTS} {ARTICLE}",
+    "Copyright Example Press won its appeal. All rights reserved.",
     f"{KOREAN_RIGHTS} {ARTICLE}",
     f"{ARTICLE} {ENGLISH_RIGHTS}",
     f"{EMPHASIZED_HOLDER} The *library* extended its hours.",
@@ -371,6 +374,8 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
     ("transport", "cookie", "article", "expected"),
     [
         (False, False, EXTENDED_RIGHTS, ["raw_capture_body_missing"]),
+        pytest.param(False, False, UNDATED_RIGHTS, ["raw_capture_body_missing"], id="undated-notice"),
+        pytest.param(False, False, UNDATED_RIGHTS + " " + ARTICLE, [], id="undated-notice-with-prose"),
         pytest.param(False, False, SYMBOL_RIGHTS, ["raw_capture_body_missing"], id="copyright-symbol"),
         pytest.param(False, False, SYMBOL_RIGHTS.replace("©", "&copy;"),
                      ["raw_capture_body_missing"], id="copyright-entity"),
