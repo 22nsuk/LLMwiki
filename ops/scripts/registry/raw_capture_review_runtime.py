@@ -3,12 +3,16 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
+from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
+from string import punctuation
 from typing import NamedTuple
 
 from markdown_it import MarkdownIt
+from markdown_it.rules_block import StateBlock, html_block, paragraph as paragraph_block
+from markdown_it.rules_inline import StateInline, html_inline
 from markdown_it.token import Token
 from markdown_it.utils import EnvType
 
@@ -16,8 +20,8 @@ SUMMARY_START = re.compile(r"^(?:세\s*줄\s*요약|AI\s*요약|AI[- ]generated 
 SUMMARY_END = re.compile(r"인공지능이 자동으로|기사 본문과 함께|End of (?:AI|auto).*summary|Read the full article", re.I)
 RELATED_START = re.compile(r"^(?:관심기사 예측|관련\s*기사|함께 (?:읽기|보면)|추천\s*기사|.*뉴스를 추천해|Related (?:articles|stories)|Recommended (?:articles|stories))", re.I)
 MARKDOWN = MarkdownIt("commonmark", {"inline_definitions": True})
-# HTMLParser has already resolved tags and entities in these paragraphs.
-# Keep embedded Markdown links, images and emphasis without decoding HTML twice.
+# Tags are resolved first. Decode character references in the visible tokens
+# only after recognizing embedded Markdown links, images and emphasis.
 HTML_TEXT_MARKDOWN = MarkdownIt("commonmark").disable(["html_inline", "autolink", "entity"])
 PAREN_ATTRIBUTION = re.compile(r"\([©ⓒ][^()]*\)")
 COVER_COPYRIGHT = re.compile(r"^(?:©|Copyright\b|저작권자)", re.I)
@@ -41,6 +45,28 @@ MIN_SUMMARY_OVERLAP = 0.25
 MIN_TITLE_TOKENS = 3
 MIN_BODY_COMPARISON_CHARS = 160
 MIN_BOUNDARY_PROSE_CHARS = 80
+_RAW_TEXT_END = {tag: re.compile(rf"</{tag}\s*>", re.I) for tag in ("script", "style")}
+_RAW_TEXT_START = re.compile(r"<(script|style)(?=[\s/>])", re.I)
+
+
+def _capture_html_inline(state: StateInline, silent: bool) -> bool:
+    start = state.pos
+    if not html_inline(state, silent):
+        return False
+    # CommonMark recognizes the start tag, but otherwise tokenizes the script
+    # or stylesheet itself as Markdown. Consume raw text through its end tag.
+    match = _RAW_TEXT_START.match(state.src, start)
+    if match:
+        end = _RAW_TEXT_END[match[1].lower()].search(state.src, state.pos, state.posMax)
+        state.pos = end.end() if end else state.posMax
+        if not silent:
+            state.tokens[-1].content = ""
+            if end is None:
+                state.tokens[-1].meta["open_raw_text"] = match[1].lower()
+    return True
+
+
+MARKDOWN.inline.ruler.at("html_inline", _capture_html_inline)
 
 
 def _plain(line: str) -> str:
@@ -82,10 +108,10 @@ def _strip_attribution(match: re.Match[str]) -> str:
     return " " if source.endswith("제공") else match[0]
 
 
-def markdown_blocks(body: str) -> tuple[list[Token], EnvType]:
+def markdown_blocks(body: str, *, capture_analysis: bool = False) -> tuple[list[Token], EnvType]:
     """Collect definition spans and their document-scoped inline reference table."""
     blocks: list[Token] = []
-    env: EnvType = {}
+    env: EnvType = {"capture_analysis": capture_analysis}
     MARKDOWN.block.parse(body, MARKDOWN, env, blocks)
     return blocks, env
 
@@ -123,7 +149,9 @@ def _project_inline(children: list[Token]) -> _InlineText | None:
             unlinked_text = False
         elif token.type == "html_inline":
             source_lines += token.content.count("\n")
-            if token.content.startswith("<!--"):
+            if not token.content:
+                project = True
+            elif token.content.startswith("<!--"):
                 project = True
                 parts.append(" ")
             else:
@@ -169,7 +197,7 @@ def lead_analysis_lines(body: str) -> Iterator[LeadLine]:
     # Block maps use CommonMark line endings; keep their offsets into the source.
     body = body.replace("\r\n", "\n").replace("\r", "\n")
     lines = body.split("\n")
-    blocks, env = markdown_blocks(body)
+    blocks, env = markdown_blocks(body, capture_analysis=True)
     cursor = 0
     for block in blocks:
         if block.map is None or block.map[0] < cursor:
@@ -218,12 +246,14 @@ class _HTMLProse(HTMLParser):
     """Separate prose paragraphs from other HTML text, including nested containers."""
 
     containers = {"article", "body", "div", "html", "main", "p", "section"}
-    formatting = {"b", "em", "i", "mark", "s", "small", "span", "strong", "sub", "sup", "u"}
+    formatting = {"abbr", "b", "bdi", "bdo", "cite", "data", "dfn", "em", "i", "kbd", "mark",
+                  "s", "samp", "small", "span", "strong", "sub", "sup", "time", "u", "var"}
     void = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
             "param", "source", "track", "wbr"}
 
-    def __init__(self, excluded: list[str]) -> None:
-        super().__init__()
+    def __init__(self, excluded: list[str], markdown_source: str | None) -> None:
+        super().__init__(convert_charrefs=markdown_source is None)
+        self.source_lines = markdown_source.split("\n") if markdown_source is not None else []
         self.excluded = excluded
         self.has_prose = False
         self.text: list[str] = []
@@ -238,12 +268,30 @@ class _HTMLProse(HTMLParser):
         self.has_prose = False
 
     def handle_data(self, data: str) -> None:
-        self.text.append(data)
+        if self.excluded and self.excluded[-1] in _RAW_TEXT_END:
+            return
+        self.text.append(data.replace("&", "&amp;") if self.source_lines else data)
         if not self.excluded and PAREN_ATTRIBUTION.sub(_strip_attribution, data).strip():
             self.has_prose = True
 
+    def handle_charref(self, name: str) -> None:
+        self.handle_entityref("#" + name)
+
+    def handle_entityref(self, name: str) -> None:
+        # HTMLParser omits the optional semicolon from both callbacks. Recover
+        # its spelling so unknown and semicolonless references keep HTML semantics.
+        line, column = self.getpos()
+        ref = "&" + name
+        if self.source_lines[line - 1].startswith(";", column + len(ref)):
+            ref += ";"
+        decoded = unescape(ref)
+        # Keep reference-derived punctuation literal through the Markdown pass.
+        self.text.append("".join(f"&#{ord(char)};" if char in punctuation else char for char in decoded))
+        if not self.excluded and decoded.strip():
+            self.has_prose = True
+
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag == "a":
+        if tag == "a" or tag in _RAW_TEXT_END:
             self.excluded.append(tag)
         elif tag in self.void:
             self.text.append(" ")
@@ -255,7 +303,7 @@ class _HTMLProse(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag in self.formatting or tag in self.void:
             return
-        if tag != "a":
+        if tag != "a" and tag not in _RAW_TEXT_END:
             self.flush()
         if self.excluded and tag == self.excluded[-1]:
             self.excluded.pop()
@@ -265,10 +313,10 @@ class _HTMLProse(HTMLParser):
                 pass
 
 
-def _html_paragraphs(markup: str, excluded: list[str]) -> list[tuple[str, str]]:
+def _html_paragraphs(markup: str, excluded: list[str], *, embedded_markdown: bool = False) -> list[tuple[str, str]]:
     # Each CommonMark fragment is complete input. Only open element scopes
     # carry across fragments, never undecoded input or an unfinished paragraph.
-    html = _HTMLProse(excluded)
+    html = _HTMLProse(excluded, markup if embedded_markdown else None)
     try:
         html.feed(markup)
         html.close()
@@ -278,6 +326,51 @@ def _html_paragraphs(markup: str, excluded: list[str]) -> list[tuple[str, str]]:
         return [("other", markup)]
     html.flush()
     return html.paragraphs
+
+
+def _open_raw_text(content: str, is_html: bool, env: EnvType) -> str | None:
+    if not _RAW_TEXT_START.search(content):
+        return None
+    if is_html:
+        scopes: list[str] = []
+        _html_paragraphs(content, scopes)
+        return scopes[-1] if scopes and scopes[-1] in _RAW_TEXT_END else None
+    tokens = _inline_tokens(content, env)
+    return next((token.meta["open_raw_text"] for token in tokens if "open_raw_text" in token.meta), None)
+
+
+_BlockRule = Callable[[StateBlock, int, int, bool], bool]
+
+
+def _include_raw_text(rule: _BlockRule) -> _BlockRule:
+    def read_block(state: StateBlock, start: int, end: int, silent: bool) -> bool:
+        if not rule(state, start, end, silent):
+            return False
+        if silent or state.line >= end or not state.env.get("capture_analysis"):
+            return True
+        is_html = rule is html_block
+        token = state.tokens[-1 if is_html else -2]
+        tag = _open_raw_text(token.content, is_html, state.env)
+        if tag is None:
+            return True
+        # A blank line can end a CommonMark block while an HTML raw-text
+        # element is still open. Consume through the closing tag in this scope.
+        while tag is not None and state.line < end:
+            line = state.getLines(state.line, state.line + 1, state.blkIndent, True)
+            state.line += 1
+            close = _RAW_TEXT_END[tag].search(line)
+            if close:
+                token.content += line[close.start():]
+                tag = _open_raw_text(line[close.end():], is_html, state.env)
+        token.map = [start, state.line]
+        if not is_html:
+            state.tokens[-3].map = token.map
+        return True
+    return read_block
+
+
+MARKDOWN.block.ruler.at("html_block", _include_raw_text(html_block), {"alt": ["paragraph", "reference", "blockquote"]})
+MARKDOWN.block.ruler.at("paragraph", _include_raw_text(paragraph_block))
 
 
 _CaptureBlock = tuple[str, Iterable[_Line]]
@@ -293,8 +386,12 @@ def _markdown_block(kind: str, content: str, children: list[Token]) -> _CaptureB
 
 
 def _html_blocks(markup: str, env: EnvType, excluded: list[str]) -> Iterator[_CaptureBlock]:
-    for kind, content in _html_paragraphs(markup, excluded):
-        yield _markdown_block(kind, content, _inline_tokens(content, env, HTML_TEXT_MARKDOWN))
+    for kind, content in _html_paragraphs(markup, excluded, embedded_markdown=True):
+        children = _inline_tokens(content, env, HTML_TEXT_MARKDOWN)
+        for token in children:
+            if token.type in {"text", "code_inline"}:
+                token.content = unescape(token.content)
+        yield _markdown_block(kind, content, children)
 
 
 def _inline_paragraph(content: str, env: EnvType, excluded: list[str]) -> Iterator[_CaptureBlock]:
@@ -353,7 +450,7 @@ def _has_summary_body(terms: set[str], title: str, paragraphs: Iterable[str]) ->
 
 def _article_parts(body: str, title: str) -> tuple[list[str], list[str], bool, bool]:
     """Find the primary article and check its prose against any marked summary."""
-    blocks, env = markdown_blocks(re.sub(r"<!--.*?-->", "", body, flags=re.S))
+    blocks, env = markdown_blocks(re.sub(r"<!--.*?-->", "", body, flags=re.S), capture_analysis=True)
     headings: list[tuple[str, int]] = []
     prose: list[str] = []
     # Quoted text and list items can belong to an article. Neither establishes

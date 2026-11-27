@@ -270,6 +270,9 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     (f"{HTML_BLOCK_NOTICE}<p>{ARTICLE}</p>", ARTICLE),
     (f"<div><p>{EXTENDED_RIGHTS} {ARTICLE}</p></div>", f"{EXTENDED_RIGHTS} {ARTICLE}"),
     ("<p>&lt;!-- &amp;copy; --&gt;</p>", "<!-- &copy; -->"),
+    ("<p>&am<span>p;</span> &unknown &copy</p>", "&amp; &unknown ©"),
+    (f"A literal `<script>` tag.\n\n{ARTICLE}", ARTICLE),
+    (f"<div><script>\n\n{OTHER}\n\n</script><p>{ARTICLE}</p></div>", ARTICLE),
     (f"Title: {TITLE}\nMarkdown Content:\n{ARTICLE}", ARTICLE),
     (f"{ARTICLE}\nTitle: new weekday schedule", f"{ARTICLE} Title: new weekday schedule"),
     (f'*Archive* <span title="old\nbuilding">library</span> {ARTICLE}',
@@ -278,6 +281,53 @@ def test_credit_spans_keep_surrounding_text(line, lead):
 ])
 def test_lead_uses_original_markdown_structure(source, expected):
     assert extract_clean_lead(source) == expected
+
+
+def _write_library_source(tmp_path):
+    from tests.test_raw_intake_source_quality import write_source
+
+    write_source(tmp_path / "wiki" / "source--quality.md", summary=ARTICLE, key_points=[
+        "The library trial measured weekday attendance over six weeks.",
+        "The council approved additional staffing for longer opening hours.",
+        "Weekend schedules remained outside the scope of the trial.",
+        "The announcement did not report long-term operating costs.",
+    ])
+
+
+@pytest.mark.parametrize("suffix", ["md", "html"])
+@pytest.mark.parametrize(("markup", "expected"), [
+    ("<p>The library will extend its hours on <time>December 1</time> "
+     "to give evening visitors more time to use the reading rooms.</p>",
+     "The library will extend its hours on December 1 "
+     "to give evening visitors more time to use the reading rooms."),
+    ("<p>" + EXTENDED_RIGHTS.replace("2024", "<time>2024</time>") + "</p>", ""),
+    (f"<script><!--{ARTICLE}--></script>", ""),
+    (f"<div><script>\n\n{ARTICLE}\n\n</script></div>", ""),
+    (f"The library <style>\n\n{OTHER}\n\n</style>reports that {ARTICLE}", f"The library reports that {ARTICLE}"),
+    (f"<p>The library <style>{OTHER}</style>announced its decision. {ARTICLE}</p>",
+     f"The library announced its decision. {ARTICLE}"),
+    (f"The library <script>{OTHER}</script>reports that {ARTICLE}", f"The library reports that {ARTICLE}"),
+    (f"<p>&#91;{ARTICLE}&#93;(/story)</p>", f"[{ARTICLE}](/story)"),
+    (f"<p>[{ARTICLE}](/story)</p>", ""),
+], ids=["date", "notice-year", "script-only", "multiblock-script", "multiblock-style",
+        "inline-style", "inline-script", "literal-brackets", "markdown-link"])
+def test_html_capture_intake_report(tmp_path, suffix, markup, expected):
+    from ops.scripts.registry.raw_intake_source_quality import build_report
+    from tests.minimal_vault_runtime import seed_minimal_vault
+    from tests.test_raw_intake_source_quality import (
+        matrix_entry,
+        write_matrix,
+    )
+
+    seed_minimal_vault(tmp_path)
+    raw_path = f"raw/capture.{suffix}"
+    (tmp_path / raw_path).write_text(markup, encoding="utf-8")
+    _write_library_source(tmp_path)
+    write_matrix(tmp_path / "matrix.json", [matrix_entry(raw_path=raw_path)])
+    report = build_report(tmp_path, matrix_path="matrix.json")
+    assert extract_clean_lead(markup) == expected
+    assert report["findings"][0]["cleaned_raw_lead"]["char_count"] == len(expected)
+    assert report["status"] == ("pass" if expected else "fail")
 
 
 @pytest.mark.parametrize(("body", "lead"), [
@@ -449,7 +499,6 @@ def test_capture_reports_agree_before_and_after_normalization(tmp_path, transpor
     from tests.test_raw_intake_source_quality import (
         matrix_entry,
         write_matrix,
-        write_source,
     )
 
     seed_minimal_vault(tmp_path)
@@ -466,12 +515,7 @@ def test_capture_reports_agree_before_and_after_normalization(tmp_path, transpor
     if not article or article.startswith("#"):
         text = header + article
     path.write_text(text, encoding="utf-8")
-    write_source(tmp_path / "wiki" / "source--quality.md", summary=ARTICLE, key_points=[
-        "The library trial measured weekday attendance over six weeks.",
-        "The council approved additional staffing for longer opening hours.",
-        "Weekend schedules remained outside the scope of the trial.",
-        "The announcement did not report long-term operating costs.",
-    ])
+    _write_library_source(tmp_path)
     write_matrix(tmp_path / "matrix.json", [matrix_entry()])
 
     for phase in ("original", "normalized"):
