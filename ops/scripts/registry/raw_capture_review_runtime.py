@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from bisect import bisect_right
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
@@ -46,145 +46,224 @@ MIN_SUMMARY_OVERLAP = 0.25
 MIN_TITLE_TOKENS = 3
 MIN_BODY_COMPARISON_CHARS = 160
 MIN_BOUNDARY_PROSE_CHARS = 80
-_RAW_TEXT_END = {tag: re.compile(rf"</{tag}\s*>", re.I) for tag in ("script", "style")}
-_RAW_TEXT_START = re.compile(r"<(script|style)(?=[\s/>])", re.I)
+_RAW_TEXT_CLOSE = {tag: re.compile(rf"</{tag}(?=[ \t\r\n\f>])", re.I) for tag in ("script", "style")}
+_START_TAG = re.compile(r"<([a-z][a-z0-9:-]*)(?=[\s/>]|$)", re.I)
+_HIDDEN_START = re.compile(r"<!--|<(script|style)(?=[\s/>]|$)", re.I)
+# Complete attributes on the source document; a quoted '>' belongs to the value.
+_TAG_TAIL = re.compile(r"""[^'"<>]*(?:(?:"[^"]*"|'[^']*')[^'"<>]*)*>""")
+_END_TAG_TAIL = re.compile(r"[ \t\r\n\f]*>")
+_COMMENT_END = re.compile(r"--!?>")
 
 
-def _locate_inline_raw_text(state: StateInline, silent: bool) -> bool:
+def _end_of_tag(pattern: re.Pattern[str], source: str, start: int,
+                prefix_end: Callable[[int], int] | None) -> int | None:
+    while match := pattern.match(source, start):
+        end = match.end()
+        # The '>' on a continuation line may be a Markdown blockquote marker.
+        if prefix_end is None:
+            return end
+        start = prefix_end(end - 1)
+        if start < end:
+            return end
+    return None
+
+
+def _markup_end(source: str, opening: int, tag: str,
+                prefix_end: Callable[[int], int] | None = None) -> int | None:
+    if tag == "!--":
+        # HTMLParser also sends bogus declarations to handle_comment.
+        if not source.startswith("<!--", opening):
+            return None
+        start = opening + 4
+        # HTML also allows abruptly closed empty comments.
+        if source.startswith(">", start):
+            return start + 1
+        if source.startswith("->", start):
+            return start + 2
+        close = _COMMENT_END.search(source, start)
+        return close.end() if close else len(source)
+
+    end = _end_of_tag(_TAG_TAIL, source, opening + len(tag) + 1, prefix_end)
+    if end is None or tag not in _RAW_TEXT_CLOSE:
+        return end
+    for close in _RAW_TEXT_CLOSE[tag].finditer(source, end):
+        end = _end_of_tag(_END_TAG_TAIL, source, close.end(), prefix_end)
+        if end is not None:
+            return end
+    return len(source)
+
+
+def _locate_inline_markup(state: StateInline, silent: bool) -> bool:
     start = state.pos
-    if not html_inline(state, silent):
+    parsed = html_inline(state, silent)
+    match = _HIDDEN_START.match(state.src, start)
+    if not match:
+        if parsed:
+            return True
+        # A quoted attribute in an unfinished tag can itself contain '<script>'.
+        match = _START_TAG.match(state.src, start)
+    if not match:
         return False
-    match = _RAW_TEXT_START.match(state.src, start)
-    if match:
-        tag = match[1].lower()
-        if not silent:
-            state.tokens[-1].meta["raw_start"] = (start, tag)
-        close = _RAW_TEXT_END[tag].search(state.src, state.pos, state.posMax)
-        state.pos = close.end() if close else state.posMax
+    tag = (match[1] or "!--").lower()
+    if not parsed and tag != "!--" and _TAG_TAIL.match(state.src, match.end(), state.posMax):
+        return False  # CommonMark rejected a complete inline tag.
+    end = _markup_end(state.src, start, tag)
+    if not silent:
+        token = state.tokens[-1] if parsed else state.push("html_inline", "", 0)
+        token.meta["markup_start"] = (start, tag)
+    state.pos = min(end if end is not None else match.end(), state.posMax)
     return True
-
-
-# Discovery alone needs source positions. The actual capture and normalization
-# both use the unmodified CommonMark rules.
-_RAW_TEXT_LOCATOR = MarkdownIt("commonmark")
-_RAW_TEXT_LOCATOR.inline.ruler.at("html_inline", _locate_inline_raw_text)
 
 
 class _TagPosition(NamedTuple):
     line: int
     column: int
     name: str
-    markup: str
 
 
-class _RawTextTags(HTMLParser):
+class _MarkupStarts(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=False)
         self.starts: list[_TagPosition] = []
 
+    def record(self, name: str) -> None:
+        line, column = self.getpos()
+        self.starts.append(_TagPosition(line - 1, column, name))
+
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in _RAW_TEXT_END:
-            line, column = self.getpos()
-            self.starts.append(_TagPosition(line - 1, column, tag, self.get_starttag_text() or f"<{tag}>"))
+        if tag in _RAW_TEXT_CLOSE:
+            self.record(tag)
+
+    def handle_comment(self, data: str) -> None:
+        self.record("!--")
 
 
-def _raw_text_tags(token: Token, env: EnvType) -> Iterator[_TagPosition]:
+def _markup_starts(token: Token, env: EnvType) -> Iterator[_TagPosition]:
     if token.type == "html_block":
-        html = _RawTextTags()
+        html = _MarkupStarts()
         try:
             html.feed(token.content)
-            html.close()
+            # HTMLParser buffers an unfinished lexeme at getpos(). The
+            # document, not the fragment, supplies its remaining attributes
+            # or comment terminator.
+            pending = _HIDDEN_START.match(html.rawdata) or _START_TAG.match(html.rawdata)
+            if pending:
+                html.record((pending[1] or "!--").lower())
         except (ValueError, AssertionError):
             pass  # Retain positions confirmed before malformed HTML.
         yield from html.starts
     elif token.type == "inline":
         offsets = [0, *(m.end() for m in re.finditer("\n", token.content))]
-        for child in _inline_tokens(token.content, env, _RAW_TEXT_LOCATOR):
-            if "raw_start" in child.meta:
-                start, tag = child.meta["raw_start"]
+        for child in _inline_tokens(token.content, env, _VISIBILITY_MARKDOWN):
+            if "markup_start" in child.meta:
+                start, tag = child.meta["markup_start"]
                 line = bisect_right(offsets, start) - 1
-                yield _TagPosition(line, start - offsets[line], tag, child.content)
+                yield _TagPosition(line, start - offsets[line], tag)
 
 
-class _RawTextStart(NamedTuple):
-    opening: int
-    content_start: int
-    tag: str
-    block_end: int
-    heading: bool
+def _source_candidates(token: Token, env: EnvType, lines: list[str], offsets: list[int]) -> Iterator[tuple[int, str]]:
+    if token.type not in {"html_block", "inline"} or "<" not in token.content:
+        return
+    assert token.map is not None
+    # Align the token's logical lines with source lines before removing
+    # anything. CommonMark strips container prefixes and leading blank lines.
+    origins = []
+    line, stop = token.map
+    for logical in token.content.split("\n"):
+        text = logical.lstrip(" \t")
+        while line < stop:
+            column = lines[line].rfind(text)
+            origin = offsets[line] + column - (len(logical) - len(text))
+            line += 1
+            if column >= 0:
+                origins.append(origin)
+                break
+        else:
+            break  # An HTML block's trailing LF has no corresponding source line.
+    for site in _markup_starts(token, env):
+        yield origins[site.line] + site.column, site.name
 
 
-def _block_raw_text_starts(state: StateBlock) -> Iterator[_RawTextStart]:
-    for index, token in enumerate(state.tokens):
-        if token.type not in {"html_block", "inline"} or token.map is None or not _RAW_TEXT_START.search(token.content):
-            continue
-        # Token maps give physical lines. Within each line CommonMark can
-        # strip list/quote/heading prefixes and expand leading indentation.
-        fragment = token.content.split("\n")
-        origins = []
-        line, stop = token.map
-        for logical in fragment:
-            text = logical.lstrip(" \t")
-            # CommonMark may trim entire whitespace-only lines at the start
-            # of an inline token while its block map still includes them.
-            while line < stop:
-                pos = state.src.rfind(text, state.bMarks[line], state.eMarks[line])
-                line += 1
-                if pos >= 0:
-                    origins.append(pos - (len(logical) - len(text)))
-                    break
-            else:
-                break  # The final newline of an HTML block has no source line.
-        heading = token.type == "inline" and state.tokens[index - 1].type == "heading_open"
-        for tag in _raw_text_tags(token, state.env):
-            opening = origins[tag.line] + tag.column
-            end_line = tag.line + tag.markup.count("\n")
-            end_column = (tag.column + len(tag.markup) if end_line == tag.line
-                          else len(tag.markup.rsplit("\n", 1)[1]))
-            yield _RawTextStart(opening, origins[end_line] + end_column, tag.name,
-                                state.eMarks[token.map[1] - 1], heading)
+class _CaptureVisibility:
+    """Document source and forward cursor shared by all nested block rules."""
+
+    def __init__(self, body: str) -> None:
+        self.body = body
+        self.lines = body.split("\n")
+        self.offsets = [0, *(match.end() for match in re.finditer("\n", body))]
+        self.cursor = 0
+        self.pieces: list[str] = []
+
+    def read(self, token: Token, state: StateBlock, heading: bool) -> None:
+        assert token.map is not None
+
+        def prefix_end(position: int) -> int:
+            return state.bMarks[bisect_right(self.offsets, position) - 1]
+
+        for opening, tag in _source_candidates(token, state.env, self.lines, self.offsets):
+            if opening < self.cursor:
+                continue
+            end = _markup_end(self.body, opening, tag, prefix_end)
+            if end is None:
+                continue
+            # Preserve the layout of an ordinary start tag whose attributes
+            # crossed a block boundary; only its line breaks need collapsing.
+            replacement = ("<!---->" if tag == "!--" or tag in _RAW_TEXT_CLOSE
+                           else self.body[opening:end].replace("\n", " "))
+            self.pieces.extend((self.body[self.cursor:opening], replacement))
+            self.cursor = end
+            if heading and end >= self.offsets[token.map[1]]:
+                self.pieces.append("\n")
+
+
+def _scan_visible_block(state: StateBlock, start: int, stop: int, silent: bool) -> bool:
+    # Only invoked in the main rule chain. A container calls this same rule
+    # for each child, so a leaf claims its hidden span before the parser
+    # attempts to read the next list item, fence, heading or paragraph.
+    scan: _CaptureVisibility = state.env["capture_visibility"]
+    if state.bMarks[start] < scan.cursor:
+        line = bisect_right(scan.offsets, scan.cursor) - 1
+        if line > start:
+            state.line = min(line, stop)
+            return True
+        if scan.cursor >= state.eMarks[start]:
+            state.line = start + 1
+            return True
+        state.bMarks[start] = scan.cursor
+        state.tShift[start] = state.sCount[start] = 0
+
+    first = len(state.tokens)
+    for rule in MARKDOWN.block.ruler.getRules(""):
+        if rule(state, start, stop, silent):
+            break
+    if len(state.tokens) == first:
+        return True
+    root = state.tokens[first]
+    if root.type == "html_block":
+        scan.read(root, state, False)
+    elif root.type in {"paragraph_open", "heading_open"}:
+        scan.read(state.tokens[first + 1], state, root.type == "heading_open")
+    return True
+
+
+# Keep the visibility probe separate from normal Markdown parsing and from
+# the normalizer, which relies on line maps into the unmodified source.
+_VISIBILITY_MARKDOWN = MarkdownIt("commonmark", {"inline_definitions": True})
+_VISIBILITY_MARKDOWN.inline.ruler.at("html_inline", _locate_inline_markup)
+_VISIBILITY_MARKDOWN.block.ruler.before("code", "capture_visibility", _scan_visible_block)
 
 
 def _visible_capture_source(body: str) -> str:
-    """Give all diagnostics the same source with raw-text spans made opaque."""
+    """Project hidden HTML at document scope while respecting Markdown literals."""
     body = body.replace("\r\n", "\n").replace("\r", "\n")
-    # StateBlock.getLines includes the final LF when a nested HTML block
-    # requests it. Supply the terminator for captures ending mid-container.
     if not body.endswith("\n"):
         body += "\n"
-    if not _RAW_TEXT_START.search(body):
+    if not _HIDDEN_START.search(body):
         return body
-    state = StateBlock(body, MARKDOWN, {}, [])
-    rules = MARKDOWN.block.ruler.getRules("")
-    pieces: list[str] = []
-    cursor = 0
-    while (start := state.skipEmptyLines(state.line)) < state.lineMax:
-        state.tokens.clear()
-        state.line = start
-        for rule in rules:
-            if rule(state, start, state.lineMax, False):
-                break
-        for span in _block_raw_text_starts(state):
-            if span.opening < cursor:
-                continue
-            close = _RAW_TEXT_END[span.tag].search(body, span.content_start)
-            pieces.extend((body[cursor:span.opening], "<!---->"))
-            cursor = close.end() if close else len(body)
-            if cursor <= span.block_end:
-                continue
-            if span.heading:
-                pieces.append("\n")
-            # Resume on the visible suffix, even if the hidden text contained
-            # an unbalanced Markdown fence or an apparent reference definition.
-            line = bisect_right(state.bMarks, cursor) - 1
-            state.line = line
-            state.bMarks[line] = cursor
-            state.tShift[line] = state.sCount[line] = 0
-            if cursor == state.eMarks[line]:
-                state.line += 1
-            break
-    pieces.append(body[cursor:])
-    return "".join(pieces)
+    scan = _CaptureVisibility(body)
+    _VISIBILITY_MARKDOWN.block.parse(body, _VISIBILITY_MARKDOWN, {"capture_visibility": scan}, [])
+    scan.pieces.append(body[scan.cursor:])
+    return "".join(scan.pieces)
 
 
 def _plain(line: str) -> str:
@@ -362,7 +441,9 @@ class _HTMLProse(HTMLParser):
 
     containers = {"article", "body", "div", "html", "main", "p", "section"}
     boundaries = frozenset(block_names) | {"pre", "textarea"}
-    inline_excluded = {"a", "q", "code"}
+    # These inline scopes retain their layout. Their text alone cannot
+    # establish an article paragraph after a heading or a summary.
+    inline_excluded = {"a", "q", "code", "button", "select"}
     void = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
             "param", "source", "track", "wbr"}
 

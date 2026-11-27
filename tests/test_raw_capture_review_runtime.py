@@ -275,6 +275,11 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     ("Literal `<script>x</script>` tag.", "Literal <script>x</script> tag."),
     ("<p title='<script>'>libr<script data-end='</script>'>hidden</script>ary</p>", "library"),
     ("<p>&am<!--hidden-->p;</p>", "&amp;"),
+    ('> <div><script type=module\n>\n> defer="</script>">hidden</script>visible</div>', "visible"),
+    ("> <div><script>\n>\n> hidden\n> </script\n> >visible</div>", "visible"),
+    ("<div title='\n\n<script>'>visible</div>", "visible"),
+    ("<div><!unknown><script>hidden</script>visible</div>", "visible"),
+    ("Literal `<!--` and `<script>` in code.", "Literal <!-- and <script> in code."),
     ("\u00a0\nLibrary <script>hidden</script>hours", "Library hours"),
     (f"# Heading <script>\n\n```js\n\n</script>\n\n<style>{OTHER}</style>{ARTICLE}", ARTICLE),
     (f"<div><script>\n\n{OTHER}\n\n</script><p>{ARTICLE}</p></div>", ARTICLE),
@@ -323,6 +328,13 @@ def _write_library_source(tmp_path):
     pytest.param("<p>" + EXTENDED_RIGHTS.replace("Press", "<ins>Press</ins>") + "</p>", "", id="inline-ins"),
     pytest.param(f"<div><script>const marker = '<!--';</script><p>{ARTICLE}</p><!-- footer --></div>",
                  ARTICLE, id="comment-marker-in-script"),
+    pytest.param(f"<div><!--\n\n{ARTICLE}\n\n--></div>", "", id="multiblock-comment"),
+    pytest.param(f"<div><!-- advertising\n\n<script>code\n-->\n<p>{ARTICLE}</p></div>", ARTICLE,
+                 id="script-spelling-inside-comment"),
+    pytest.param(f"<div><script type=module\n\n defer>{ARTICLE}</script></div>", "",
+                 id="multiblock-opening-tag"),
+    pytest.param(f"<div><style media='screen > print'\n\n >{OTHER}</style><p>{ARTICLE}</p></div>", ARTICLE,
+                 id="article-after-multiblock-opener"),
     pytest.param(f"# <script>\n\n{OTHER}\n\n</script>", "", id="script-in-heading"),
     pytest.param(f"# Title <script>\n\n{OTHER}\n\n</script>{ARTICLE}", ARTICLE, id="article-after-heading-script"),
 ])
@@ -345,6 +357,33 @@ def test_html_capture_intake_report(tmp_path, suffix, markup, expected):
     assert finding["cleaned_raw_lead"]["char_count"] == len(expected)
     assert ("raw_capture_body_missing" in finding["issues"]) == (not expected and suffix == "md")
     assert report["status"] == ("pass" if expected else "fail")
+
+
+@pytest.mark.parametrize("item", [
+    "- item <script>start\n\n  hidden\n\n  </script> end\n\n",
+    "> item <script>start\n>\n> hidden\n>\n> </script> end\n>\n",
+])
+def test_nested_raw_text_scanning_grows_with_input(item, monkeypatch):
+    from markdown_it.rules_block import StateBlock
+
+    # Count real block-parser work; a clock threshold would depend on CI load.
+    push = StateBlock.push
+    count = 0
+
+    def counted_push(state, *args):
+        nonlocal count
+        count += 1
+        return push(state, *args)
+
+    monkeypatch.setattr(StateBlock, "push", counted_push)
+    counts = []
+    for size in (16, 64):
+        count = 0
+        source = item * size + "\n" + ARTICLE
+        assert extract_clean_lead(source) == ARTICLE
+        assert capture_review_reasons(body=source, title=TITLE, filename="capture.md") == []
+        counts.append(count)
+    assert 0 < counts[1] <= 5 * counts[0]
 
 
 @pytest.mark.parametrize(("body", "lead"), [
@@ -387,6 +426,8 @@ def test_second_story_needs_a_heading_and_article_prose(notice, following, mixed
     (ARTICLE, f'<a href="/story">Read more</a> {OTHER}', True),
     (ARTICLE, f'<a href="/story">\n\n{OTHER}\n\n</a> {OTHER}', True),
     (ARTICLE, f'<q>{OTHER}</q>', False),
+    (ARTICLE, "<button>Subscribe now</button>", False),
+    (ARTICLE, f"<button>Listen</button> {OTHER}", True),
     (ARTICLE, f"<article><p>{OTHER}</p></article>", True),
     (ARTICLE, f"<div><blockquote><p>{OTHER}</p></blockquote></div>", False),
     (f"<ul>\n\n<li><p>{ARTICLE}</p></li>\n\n</ul>", OTHER, False),
@@ -447,6 +488,8 @@ def test_korean_particles_do_not_turn_shared_title_words_into_mismatch():
     ("transport", "cookie", "article", "expected"),
     [
         (False, False, EXTENDED_RIGHTS, ["raw_capture_body_missing"]),
+        pytest.param(False, False, ARTICLE + "\n\n# Sign up for updates\n\n<button>Subscribe now</button>",
+                     [], id="subscription-button-after-article"),
         pytest.param(False, False, HTML_BLOCK_NOTICE, ["raw_capture_body_missing"], id="html-block-notice"),
         pytest.param(False, False, f"> {HTML_BLOCK_NOTICE}{HTML_BLOCK_NOTICE}", ["raw_capture_body_missing"],
                      id="quoted-html-notices"),
