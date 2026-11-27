@@ -272,6 +272,11 @@ def test_credit_spans_keep_surrounding_text(line, lead):
     ("<p>&lt;!-- &amp;copy; --&gt;</p>", "<!-- &copy; -->"),
     ("<p>&am<span>p;</span> &unknown &copy</p>", "&amp; &unknown ©"),
     (f"A literal `<script>` tag.\n\n{ARTICLE}", ARTICLE),
+    ("Literal `<script>x</script>` tag.", "Literal <script>x</script> tag."),
+    ("<p title='<script>'>libr<script data-end='</script>'>hidden</script>ary</p>", "library"),
+    ("<p>&am<!--hidden-->p;</p>", "&amp;"),
+    ("\u00a0\nLibrary <script>hidden</script>hours", "Library hours"),
+    (f"# Heading <script>\n\n```js\n\n</script>\n\n<style>{OTHER}</style>{ARTICLE}", ARTICLE),
     (f"<div><script>\n\n{OTHER}\n\n</script><p>{ARTICLE}</p></div>", ARTICLE),
     (f"Title: {TITLE}\nMarkdown Content:\n{ARTICLE}", ARTICLE),
     (f"{ARTICLE}\nTitle: new weekday schedule", f"{ARTICLE} Title: new weekday schedule"),
@@ -296,21 +301,31 @@ def _write_library_source(tmp_path):
 
 @pytest.mark.parametrize("suffix", ["md", "html"])
 @pytest.mark.parametrize(("markup", "expected"), [
-    ("<p>The library will extend its hours on <time>December 1</time> "
-     "to give evening visitors more time to use the reading rooms.</p>",
-     "The library will extend its hours on December 1 "
-     "to give evening visitors more time to use the reading rooms."),
-    ("<p>" + EXTENDED_RIGHTS.replace("2024", "<time>2024</time>") + "</p>", ""),
-    (f"<script><!--{ARTICLE}--></script>", ""),
-    (f"<div><script>\n\n{ARTICLE}\n\n</script></div>", ""),
-    (f"The library <style>\n\n{OTHER}\n\n</style>reports that {ARTICLE}", f"The library reports that {ARTICLE}"),
-    (f"<p>The library <style>{OTHER}</style>announced its decision. {ARTICLE}</p>",
-     f"The library announced its decision. {ARTICLE}"),
-    (f"The library <script>{OTHER}</script>reports that {ARTICLE}", f"The library reports that {ARTICLE}"),
-    (f"<p>&#91;{ARTICLE}&#93;(/story)</p>", f"[{ARTICLE}](/story)"),
-    (f"<p>[{ARTICLE}](/story)</p>", ""),
-], ids=["date", "notice-year", "script-only", "multiblock-script", "multiblock-style",
-        "inline-style", "inline-script", "literal-brackets", "markdown-link"])
+    pytest.param(
+        "<p>The library will extend its hours on <time>December 1</time> "
+        "to give evening visitors more time to use the reading rooms.</p>",
+        "The library will extend its hours on December 1 to give evening visitors more time to use the reading rooms.",
+        id="date",
+    ),
+    pytest.param("<p>" + EXTENDED_RIGHTS.replace("2024", "<time>2024</time>") + "</p>", "", id="notice-year"),
+    pytest.param(f"<script><!--{ARTICLE}--></script>", "", id="script-only"),
+    pytest.param(f"<div><script>\n\n{ARTICLE}\n\n</script></div>", "", id="multiblock-script"),
+    pytest.param(f"The library <style>\n\n{OTHER}\n\n</style>reports that {ARTICLE}", f"The library reports that {ARTICLE}", id="multiblock-style"),
+    pytest.param(f"<p>The library <style>{OTHER}</style>announced its decision. {ARTICLE}</p>",
+                 f"The library announced its decision. {ARTICLE}", id="inline-style"),
+    pytest.param(f"The library <script>{OTHER}</script>reports that {ARTICLE}", f"The library reports that {ARTICLE}", id="inline-script"),
+    pytest.param(f"<p>&#91;{ARTICLE}&#93;(/story)</p>", f"[{ARTICLE}](/story)", id="literal-brackets"),
+    pytest.param(f"<p>[{ARTICLE}](/story)</p>", "", id="markdown-link"),
+    pytest.param(f"<p>![{ARTICLE}][R & D]</p>\n\n[R & D]: /image.jpg", "", id="reference-image-ampersand"),
+    pytest.param(f"<p>[{ARTICLE}][R & D]</p>\n\n[R & D]: /story", "", id="reference-link-ampersand"),
+    pytest.param(f"<div><style>\n\n{OTHER}\n\n</style\n><p>{ARTICLE}</p></div>", ARTICLE, id="split-close"),
+    pytest.param("<p>" + ARTICLE.replace("library", "<code>library</code>") + "</p>", ARTICLE, id="inline-code"),
+    pytest.param("<p>" + EXTENDED_RIGHTS.replace("Press", "<ins>Press</ins>") + "</p>", "", id="inline-ins"),
+    pytest.param(f"<div><script>const marker = '<!--';</script><p>{ARTICLE}</p><!-- footer --></div>",
+                 ARTICLE, id="comment-marker-in-script"),
+    pytest.param(f"# <script>\n\n{OTHER}\n\n</script>", "", id="script-in-heading"),
+    pytest.param(f"# Title <script>\n\n{OTHER}\n\n</script>{ARTICLE}", ARTICLE, id="article-after-heading-script"),
+])
 def test_html_capture_intake_report(tmp_path, suffix, markup, expected):
     from ops.scripts.registry.raw_intake_source_quality import build_report
     from tests.minimal_vault_runtime import seed_minimal_vault
@@ -326,7 +341,9 @@ def test_html_capture_intake_report(tmp_path, suffix, markup, expected):
     write_matrix(tmp_path / "matrix.json", [matrix_entry(raw_path=raw_path)])
     report = build_report(tmp_path, matrix_path="matrix.json")
     assert extract_clean_lead(markup) == expected
-    assert report["findings"][0]["cleaned_raw_lead"]["char_count"] == len(expected)
+    finding = report["findings"][0]
+    assert finding["cleaned_raw_lead"]["char_count"] == len(expected)
+    assert ("raw_capture_body_missing" in finding["issues"]) == (not expected and suffix == "md")
     assert report["status"] == ("pass" if expected else "fail")
 
 

@@ -346,11 +346,13 @@ A literal `©` and the character reference `&copy;` in the same notice give the 
 Each sentence after the holder must be a recognized rights clause. A paragraph
 that also contains an article sentence stays eligible in full.
 In an HTML block, both checks use the displayed text of each paragraph, so an
-article paragraph following a notice can supply the lead. Inline dates stay in
-their paragraph, and script and style content is excluded. Punctuation written
-as an HTML character reference remains literal when the paragraph also contains
-Markdown links or emphasis. Lead selection skips
-the same leading transport headers as normalization.
+article paragraph following a notice can supply the lead. Inline elements such
+as `<time>`, `<code>` and `<ins>` preserve the surrounding paragraph. Both
+diagnostics exclude script and style content through the HTML end tag, including
+when the element spans Markdown headings or blank lines. Markdown code examples
+retain literal tags. Embedded Markdown references resolve using the label spelling
+in the capture. HTML character references supply display text after link recognition.
+Lead selection skips the same leading transport headers as normalization.
 Unrecognized notices may still
 qualify as prose. Stored Markdown retains the original wording.
 
