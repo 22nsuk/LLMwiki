@@ -6,6 +6,8 @@ import hashlib
 import re
 import sys
 from collections import Counter
+from collections.abc import Iterator
+from itertools import groupby
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +27,10 @@ if __package__ in (None, ""):  # pragma: no cover - direct script fallback
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_capture_review_runtime import (
+        is_rights_notice,
+        lead_analysis_lines,
+    )
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -53,6 +59,10 @@ else:
         evaluate_source_page_substance,
     )
     from ops.scripts.eval.wiki_page_runtime import section_body
+    from ops.scripts.registry.raw_capture_review_runtime import (
+        is_rights_notice,
+        lead_analysis_lines,
+    )
     from ops.scripts.registry.raw_intake_input_runtime import (
         TEXTUAL_RAW_SUFFIXES,
         IntakeFile,
@@ -77,11 +87,7 @@ PRODUCER = "ops.scripts.raw_intake_source_quality"
 SCHEMA_PATH = "ops/schemas/raw-intake-source-quality-report.schema.json"
 SOURCE_COMMAND = "python -m ops.scripts.raw_intake_source_quality"
 REVIEWED_ROUTE_STATUSES = {"approved", "reviewed"}
-BOILERPLATE_PATTERNS = (
-    re.compile(r"^(skip to|본문 바로가기|메뉴|로그인|회원가입|구독|공유|광고)\b", re.I),
-    re.compile(r"^(copyright|all rights reserved)\b", re.I),
-    re.compile(r"(무단전재|재배포 금지|저작권)", re.I),
-)
+NAVIGATION_LINE = re.compile(r"^(skip to|본문 바로가기|메뉴|로그인|회원가입|구독|공유|광고)\b", re.I)
 
 
 def _resolved_input_path(vault: Path, path: str | Path) -> Path:
@@ -104,36 +110,23 @@ def _is_boilerplate_line(line: str) -> bool:
     stripped = line.strip()
     if not stripped:
         return True
-    if stripped.startswith(("![", "<!--")):
-        return True
     if re.fullmatch(r"[-*_`#>\s]+", stripped):
         return True
-    if re.fullmatch(r"\[[^\]]+\]\([^\)]+\)", stripped):
-        return True
-    return any(pattern.search(stripped) for pattern in BOILERPLATE_PATTERNS)
+    return NAVIGATION_LINE.search(stripped) is not None
+
+
+def _lead_paragraphs(body: str) -> Iterator[str]:
+    for noise, group in groupby(lead_analysis_lines(body), key=lambda line: _is_boilerplate_line(line.excerpt)):
+        if noise:
+            continue
+        paragraph = list(group)
+        if not is_rights_notice(" ".join(line.visible for line in paragraph)):
+            yield " ".join(line.excerpt for line in paragraph)
 
 
 def extract_clean_lead(text: str, *, min_chars: int = 80, max_chars: int = 700) -> str:
-    body = _strip_frontmatter(text)
-    paragraphs: list[str] = []
-    current: list[str] = []
-    for raw_line in body.splitlines():
-        stripped = raw_line.strip()
-        if stripped.startswith("#"):
-            continue
-        if _is_boilerplate_line(stripped):
-            if current:
-                paragraphs.append(" ".join(current))
-                current = []
-            continue
-        stripped = re.sub(r"`([^`]+)`", r"\1", stripped)
-        stripped = re.sub(r"!\[[^\]]*\]\([^\)]+\)", "", stripped)
-        stripped = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", stripped)
-        current.append(stripped)
-    if current:
-        paragraphs.append(" ".join(current))
     fallback = ""
-    for paragraph in paragraphs:
+    for paragraph in _lead_paragraphs(_strip_frontmatter(text)):
         normalized = re.sub(r"\s+", " ", paragraph).strip()
         if not normalized:
             continue

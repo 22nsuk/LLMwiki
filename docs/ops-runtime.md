@@ -325,15 +325,63 @@ reviewed intake remains `review` / `attention` while a signal is present; route
 approval does not clear it. Existing empty/unavailable raw hard failures remain.
 
 The shared, read-only detector recognizes missing body text, explicit automatic
-summary blocks without article prose, article-like text after a copyright
-boundary or a second distinct top-level title, and disjoint title vocabulary.
-It compares declared titles with the first H1, article prose and human-readable
+summary blocks without article prose, a second article heading with prose, and
+disjoint title vocabulary. Lead selection and capture review exclude Markdown
+images and closed photo attributions such as `(ⓒ Example Archive 제공)` from
+analysis. Lead selection uses the original Markdown heading blocks, including
+Setext headings. A paragraph beginning with a hashtag remains eligible when
+its formatting or photo credit is removed. A standalone Markdown link remains
+navigation even when an adjacent line contains an image. Reference-style images
+resolve against definitions from the same document. Their alt text and the definition lines are excluded even when
+the definition follows the article. A plain credit can share a line with article text, so its text stays
+in the paragraph, including inside emphasis or a link. A standalone plain
+caption can therefore qualify as a lead if it meets the length threshold.
+
+A standalone rights declaration supplies no body or lead text. The check
+recognizes a labeled holder followed by a complete English reservation or
+Korean reprint restriction, as well as “All rights reserved.” on its own.
+The year is optional in a notice such as “Copyright Example Press. All rights reserved.”
+The check uses visible CommonMark text, including publisher names and clauses emphasized with Markdown or inline HTML.
+A literal `©` and the character reference `&copy;` in the same notice give the same result.
+Each sentence after the holder must be a recognized rights clause. A paragraph
+that also contains an article sentence stays eligible in full.
+Analysis continues with the next paragraph. Unrecognized notices may still
+qualify as prose. Stored Markdown retains the original wording.
+
+For an explicitly marked automatic summary, the detector looks for a top-level
+prose paragraph outside the summary in the same article. It excludes repeated
+headlines and uses the same structural prose classification as the article
+boundary check. One paragraph must share at least two distinct normalized words
+with the summary. Either two shared words also appear in the title, or the
+shared words cover at least a quarter of the smaller vocabulary. Separate
+paragraphs cannot pool matches. If the summary supplies fewer than two usable
+words, the title supplements it. If both together still supply fewer than two,
+a prose paragraph of at least 80 characters is the fallback.
+
+This check keeps a capture with only an unrelated publisher notice in review
+and preserves the notice in the stored source. A paraphrase or translation with
+little shared wording can still require review. Topically similar boilerplate
+can look like article prose.
+
+A second article requires a substantial preceding paragraph (at least 80
+characters), a top-level heading with vocabulary distinct from the original
+title, and prose under that heading. In Markdown captures, HTML paragraphs and
+text in ordinary layout containers such as `<div>` can supply prose on either
+side of the heading. Quotations, lists, standalone links and code blocks do not
+establish a new article in either representation. This includes a linked headline
+written as an inline HTML anchor or a Markdown reference link. Text outside a
+link in the same paragraph can still supply prose. Publisher names and rights notices
+may occur between articles or within a single article. Stories joined without
+a distinct heading can escape detection. For a labeled report cover, the
+section under a new H1 must also contain substantial prose with vocabulary
+distinct from the original title.
+
+The detector compares declared titles with the first H1, article prose and human-readable
 filenames. All three report paths resolve titles in the same order: frontmatter,
 transport `Title:`, first H1, then the humanized filename. They combine signals
 from the original body and an analysis copy with the normalizer's recognized
-transport/cookie/blob noise removed, preserving prefaces during analysis. Thus
-removable noise cannot hide a summary-only body on the first normalization pass,
-and original boundary signals still prevent duplicate-preface removal.
+transport/cookie/blob noise removed so that removable noise cannot hide a
+summary-only body on the first normalization pass.
 Slugs/IDs without spaces, short titles and cross-script translations
 are excluded from the corresponding title comparisons. Recognized navigation,
 recommendations, comments and code fences are excluded from analysis. Binary
@@ -343,9 +391,11 @@ These are lexical review signals, not semantic contradiction detection, URL
 verification or proof of a complete article. Paraphrases, shared vocabulary,
 unrecognized captions/UI, multilingual text and unexpected page layouts can
 produce false positives or missed cases. The detector never edits raw or
-repairs titles; `--write` still performs only the normalizer's existing permitted
-metadata/noise cleanup, and skips duplicate-preface removal for flagged captures
-so the suspect article prefix remains reviewable. Review the original source, preserve historical captures
+repairs titles. The normalizer preserves repeated titles and the content
+between them, including when all checks pass. A standalone localhost blob URL
+or image can be removed as noise. Lines containing prose and URLs inside
+Markdown reference definitions are retained.
+Review the original source, preserve historical captures
 and register recovered bodies separately. A clear result means no recognized
 signal. Old report shapes remain readable; regenerate reports before relying on
 the new checks. Capture review does not change route/absorption authority.

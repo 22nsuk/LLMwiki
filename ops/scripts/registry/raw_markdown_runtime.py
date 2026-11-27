@@ -11,7 +11,10 @@ from typing import Any
 
 from ops.scripts.core.policy_runtime import report_path
 from ops.scripts.core.yaml_runtime import parse_simple_yaml
-from ops.scripts.registry.raw_capture_review_runtime import capture_review_reasons
+from ops.scripts.registry.raw_capture_review_runtime import (
+    capture_review_reasons,
+    markdown_blocks,
+)
 
 FRONTMATTER_FIELD_ORDER = [
     "title",
@@ -67,7 +70,10 @@ PUBLISHED_TIME_RE = re.compile(r"^Published Time:\s*(.+?)\s*$", re.MULTILINE)
 LAST_UPDATED_RE = re.compile(r"^\*\*Last Updated:\*\*\s*(.+?)(?:\s*\|.*)?\s*$", re.MULTILINE)
 CAPTURE_DATE_RE = re.compile(r"^- Capture date:\s*(.+?)\s*$", re.MULTILINE)
 URL_DATE_RE = re.compile(r"/(20\d{2})[-_/](\d{2})[-_/](\d{2})(?:[/?#]|$)")
-BLOB_LOCALHOST_RE = re.compile(r"^.*blob:http://localhost[^\n]*\n?", re.MULTILINE)
+LOCAL_BLOB_URL = r"blob:http://localhost(?::[0-9]+)?/[^()\s]+"
+BLOB_LOCALHOST_RE = re.compile(
+    rf"^[ \t]*(?:{LOCAL_BLOB_URL}|!\[[^\]\n]*\]\({LOCAL_BLOB_URL}\))[ \t]*$\n?", re.MULTILINE,
+)
 REPLACEMENT_CHAR = "\ufffd"
 
 
@@ -184,13 +190,6 @@ def _humanize_filename(path: Path) -> str | None:
     stem = path.stem.replace("_", " ").replace("-", " ")
     stem = re.sub(r"\s+", " ", stem).strip()
     return stem or None
-
-
-def _normalized_title_token(value: str | None) -> str:
-    if not value:
-        return ""
-    collapsed = re.sub(r"\s+", " ", value.replace("\u00a0", " ")).strip().lower()
-    return re.sub(r"[^0-9a-z가-힣]+", "", collapsed)
 
 
 def _parse_date_to_iso(value: str | None) -> str | None:
@@ -389,29 +388,21 @@ def _strip_cookie_block(body: str) -> tuple[str, bool]:
 
 
 def _strip_blob_localhost(body: str) -> tuple[str, bool]:
-    updated, count = BLOB_LOCALHOST_RE.subn("", body)
-    return updated, count > 0
+    if not BLOB_LOCALHOST_RE.search(body):
+        return body, False
+    # A URL on its own line can be the destination in a multiline reference.
+    blocks, _ = markdown_blocks(body)
+    definition_lines = {
+        i for block in blocks if block.type == "definition" and block.map
+        for i in range(*block.map)
+    }
+    lines = body.split("\n")
+    updated = "\n".join(line for i, line in enumerate(lines)
+                        if i in definition_lines or not BLOB_LOCALHOST_RE.fullmatch(line))
+    return updated, updated != body
 
 
-def _strip_duplicate_preface(body: str, title: str | None) -> str:
-    if not title:
-        return body
-    title_token = _normalized_title_token(title)
-    if not title_token:
-        return body
-
-    matches = list(H1_RE.finditer(body))
-    title_matches = [
-        match
-        for match in matches
-        if _normalized_title_token(match.group(1)) == title_token
-    ]
-    if len(title_matches) < 2:
-        return body
-    return body[title_matches[-1].start() :]
-
-
-def _cleanup_body(body: str, *, title: str | None, preserve_preface: bool = False) -> tuple[str, list[str]]:
+def _cleanup_body(body: str) -> tuple[str, list[str]]:
     removed_noise_classes: list[str] = []
     updated = body
 
@@ -427,8 +418,6 @@ def _cleanup_body(body: str, *, title: str | None, preserve_preface: bool = Fals
     if removed_blob:
         removed_noise_classes.append("blob_localhost")
 
-    if not preserve_preface:
-        updated = _strip_duplicate_preface(updated, title)
     updated = updated.strip("\n")
     if updated:
         updated += "\n"
@@ -468,12 +457,11 @@ def _compose_text(metadata: dict[str, Any], body: str) -> str:
 def raw_markdown_capture_review_reasons(document: RawMarkdownDocument) -> list[str]:
     """Share title resolution and noise-aware analysis across all report callers."""
     title = _extract_title(document)
-    cleaned_body, _ = _cleanup_body(document.body, title=title, preserve_preface=True)
+    cleaned_body, _ = _cleanup_body(document.body)
     reasons = capture_review_reasons(
         body=document.body, title=title or "", filename=document.path.name,
     )
     # Keep original boundary signals, and detect gaps hidden by removable noise.
-    # Preface removal must wait until both views have been reviewed.
     if cleaned_body != document.body:
         reasons.extend(capture_review_reasons(
             body=cleaned_body, title=title or "", filename=document.path.name,
@@ -498,7 +486,7 @@ def raw_markdown_quality_report(vault: Path, path: Path) -> RawMarkdownQualityRe
         marker in body
         for marker in COOKIE_NOISE_MARKERS
     ) or any(COOKIE_OPTION_RE.match(line.strip()) for line in body.splitlines())
-    blob_noise_present = "blob:http://localhost" in body
+    _, blob_noise_present = _strip_blob_localhost(body)
     replacement_char_present = REPLACEMENT_CHAR in body
     manual_review_reasons: list[str] = []
     if replacement_char_present:
@@ -529,9 +517,7 @@ def normalize_raw_markdown_file(vault: Path, path: Path) -> RawMarkdownNormaliza
     document = load_raw_markdown_document(path)
     metadata = _build_normalized_metadata(document)
     capture_reasons = raw_markdown_capture_review_reasons(document)
-    cleaned_body, removed_noise_classes = _cleanup_body(
-        document.body, title=_string_value(metadata.get("title")), preserve_preface=bool(capture_reasons),
-    )
+    cleaned_body, removed_noise_classes = _cleanup_body(document.body)
 
     manual_review_reasons: list[str] = []
     if REPLACEMENT_CHAR in cleaned_body:
